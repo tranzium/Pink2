@@ -37,7 +37,7 @@ jobs:
 
 - job: init_macos
   pool:
-    vmImage: 'macOS-10.13'
+    vmImage: 'macOS-13'
     cancelTimeoutInMinutes: 1
   condition: and(ne(variables['Agent.JobStatus'], 'Canceled'), ne(variables['Agent.JobStatus'], 'Failed'))
   steps:
@@ -90,7 +90,7 @@ jobs:
 
 - job: build_pinkcoin_binaries_for_macos
   pool:
-    vmImage: 'macOS-10.13'
+    vmImage: 'macOS-13'
     cancelTimeoutInMinutes: 1
   dependsOn:
     - init_macos
@@ -135,7 +135,7 @@ jobs:
 
 - job: init_linux
   pool:
-    vmImage: 'Ubuntu 16.04'
+    vmImage: 'ubuntu-20.04'
     cancelTimeoutInMinutes: 1
   condition: and(ne(variables['Agent.JobStatus'], 'Canceled'), ne(variables['Agent.JobStatus'], 'Failed'))
   steps:
@@ -210,7 +210,7 @@ jobs:
 
 - job: build_pinkcoin_binaries_for_linux
   pool:
-    vmImage: 'Ubuntu 16.04'
+    vmImage: 'ubuntu-20.04'
     cancelTimeoutInMinutes: 1
   dependsOn:
     - init_linux
@@ -255,7 +255,7 @@ jobs:
 
 - job: init_windows
   pool:
-    vmImage: 'Ubuntu 16.04'
+    vmImage: 'ubuntu-20.04'
     cancelTimeoutInMinutes: 1
   condition: and(ne(variables['Agent.JobStatus'], 'Canceled'), ne(variables['Agent.JobStatus'], 'Failed'))
   steps:
@@ -360,7 +360,7 @@ jobs:
 
 - job: build_pinkcoin_binaries_for_windows
   pool:
-    vmImage: 'Ubuntu 16.04'
+    vmImage: 'ubuntu-20.04'
     cancelTimeoutInMinutes: 1
   container: 'docimg'
   dependsOn:
