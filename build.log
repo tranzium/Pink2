@@ -1,0 +1,1070 @@
+/bin/sh ../share/genbuild.sh obj/build.h
+g++ -c -O2  -std=c++11 -pthread -Wall -Wextra -Wno-ignored-qualifiers -Wformat -Wformat-security -Wno-unused-parameter -g -DBOOST_SPIRIT_THREADSAFE -I/app/src -I/app/src/obj -DIS_ARCH_64 -DUSE_UPNP=0 -I/app/src/leveldb/include -I/app/src/leveldb/helpers -DHAVE_BUILD_INFO -fno-stack-protector -fstack-protector-all -Wstack-protector -D_FORTIFY_SOURCE=2  -MMD -MF obj/test/Checkpoints_tests.d -o obj/test/Checkpoints_tests.o test/Checkpoints_tests.cpp
+g++ -c -O2  -std=c++11 -pthread -Wall -Wextra -Wno-ignored-qualifiers -Wformat -Wformat-security -Wno-unused-parameter -g -DBOOST_SPIRIT_THREADSAFE -I/app/src -I/app/src/obj -DIS_ARCH_64 -DUSE_UPNP=0 -I/app/src/leveldb/include -I/app/src/leveldb/helpers -DHAVE_BUILD_INFO -fno-stack-protector -fstack-protector-all -Wstack-protector -D_FORTIFY_SOURCE=2  -MMD -MF obj/test/DoS_tests.d -o obj/test/DoS_tests.o test/DoS_tests.cpp
+g++ -c -O2  -std=c++11 -pthread -Wall -Wextra -Wno-ignored-qualifiers -Wformat -Wformat-security -Wno-unused-parameter -g -DBOOST_SPIRIT_THREADSAFE -I/app/src -I/app/src/obj -DIS_ARCH_64 -DUSE_UPNP=0 -I/app/src/leveldb/include -I/app/src/leveldb/helpers -DHAVE_BUILD_INFO -fno-stack-protector -fstack-protector-all -Wstack-protector -D_FORTIFY_SOURCE=2  -MMD -MF obj/test/accounting_tests.d -o obj/test/accounting_tests.o test/accounting_tests.cpp
+../share/genbuild.sh: 22: dea269c82=dea269c82-dirty: not found
+g++ -c -O2  -std=c++11 -pthread -Wall -Wextra -Wno-ignored-qualifiers -Wformat -Wformat-security -Wno-unused-parameter -g -DBOOST_SPIRIT_THREADSAFE -I/app/src -I/app/src/obj -DIS_ARCH_64 -DUSE_UPNP=0 -I/app/src/leveldb/include -I/app/src/leveldb/helpers -DHAVE_BUILD_INFO -fno-stack-protector -fstack-protector-all -Wstack-protector -D_FORTIFY_SOURCE=2  -MMD -MF obj/test/allocator_tests.d -o obj/test/allocator_tests.o test/allocator_tests.cpp
+In file included from /app/src/main.h:8,
+                 from /app/src/wallet.h:13,
+                 from /app/src/init.h:8,
+                 from test/allocator_tests.cpp:3:
+/app/src/bignum.h: In member function ‘bool CBigNum::isPrime(int) const’:
+/app/src/bignum.h:538:33: warning: ‘int BN_is_prime_ex(const BIGNUM*, int, BN_CTX*, BN_GENCB*)’ is deprecated: Since OpenSSL 3.0 [-Wdeprecated-declarations]
+  538 |         int ret = BN_is_prime_ex(pbn, checks, pctx, NULL);
+      |                   ~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from /app/src/bignum.h:13:
+/usr/include/openssl/bn.h:373:5: note: declared here
+  373 | int BN_is_prime_ex(const BIGNUM *p, int nchecks, BN_CTX *ctx, BN_GENCB *cb);
+      |     ^~~~~~~~~~~~~~
+In file included from /app/src/main.h:8,
+                 from /app/src/wallet.h:13,
+                 from /app/src/init.h:8,
+                 from test/accounting_tests.cpp:5:
+/app/src/bignum.h: In member function ‘bool CBigNum::isPrime(int) const’:
+/app/src/bignum.h:538:33: warning: ‘int BN_is_prime_ex(const BIGNUM*, int, BN_CTX*, BN_GENCB*)’ is deprecated: Since OpenSSL 3.0 [-Wdeprecated-declarations]
+  538 |         int ret = BN_is_prime_ex(pbn, checks, pctx, NULL);
+      |                   ~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from /app/src/bignum.h:13:
+/usr/include/openssl/bn.h:373:5: note: declared here
+  373 | int BN_is_prime_ex(const BIGNUM *p, int nchecks, BN_CTX *ctx, BN_GENCB *cb);
+      |     ^~~~~~~~~~~~~~
+In file included from /app/src/main.h:8,
+                 from test/DoS_tests.cpp:11:
+/app/src/bignum.h: In member function ‘bool CBigNum::isPrime(int) const’:
+/app/src/bignum.h:538:33: warning: ‘int BN_is_prime_ex(const BIGNUM*, int, BN_CTX*, BN_GENCB*)’ is deprecated: Since OpenSSL 3.0 [-Wdeprecated-declarations]
+  538 |         int ret = BN_is_prime_ex(pbn, checks, pctx, NULL);
+      |                   ~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from /app/src/bignum.h:13:
+/usr/include/openssl/bn.h:373:5: note: declared here
+  373 | int BN_is_prime_ex(const BIGNUM *p, int nchecks, BN_CTX *ctx, BN_GENCB *cb);
+      |     ^~~~~~~~~~~~~~
+In file included from test/../addrman.h:9,
+                 from test/../net.h:20,
+                 from test/../checkpoints.h:8,
+                 from test/Checkpoints_tests.cpp:8:
+test/../util.h: In member function ‘void CHashWriter::Init()’:
+test/../util.h:454:20: warning: ‘int SHA256_Init(SHA256_CTX*)’ is deprecated: Since OpenSSL 3.0 [-Wdeprecated-declarations]
+  454 |         SHA256_Init(&ctx);
+      |         ~~~~~~~~~~~^~~~~~
+In file included from test/../util.h:30:
+/usr/include/openssl/sha.h:73:27: note: declared here
+   73 | OSSL_DEPRECATEDIN_3_0 int SHA256_Init(SHA256_CTX *c);
+      |                           ^~~~~~~~~~~
+test/../util.h: In member function ‘CHashWriter& CHashWriter::write(const char*, size_t)’:
+test/../util.h:462:22: warning: ‘int SHA256_Update(SHA256_CTX*, const void*, size_t)’ is deprecated: Since OpenSSL 3.0 [-Wdeprecated-declarations]
+  462 |         SHA256_Update(&ctx, pch, size);
+      |         ~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~
+/usr/include/openssl/sha.h:74:27: note: declared here
+   74 | OSSL_DEPRECATEDIN_3_0 int SHA256_Update(SHA256_CTX *c,
+      |                           ^~~~~~~~~~~~~
+test/../util.h: In member function ‘uint256 CHashWriter::GetHash()’:
+test/../util.h:469:21: warning: ‘int SHA256_Final(unsigned char*, SHA256_CTX*)’ is deprecated: Since OpenSSL 3.0 [-Wdeprecated-declarations]
+  469 |         SHA256_Final((unsigned char*)&hash1, &ctx);
+      |         ~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/usr/include/openssl/sha.h:76:27: note: declared here
+   76 | OSSL_DEPRECATEDIN_3_0 int SHA256_Final(unsigned char *md, SHA256_CTX *c);
+      |                           ^~~~~~~~~~~~
+test/../util.h: In function ‘uint256 Hash(T1, T1, T2, T2)’:
+test/../util.h:491:16: warning: ‘int SHA256_Init(SHA256_CTX*)’ is deprecated: Since OpenSSL 3.0 [-Wdeprecated-declarations]
+  491 |     SHA256_Init(&ctx);
+      |     ~~~~~~~~~~~^~~~~~
+/usr/include/openssl/sha.h:73:27: note: declared here
+   73 | OSSL_DEPRECATEDIN_3_0 int SHA256_Init(SHA256_CTX *c);
+      |                           ^~~~~~~~~~~
+test/../util.h:494:17: warning: ‘int SHA256_Final(unsigned char*, SHA256_CTX*)’ is deprecated: Since OpenSSL 3.0 [-Wdeprecated-declarations]
+  494 |     SHA256_Final((unsigned char*)&hash1, &ctx);
+      |     ~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/usr/include/openssl/sha.h:76:27: note: declared here
+   76 | OSSL_DEPRECATEDIN_3_0 int SHA256_Final(unsigned char *md, SHA256_CTX *c);
+      |                           ^~~~~~~~~~~~
+test/../util.h: In function ‘uint256 Hash(T1, T1, T2, T2, T3, T3)’:
+test/../util.h:508:16: warning: ‘int SHA256_Init(SHA256_CTX*)’ is deprecated: Since OpenSSL 3.0 [-Wdeprecated-declarations]
+  508 |     SHA256_Init(&ctx);
+      |     ~~~~~~~~~~~^~~~~~
+/usr/include/openssl/sha.h:73:27: note: declared here
+   73 | OSSL_DEPRECATEDIN_3_0 int SHA256_Init(SHA256_CTX *c);
+      |                           ^~~~~~~~~~~
+test/../util.h:512:17: warning: ‘int SHA256_Final(unsigned char*, SHA256_CTX*)’ is deprecated: Since OpenSSL 3.0 [-Wdeprecated-declarations]
+  512 |     SHA256_Final((unsigned char*)&hash1, &ctx);
+      |     ~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/usr/include/openssl/sha.h:76:27: note: declared here
+   76 | OSSL_DEPRECATEDIN_3_0 int SHA256_Final(unsigned char *md, SHA256_CTX *c);
+      |                           ^~~~~~~~~~~~
+test/../util.h: In function ‘uint160 Hash160(const std::vector<unsigned char>&)’:
+test/../util.h:531:14: warning: ‘unsigned char* RIPEMD160(const unsigned char*, size_t, unsigned char*)’ is deprecated: Since OpenSSL 3.0 [-Wdeprecated-declarations]
+  531 |     RIPEMD160((unsigned char*)&hash1, sizeof(hash1), (unsigned char*)&hash2);
+      |     ~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from test/../util.h:31:
+/usr/include/openssl/ripemd.h:49:38: note: declared here
+   49 | OSSL_DEPRECATEDIN_3_0 unsigned char *RIPEMD160(const unsigned char *d, size_t n,
+      |                                      ^~~~~~~~~
+In file included from /app/src/addrman.h:9,
+                 from /app/src/net.h:20,
+                 from /app/src/main.h:10:
+/app/src/util.h: In member function ‘void CHashWriter::Init()’:
+/app/src/util.h:454:20: warning: ‘int SHA256_Init(SHA256_CTX*)’ is deprecated: Since OpenSSL 3.0 [-Wdeprecated-declarations]
+  454 |         SHA256_Init(&ctx);
+      |         ~~~~~~~~~~~^~~~~~
+In file included from /app/src/util.h:30:
+/usr/include/openssl/sha.h:73:27: note: declared here
+   73 | OSSL_DEPRECATEDIN_3_0 int SHA256_Init(SHA256_CTX *c);
+      |                           ^~~~~~~~~~~
+/app/src/util.h: In member function ‘CHashWriter& CHashWriter::write(const char*, size_t)’:
+/app/src/util.h:462:22: warning: ‘int SHA256_Update(SHA256_CTX*, const void*, size_t)’ is deprecated: Since OpenSSL 3.0 [-Wdeprecated-declarations]
+  462 |         SHA256_Update(&ctx, pch, size);
+      |         ~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~
+/usr/include/openssl/sha.h:74:27: note: declared here
+   74 | OSSL_DEPRECATEDIN_3_0 int SHA256_Update(SHA256_CTX *c,
+      |                           ^~~~~~~~~~~~~
+/app/src/util.h: In member function ‘uint256 CHashWriter::GetHash()’:
+/app/src/util.h:469:21: warning: ‘int SHA256_Final(unsigned char*, SHA256_CTX*)’ is deprecated: Since OpenSSL 3.0 [-Wdeprecated-declarations]
+  469 |         SHA256_Final((unsigned char*)&hash1, &ctx);
+      |         ~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/usr/include/openssl/sha.h:76:27: note: declared here
+   76 | OSSL_DEPRECATEDIN_3_0 int SHA256_Final(unsigned char *md, SHA256_CTX *c);
+      |                           ^~~~~~~~~~~~
+In file included from /app/src/addrman.h:9,
+                 from /app/src/net.h:20,
+                 from /app/src/main.h:10:
+/app/src/util.h: In member function ‘void CHashWriter::Init()’:
+/app/src/util.h:454:20: warning: ‘int SHA256_Init(SHA256_CTX*)’ is deprecated: Since OpenSSL 3.0 [-Wdeprecated-declarations]
+  454 |         SHA256_Init(&ctx);
+      |         ~~~~~~~~~~~^~~~~~
+/app/src/util.h: In function ‘uint256 Hash(T1, T1, T2, T2)’:
+/app/src/util.h:491:16: warning: ‘int SHA256_Init(SHA256_CTX*)’ is deprecated: Since OpenSSL 3.0 [-Wdeprecated-declarations]
+  491 |     SHA256_Init(&ctx);
+      |     ~~~~~~~~~~~^~~~~~
+/usr/include/openssl/sha.h:73:27: note: declared here
+   73 | OSSL_DEPRECATEDIN_3_0 int SHA256_Init(SHA256_CTX *c);
+      |                           ^~~~~~~~~~~
+In file included from /app/src/util.h:30:
+/usr/include/openssl/sha.h:73:27: note: declared here
+   73 | OSSL_DEPRECATEDIN_3_0 int SHA256_Init(SHA256_CTX *c);
+      |                           ^~~~~~~~~~~
+/app/src/util.h:494:17: warning: ‘int SHA256_Final(unsigned char*, SHA256_CTX*)’ is deprecated: Since OpenSSL 3.0 [-Wdeprecated-declarations]
+  494 |     SHA256_Final((unsigned char*)&hash1, &ctx);
+      |     ~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/usr/include/openssl/sha.h:76:27: note: declared here
+   76 | OSSL_DEPRECATEDIN_3_0 int SHA256_Final(unsigned char *md, SHA256_CTX *c);
+      |                           ^~~~~~~~~~~~
+/app/src/util.h: In function ‘uint256 Hash(T1, T1, T2, T2, T3, T3)’:
+/app/src/util.h:508:16: warning: ‘int SHA256_Init(SHA256_CTX*)’ is deprecated: Since OpenSSL 3.0 [-Wdeprecated-declarations]
+  508 |     SHA256_Init(&ctx);
+      |     ~~~~~~~~~~~^~~~~~
+/usr/include/openssl/sha.h:73:27: note: declared here
+   73 | OSSL_DEPRECATEDIN_3_0 int SHA256_Init(SHA256_CTX *c);
+      |                           ^~~~~~~~~~~
+/app/src/util.h: In member function ‘CHashWriter& CHashWriter::write(const char*, size_t)’:
+/app/src/util.h:462:22: warning: ‘int SHA256_Update(SHA256_CTX*, const void*, size_t)’ is deprecated: Since OpenSSL 3.0 [-Wdeprecated-declarations]
+  462 |         SHA256_Update(&ctx, pch, size);
+      |         ~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~
+/usr/include/openssl/sha.h:74:27: note: declared here
+   74 | OSSL_DEPRECATEDIN_3_0 int SHA256_Update(SHA256_CTX *c,
+      |                           ^~~~~~~~~~~~~
+/app/src/util.h:512:17: warning: ‘int SHA256_Final(unsigned char*, SHA256_CTX*)’ is deprecated: Since OpenSSL 3.0 [-Wdeprecated-declarations]
+  512 |     SHA256_Final((unsigned char*)&hash1, &ctx);
+      |     ~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/usr/include/openssl/sha.h:76:27: note: declared here
+   76 | OSSL_DEPRECATEDIN_3_0 int SHA256_Final(unsigned char *md, SHA256_CTX *c);
+      |                           ^~~~~~~~~~~~
+/app/src/util.h: In member function ‘uint256 CHashWriter::GetHash()’:
+/app/src/util.h:469:21: warning: ‘int SHA256_Final(unsigned char*, SHA256_CTX*)’ is deprecated: Since OpenSSL 3.0 [-Wdeprecated-declarations]
+  469 |         SHA256_Final((unsigned char*)&hash1, &ctx);
+      |         ~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/usr/include/openssl/sha.h:76:27: note: declared here
+   76 | OSSL_DEPRECATEDIN_3_0 int SHA256_Final(unsigned char *md, SHA256_CTX *c);
+      |                           ^~~~~~~~~~~~
+/app/src/util.h: In function ‘uint256 Hash(T1, T1, T2, T2)’:
+/app/src/util.h:491:16: warning: ‘int SHA256_Init(SHA256_CTX*)’ is deprecated: Since OpenSSL 3.0 [-Wdeprecated-declarations]
+  491 |     SHA256_Init(&ctx);
+      |     ~~~~~~~~~~~^~~~~~
+/usr/include/openssl/sha.h:73:27: note: declared here
+   73 | OSSL_DEPRECATEDIN_3_0 int SHA256_Init(SHA256_CTX *c);
+      |                           ^~~~~~~~~~~
+/app/src/util.h: In function ‘uint160 Hash160(const std::vector<unsigned char>&)’:
+/app/src/util.h:531:14: warning: ‘unsigned char* RIPEMD160(const unsigned char*, size_t, unsigned char*)’ is deprecated: Since OpenSSL 3.0 [-Wdeprecated-declarations]
+  531 |     RIPEMD160((unsigned char*)&hash1, sizeof(hash1), (unsigned char*)&hash2);
+      |     ~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from /app/src/util.h:31:
+/usr/include/openssl/ripemd.h:49:38: note: declared here
+   49 | OSSL_DEPRECATEDIN_3_0 unsigned char *RIPEMD160(const unsigned char *d, size_t n,
+      |                                      ^~~~~~~~~
+/app/src/util.h:494:17: warning: ‘int SHA256_Final(unsigned char*, SHA256_CTX*)’ is deprecated: Since OpenSSL 3.0 [-Wdeprecated-declarations]
+  494 |     SHA256_Final((unsigned char*)&hash1, &ctx);
+      |     ~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/usr/include/openssl/sha.h:76:27: note: declared here
+   76 | OSSL_DEPRECATEDIN_3_0 int SHA256_Final(unsigned char *md, SHA256_CTX *c);
+      |                           ^~~~~~~~~~~~
+/app/src/util.h: In function ‘uint256 Hash(T1, T1, T2, T2, T3, T3)’:
+/app/src/util.h:508:16: warning: ‘int SHA256_Init(SHA256_CTX*)’ is deprecated: Since OpenSSL 3.0 [-Wdeprecated-declarations]
+  508 |     SHA256_Init(&ctx);
+      |     ~~~~~~~~~~~^~~~~~
+/usr/include/openssl/sha.h:73:27: note: declared here
+   73 | OSSL_DEPRECATEDIN_3_0 int SHA256_Init(SHA256_CTX *c);
+      |                           ^~~~~~~~~~~
+/app/src/util.h:512:17: warning: ‘int SHA256_Final(unsigned char*, SHA256_CTX*)’ is deprecated: Since OpenSSL 3.0 [-Wdeprecated-declarations]
+  512 |     SHA256_Final((unsigned char*)&hash1, &ctx);
+      |     ~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/usr/include/openssl/sha.h:76:27: note: declared here
+   76 | OSSL_DEPRECATEDIN_3_0 int SHA256_Final(unsigned char *md, SHA256_CTX *c);
+      |                           ^~~~~~~~~~~~
+/app/src/util.h: In function ‘uint160 Hash160(const std::vector<unsigned char>&)’:
+/app/src/util.h:531:14: warning: ‘unsigned char* RIPEMD160(const unsigned char*, size_t, unsigned char*)’ is deprecated: Since OpenSSL 3.0 [-Wdeprecated-declarations]
+  531 |     RIPEMD160((unsigned char*)&hash1, sizeof(hash1), (unsigned char*)&hash2);
+      |     ~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from /app/src/util.h:31:
+/usr/include/openssl/ripemd.h:49:38: note: declared here
+   49 | OSSL_DEPRECATEDIN_3_0 unsigned char *RIPEMD160(const unsigned char *d, size_t n,
+      |                                      ^~~~~~~~~
+In file included from /usr/include/boost/test/test_tools.hpp:45,
+                 from /usr/include/boost/test/unit_test.hpp:18,
+                 from test/Checkpoints_tests.cpp:5:
+test/Checkpoints_tests.cpp: In member function ‘void Checkpoints_tests::sanity::test_method()’:
+test/Checkpoints_tests.cpp:19:30: error: ‘CheckBlock’ is not a member of ‘Checkpoints’
+   19 |     BOOST_CHECK(Checkpoints::CheckBlock(11111, p11111));
+      |                              ^~~~~~~~~~
+test/Checkpoints_tests.cpp:20:30: error: ‘CheckBlock’ is not a member of ‘Checkpoints’
+   20 |     BOOST_CHECK(Checkpoints::CheckBlock(134444, p134444));
+      |                              ^~~~~~~~~~
+test/Checkpoints_tests.cpp:24:31: error: ‘CheckBlock’ is not a member of ‘Checkpoints’
+   24 |     BOOST_CHECK(!Checkpoints::CheckBlock(11111, p134444));
+      |                               ^~~~~~~~~~
+test/Checkpoints_tests.cpp:25:31: error: ‘CheckBlock’ is not a member of ‘Checkpoints’
+   25 |     BOOST_CHECK(!Checkpoints::CheckBlock(134444, p11111));
+      |                               ^~~~~~~~~~
+test/Checkpoints_tests.cpp:28:30: error: ‘CheckBlock’ is not a member of ‘Checkpoints’
+   28 |     BOOST_CHECK(Checkpoints::CheckBlock(11111+1, p134444));
+      |                              ^~~~~~~~~~
+test/Checkpoints_tests.cpp:29:30: error: ‘CheckBlock’ is not a member of ‘Checkpoints’
+   29 |     BOOST_CHECK(Checkpoints::CheckBlock(134444+1, p11111));
+      |                              ^~~~~~~~~~
+In file included from /app/src/addrman.h:9,
+                 from /app/src/net.h:20,
+                 from /app/src/main.h:10:
+/app/src/util.h: In member function ‘void CHashWriter::Init()’:
+/app/src/util.h:454:20: warning: ‘int SHA256_Init(SHA256_CTX*)’ is deprecated: Since OpenSSL 3.0 [-Wdeprecated-declarations]
+  454 |         SHA256_Init(&ctx);
+      |         ~~~~~~~~~~~^~~~~~
+In file included from /app/src/util.h:30:
+/usr/include/openssl/sha.h:73:27: note: declared here
+   73 | OSSL_DEPRECATEDIN_3_0 int SHA256_Init(SHA256_CTX *c);
+      |                           ^~~~~~~~~~~
+/app/src/util.h: In member function ‘CHashWriter& CHashWriter::write(const char*, size_t)’:
+/app/src/util.h:462:22: warning: ‘int SHA256_Update(SHA256_CTX*, const void*, size_t)’ is deprecated: Since OpenSSL 3.0 [-Wdeprecated-declarations]
+  462 |         SHA256_Update(&ctx, pch, size);
+      |         ~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~
+/usr/include/openssl/sha.h:74:27: note: declared here
+   74 | OSSL_DEPRECATEDIN_3_0 int SHA256_Update(SHA256_CTX *c,
+      |                           ^~~~~~~~~~~~~
+/app/src/util.h: In member function ‘uint256 CHashWriter::GetHash()’:
+/app/src/util.h:469:21: warning: ‘int SHA256_Final(unsigned char*, SHA256_CTX*)’ is deprecated: Since OpenSSL 3.0 [-Wdeprecated-declarations]
+  469 |         SHA256_Final((unsigned char*)&hash1, &ctx);
+      |         ~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/usr/include/openssl/sha.h:76:27: note: declared here
+   76 | OSSL_DEPRECATEDIN_3_0 int SHA256_Final(unsigned char *md, SHA256_CTX *c);
+      |                           ^~~~~~~~~~~~
+/app/src/util.h: In function ‘uint256 Hash(T1, T1, T2, T2)’:
+/app/src/util.h:491:16: warning: ‘int SHA256_Init(SHA256_CTX*)’ is deprecated: Since OpenSSL 3.0 [-Wdeprecated-declarations]
+  491 |     SHA256_Init(&ctx);
+      |     ~~~~~~~~~~~^~~~~~
+/usr/include/openssl/sha.h:73:27: note: declared here
+   73 | OSSL_DEPRECATEDIN_3_0 int SHA256_Init(SHA256_CTX *c);
+      |                           ^~~~~~~~~~~
+/app/src/util.h:494:17: warning: ‘int SHA256_Final(unsigned char*, SHA256_CTX*)’ is deprecated: Since OpenSSL 3.0 [-Wdeprecated-declarations]
+  494 |     SHA256_Final((unsigned char*)&hash1, &ctx);
+      |     ~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/usr/include/openssl/sha.h:76:27: note: declared here
+   76 | OSSL_DEPRECATEDIN_3_0 int SHA256_Final(unsigned char *md, SHA256_CTX *c);
+      |                           ^~~~~~~~~~~~
+/app/src/util.h: In function ‘uint256 Hash(T1, T1, T2, T2, T3, T3)’:
+/app/src/util.h:508:16: warning: ‘int SHA256_Init(SHA256_CTX*)’ is deprecated: Since OpenSSL 3.0 [-Wdeprecated-declarations]
+  508 |     SHA256_Init(&ctx);
+      |     ~~~~~~~~~~~^~~~~~
+/usr/include/openssl/sha.h:73:27: note: declared here
+   73 | OSSL_DEPRECATEDIN_3_0 int SHA256_Init(SHA256_CTX *c);
+      |                           ^~~~~~~~~~~
+/app/src/util.h:512:17: warning: ‘int SHA256_Final(unsigned char*, SHA256_CTX*)’ is deprecated: Since OpenSSL 3.0 [-Wdeprecated-declarations]
+  512 |     SHA256_Final((unsigned char*)&hash1, &ctx);
+      |     ~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/usr/include/openssl/sha.h:76:27: note: declared here
+   76 | OSSL_DEPRECATEDIN_3_0 int SHA256_Final(unsigned char *md, SHA256_CTX *c);
+      |                           ^~~~~~~~~~~~
+/app/src/util.h: In function ‘uint160 Hash160(const std::vector<unsigned char>&)’:
+/app/src/util.h:531:14: warning: ‘unsigned char* RIPEMD160(const unsigned char*, size_t, unsigned char*)’ is deprecated: Since OpenSSL 3.0 [-Wdeprecated-declarations]
+  531 |     RIPEMD160((unsigned char*)&hash1, sizeof(hash1), (unsigned char*)&hash2);
+      |     ~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from /app/src/util.h:31:
+/usr/include/openssl/ripemd.h:49:38: note: declared here
+   49 | OSSL_DEPRECATEDIN_3_0 unsigned char *RIPEMD160(const unsigned char *d, size_t n,
+      |                                      ^~~~~~~~~
+/app/src/main.h: In constructor ‘CTxIn::CTxIn(COutPoint, CScript, unsigned int)’:
+/app/src/main.h:269:21: warning: implicitly-declared ‘CScript& CScript::operator=(const CScript&)’ is deprecated [-Wdeprecated-copy]
+  269 |         scriptSig = scriptSigIn;
+      |                     ^~~~~~~~~~~
+In file included from /app/src/main.h:11:
+/app/src/script.h:277:5: note: because ‘CScript’ has user-provided ‘CScript::CScript(const CScript&)’
+  277 |     CScript(const CScript& b) : std::vector<unsigned char>(b.begin(), b.end()) { }
+      |     ^~~~~~~
+/app/src/main.h: In constructor ‘CTxIn::CTxIn(COutPoint, CScript, unsigned int)’:
+/app/src/main.h:269:21: warning: implicitly-declared ‘CScript& CScript::operator=(const CScript&)’ is deprecated [-Wdeprecated-copy]
+  269 |         scriptSig = scriptSigIn;
+      |                     ^~~~~~~~~~~
+In file included from /app/src/main.h:11:
+/app/src/script.h:277:5: note: because ‘CScript’ has user-provided ‘CScript::CScript(const CScript&)’
+  277 |     CScript(const CScript& b) : std::vector<unsigned char>(b.begin(), b.end()) { }
+      |     ^~~~~~~
+/app/src/main.h: In constructor ‘CTxIn::CTxIn(uint256, unsigned int, CScript, unsigned int)’:
+/app/src/main.h:276:21: warning: implicitly-declared ‘CScript& CScript::operator=(const CScript&)’ is deprecated [-Wdeprecated-copy]
+  276 |         scriptSig = scriptSigIn;
+      |                     ^~~~~~~~~~~
+/app/src/script.h:277:5: note: because ‘CScript’ has user-provided ‘CScript::CScript(const CScript&)’
+  277 |     CScript(const CScript& b) : std::vector<unsigned char>(b.begin(), b.end()) { }
+      |     ^~~~~~~
+/app/src/main.h: In constructor ‘CTxIn::CTxIn(uint256, unsigned int, CScript, unsigned int)’:
+/app/src/main.h:276:21: warning: implicitly-declared ‘CScript& CScript::operator=(const CScript&)’ is deprecated [-Wdeprecated-copy]
+  276 |         scriptSig = scriptSigIn;
+      |                     ^~~~~~~~~~~
+/app/src/script.h:277:5: note: because ‘CScript’ has user-provided ‘CScript::CScript(const CScript&)’
+  277 |     CScript(const CScript& b) : std::vector<unsigned char>(b.begin(), b.end()) { }
+      |     ^~~~~~~
+/app/src/main.h: In constructor ‘CTxOut::CTxOut(int64_t, CScript)’:
+/app/src/main.h:350:24: warning: implicitly-declared ‘CScript& CScript::operator=(const CScript&)’ is deprecated [-Wdeprecated-copy]
+  350 |         scriptPubKey = scriptPubKeyIn;
+      |                        ^~~~~~~~~~~~~~
+/app/src/script.h:277:5: note: because ‘CScript’ has user-provided ‘CScript::CScript(const CScript&)’
+  277 |     CScript(const CScript& b) : std::vector<unsigned char>(b.begin(), b.end()) { }
+      |     ^~~~~~~
+/app/src/main.h: In constructor ‘CTxOut::CTxOut(int64_t, CScript)’:
+/app/src/main.h:350:24: warning: implicitly-declared ‘CScript& CScript::operator=(const CScript&)’ is deprecated [-Wdeprecated-copy]
+  350 |         scriptPubKey = scriptPubKeyIn;
+      |                        ^~~~~~~~~~~~~~
+/app/src/script.h:277:5: note: because ‘CScript’ has user-provided ‘CScript::CScript(const CScript&)’
+  277 |     CScript(const CScript& b) : std::vector<unsigned char>(b.begin(), b.end()) { }
+      |     ^~~~~~~
+/app/src/main.h: In constructor ‘CTxIn::CTxIn(COutPoint, CScript, unsigned int)’:
+/app/src/main.h:269:21: warning: implicitly-declared ‘CScript& CScript::operator=(const CScript&)’ is deprecated [-Wdeprecated-copy]
+  269 |         scriptSig = scriptSigIn;
+      |                     ^~~~~~~~~~~
+In file included from /app/src/main.h:11:
+/app/src/script.h:277:5: note: because ‘CScript’ has user-provided ‘CScript::CScript(const CScript&)’
+  277 |     CScript(const CScript& b) : std::vector<unsigned char>(b.begin(), b.end()) { }
+      |     ^~~~~~~
+/app/src/main.h: In constructor ‘CTxIn::CTxIn(uint256, unsigned int, CScript, unsigned int)’:
+/app/src/main.h:276:21: warning: implicitly-declared ‘CScript& CScript::operator=(const CScript&)’ is deprecated [-Wdeprecated-copy]
+  276 |         scriptSig = scriptSigIn;
+      |                     ^~~~~~~~~~~
+/app/src/script.h:277:5: note: because ‘CScript’ has user-provided ‘CScript::CScript(const CScript&)’
+  277 |     CScript(const CScript& b) : std::vector<unsigned char>(b.begin(), b.end()) { }
+      |     ^~~~~~~
+/app/src/main.h: In constructor ‘CTxOut::CTxOut(int64_t, CScript)’:
+/app/src/main.h:350:24: warning: implicitly-declared ‘CScript& CScript::operator=(const CScript&)’ is deprecated [-Wdeprecated-copy]
+  350 |         scriptPubKey = scriptPubKeyIn;
+      |                        ^~~~~~~~~~~~~~
+/app/src/script.h:277:5: note: because ‘CScript’ has user-provided ‘CScript::CScript(const CScript&)’
+  277 |     CScript(const CScript& b) : std::vector<unsigned char>(b.begin(), b.end()) { }
+      |     ^~~~~~~
+In file included from /usr/include/boost/test/unit_test.hpp:19:
+test/Checkpoints_tests.cpp: At global scope:
+test/Checkpoints_tests.cpp:34:1: fatal error: opening dependency file obj/test/Checkpoints_tests.d: No such file or directory
+   34 | BOOST_AUTO_TEST_SUITE_END()
+      | ^~~~~~~~~~~~~~~~~~~~~~~~~
+compilation terminated.
+make: *** [makefile.test:211: obj/test/Checkpoints_tests.o] Error 1
+make: *** Waiting for unfinished jobs....
+test/accounting_tests.cpp: At global scope:
+test/accounting_tests.cpp:12:42: error: ‘int64’ was not declared in this scope
+   12 | GetResults(CWalletDB& walletdb, std::map<int64, CAccountingEntry>& results)
+      |                                          ^~~~~
+test/accounting_tests.cpp:12:49: error: ‘CAccountingEntry’ was not declared in this scope; did you mean ‘CAccountingentry’?
+   12 | GetResults(CWalletDB& walletdb, std::map<int64, CAccountingEntry>& results)
+      |                                                 ^~~~~~~~~~~~~~~~
+      |                                                 CAccountingentry
+test/accounting_tests.cpp:12:65: error: template argument 1 is invalid
+   12 | GetResults(CWalletDB& walletdb, std::map<int64, CAccountingEntry>& results)
+      |                                                                 ^
+test/accounting_tests.cpp:12:65: error: template argument 2 is invalid
+test/accounting_tests.cpp:12:65: error: template argument 3 is invalid
+test/accounting_tests.cpp:12:65: error: template argument 4 is invalid
+test/accounting_tests.cpp: In function ‘void accounting_tests::GetResults(CWalletDB&, int&)’:
+test/accounting_tests.cpp:14:15: error: ‘CAccountingEntry’ was not declared in this scope; did you mean ‘CAccountingentry’?
+   14 |     std::list<CAccountingEntry> aes;
+      |               ^~~~~~~~~~~~~~~~
+      |               CAccountingentry
+test/accounting_tests.cpp:14:31: error: template argument 1 is invalid
+   14 |     std::list<CAccountingEntry> aes;
+      |                               ^
+test/accounting_tests.cpp:14:31: error: template argument 2 is invalid
+test/accounting_tests.cpp:16:13: error: request for member ‘clear’ in ‘results’, which is of non-class type ‘int’
+   16 |     results.clear();
+      |             ^~~~~
+test/accounting_tests.cpp:18:41: error: cannot convert ‘int’ to ‘std::__cxx11::list<CAccountingentry>&’
+   18 |     walletdb.ListAccountCreditDebit("", aes);
+      |                                         ^~~
+      |                                         |
+      |                                         int
+In file included from /app/src/wallet.h:20:
+/app/src/walletdb.h:257:93: note:   initializing argument 2 of ‘void CWalletDB::ListAccountCreditDebit(const std::string&, std::__cxx11::list<CAccountingentry>&)’
+  257 |     void ListAccountCreditDebit(const std::string& strAccount, std::list<CAccountingentry>& acentries);
+      |                                                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~
+In file included from /usr/include/boost/numeric/conversion/detail/meta.hpp:16,
+                 from /usr/include/boost/numeric/conversion/detail/conversion_traits.hpp:17,
+                 from /usr/include/boost/numeric/conversion/conversion_traits.hpp:13,
+                 from /usr/include/boost/test/tools/old/impl.hpp:28,
+                 from /usr/include/boost/test/test_tools.hpp:46,
+                 from /usr/include/boost/test/unit_test.hpp:18,
+                 from test/accounting_tests.cpp:1:
+/usr/include/boost/mpl/eval_if.hpp: In instantiation of ‘struct boost::mpl::eval_if<mpl_::bool_<false>, boost::range_const_iterator<int, void>, boost::range_mutable_iterator<int, void> >’:
+/usr/include/boost/foreach.hpp:366:13:   required from ‘struct boost::foreach_detail_::foreach_iterator<int, mpl_::bool_<false> >’
+/usr/include/boost/foreach.hpp:675:1:   required by substitution of ‘template<class T, class C> boost::foreach_detail_::auto_any<typename boost::foreach_detail_::foreach_iterator<T, C>::type> boost::foreach_detail_::begin(auto_any_t, type2type<T, C>*, mpl_::false_*) [with T = int; C = mpl_::bool_<false>]’
+test/accounting_tests.cpp:19:5:   required from here
+/usr/include/boost/mpl/eval_if.hpp:38:31: error: no type named ‘type’ in ‘boost::mpl::eval_if<mpl_::bool_<false>, boost::range_const_iterator<int, void>, boost::range_mutable_iterator<int, void> >::f_’ {aka ‘struct boost::range_mutable_iterator<int, void>’}
+   38 |     typedef typename f_::type type;
+      |                               ^~~~
+In file included from test/accounting_tests.cpp:3:
+test/accounting_tests.cpp:19:5: error: no matching function for call to ‘begin(const boost::foreach_detail_::auto_any_base&, boost::foreach_detail_::type2type<int, mpl_::bool_<false> >*, boost::mpl::or_<boost::is_rvalue_reference<int&>, boost::mpl::and_<boost::mpl::not_<boost::foreach::is_noncopyable<int> >, boost::foreach::is_lightweight_proxy<int>, mpl_::bool_<true>, mpl_::bool_<true>, mpl_::bool_<true> >, mpl_::bool_<false>, mpl_::bool_<false>, mpl_::bool_<false> >*)’
+   19 |     BOOST_FOREACH(CAccountingEntry& ae, aes)
+      |     ^~~~~~~~~~~~~
+/usr/include/boost/foreach.hpp:667:1: note: candidate: ‘template<class T, class C> boost::foreach_detail_::auto_any<typename boost::foreach_detail_::foreach_iterator<T, C>::type> boost::foreach_detail_::begin(auto_any_t, type2type<T, C>*, mpl_::true_*)’
+  667 | begin(auto_any_t col, type2type<T, C> *, boost::mpl::true_ *) // rvalue
+      | ^~~~~
+/usr/include/boost/foreach.hpp:667:1: note:   template argument deduction/substitution failed:
+test/accounting_tests.cpp:19:5: note:   cannot convert ‘(true ? 0 :  boost::foreach_detail_::or_<boost::is_rvalue_reference<int&>, boost::mpl::and_<boost::mpl::not_<boost::foreach::is_noncopyable<int> >, boost::foreach::is_lightweight_proxy<int>, mpl_::bool_<true>, mpl_::bool_<true>, mpl_::bool_<true> > >(boost::foreach_detail_::is_rvalue_<int&>(aes, 0), boost::foreach_detail_::and_<boost::mpl::not_<boost::foreach::is_noncopyable<int> >, boost::foreach::is_lightweight_proxy<int> >(boost::foreach_detail_::not_<boost::foreach::is_noncopyable<int> >(boost_foreach_is_noncopyable<int>((* & boost::foreach_detail_::to_ptr<int>(aes)), boost_foreach_argument_dependent_lookup_hack_value)), boost_foreach_is_lightweight_proxy<int>((* & boost::foreach_detail_::to_ptr<int>(aes)), boost_foreach_argument_dependent_lookup_hack_value))))’ (type ‘boost::mpl::or_<boost::is_rvalue_reference<int&>, boost::mpl::and_<boost::mpl::not_<boost::foreach::is_noncopyable<int> >, boost::foreach::is_lightweight_proxy<int>, mpl_::bool_<true>, mpl_::bool_<true>, mpl_::bool_<true> >, mpl_::bool_<false>, mpl_::bool_<false>, mpl_::bool_<false> >*’) to type ‘mpl_::true_*’ {aka ‘mpl_::bool_<true>*’}
+   19 |     BOOST_FOREACH(CAccountingEntry& ae, aes)
+      |     ^~~~~~~~~~~~~
+/usr/include/boost/foreach.hpp:675:1: note: candidate: ‘template<class T, class C> boost::foreach_detail_::auto_any<typename boost::foreach_detail_::foreach_iterator<T, C>::type> boost::foreach_detail_::begin(auto_any_t, type2type<T, C>*, mpl_::false_*)’
+  675 | begin(auto_any_t col, type2type<T, C> *, boost::mpl::false_ *) // lvalue
+      | ^~~~~
+/usr/include/boost/foreach.hpp:675:1: note:   substitution of deduced template arguments resulted in errors seen above
+/usr/include/boost/foreach.hpp:696:1: note: candidate: ‘template<class T, class C> boost::foreach_detail_::auto_any<T*> boost::foreach_detail_::begin(auto_any_t, type2type<T*, C>*, mpl_::true_*)’
+  696 | begin(auto_any_t col, type2type<T *, C> *, boost::mpl::true_ *) // null-terminated C-style strings
+      | ^~~~~
+/usr/include/boost/foreach.hpp:696:1: note:   template argument deduction/substitution failed:
+test/accounting_tests.cpp:19:5: note:   mismatched types ‘T*’ and ‘int’
+   19 |     BOOST_FOREACH(CAccountingEntry& ae, aes)
+      |     ^~~~~~~~~~~~~
+test/accounting_tests.cpp:19:5: error: no matching function for call to ‘end(const boost::foreach_detail_::auto_any_base&, boost::foreach_detail_::type2type<int, mpl_::bool_<false> >*, boost::mpl::or_<boost::is_rvalue_reference<int&>, boost::mpl::and_<boost::mpl::not_<boost::foreach::is_noncopyable<int> >, boost::foreach::is_lightweight_proxy<int>, mpl_::bool_<true>, mpl_::bool_<true>, mpl_::bool_<true> >, mpl_::bool_<false>, mpl_::bool_<false>, mpl_::bool_<false> >*)’
+   19 |     BOOST_FOREACH(CAccountingEntry& ae, aes)
+      |     ^~~~~~~~~~~~~
+/usr/include/boost/foreach.hpp:707:1: note: candidate: ‘template<class T, class C> boost::foreach_detail_::auto_any<typename boost::foreach_detail_::foreach_iterator<T, C>::type> boost::foreach_detail_::end(auto_any_t, type2type<T, C>*, mpl_::true_*)’
+  707 | end(auto_any_t col, type2type<T, C> *, boost::mpl::true_ *) // rvalue
+      | ^~~
+/usr/include/boost/foreach.hpp:707:1: note:   template argument deduction/substitution failed:
+test/accounting_tests.cpp:19:5: note:   cannot convert ‘(true ? 0 :  boost::foreach_detail_::or_<boost::is_rvalue_reference<int&>, boost::mpl::and_<boost::mpl::not_<boost::foreach::is_noncopyable<int> >, boost::foreach::is_lightweight_proxy<int>, mpl_::bool_<true>, mpl_::bool_<true>, mpl_::bool_<true> > >(boost::foreach_detail_::is_rvalue_<int&>(aes, 0), boost::foreach_detail_::and_<boost::mpl::not_<boost::foreach::is_noncopyable<int> >, boost::foreach::is_lightweight_proxy<int> >(boost::foreach_detail_::not_<boost::foreach::is_noncopyable<int> >(boost_foreach_is_noncopyable<int>((* & boost::foreach_detail_::to_ptr<int>(aes)), boost_foreach_argument_dependent_lookup_hack_value)), boost_foreach_is_lightweight_proxy<int>((* & boost::foreach_detail_::to_ptr<int>(aes)), boost_foreach_argument_dependent_lookup_hack_value))))’ (type ‘boost::mpl::or_<boost::is_rvalue_reference<int&>, boost::mpl::and_<boost::mpl::not_<boost::foreach::is_noncopyable<int> >, boost::foreach::is_lightweight_proxy<int>, mpl_::bool_<true>, mpl_::bool_<true>, mpl_::bool_<true> >, mpl_::bool_<false>, mpl_::bool_<false>, mpl_::bool_<false> >*’) to type ‘mpl_::true_*’ {aka ‘mpl_::bool_<true>*’}
+   19 |     BOOST_FOREACH(CAccountingEntry& ae, aes)
+      |     ^~~~~~~~~~~~~
+/usr/include/boost/foreach.hpp:715:1: note: candidate: ‘template<class T, class C> boost::foreach_detail_::auto_any<typename boost::foreach_detail_::foreach_iterator<T, C>::type> boost::foreach_detail_::end(auto_any_t, type2type<T, C>*, mpl_::false_*)’
+  715 | end(auto_any_t col, type2type<T, C> *, boost::mpl::false_ *) // lvalue
+      | ^~~
+/usr/include/boost/foreach.hpp:715:1: note:   template argument deduction/substitution failed:
+/usr/include/boost/foreach.hpp:736:1: note: candidate: ‘template<class T, class C> boost::foreach_detail_::auto_any<int> boost::foreach_detail_::end(auto_any_t, type2type<T*, C>*, mpl_::true_*)’
+  736 | end(auto_any_t, type2type<T *, C> *, boost::mpl::true_ *) // null-terminated C-style strings
+      | ^~~
+/usr/include/boost/foreach.hpp:736:1: note:   template argument deduction/substitution failed:
+test/accounting_tests.cpp:19:5: note:   mismatched types ‘T*’ and ‘int’
+   19 |     BOOST_FOREACH(CAccountingEntry& ae, aes)
+      |     ^~~~~~~~~~~~~
+test/accounting_tests.cpp:19:37: error: ‘ae’ was not declared in this scope; did you mean ‘aes’?
+   19 |     BOOST_FOREACH(CAccountingEntry& ae, aes)
+      |                                     ^~
+test/accounting_tests.cpp:19:5: error: no matching function for call to ‘deref(const boost::foreach_detail_::auto_any_base&, boost::foreach_detail_::type2type<int, mpl_::bool_<false> >*)’
+   19 |     BOOST_FOREACH(CAccountingEntry& ae, aes)
+      |     ^~~~~~~~~~~~~
+/usr/include/boost/foreach.hpp:775:1: note: candidate: ‘template<class T, class C> typename boost::foreach_detail_::foreach_reference<T, C>::type boost::foreach_detail_::deref(auto_any_t, type2type<T, C>*)’
+  775 | deref(auto_any_t cur, type2type<T, C> *)
+      | ^~~~~
+/usr/include/boost/foreach.hpp:775:1: note:   template argument deduction/substitution failed:
+/usr/include/boost/foreach.hpp: In substitution of ‘template<class T, class C> typename boost::foreach_detail_::foreach_reference<T, C>::type boost::foreach_detail_::deref(auto_any_t, type2type<T, C>*) [with T = int; C = mpl_::bool_<false>]’:
+test/accounting_tests.cpp:19:5:   required from here
+/usr/include/boost/foreach.hpp:775:1: error: no type named ‘type’ in ‘struct boost::foreach_detail_::foreach_reference<int, mpl_::bool_<false> >’
+test/accounting_tests.cpp: In member function ‘void accounting_tests::acc_orderupgrade::test_method()’:
+test/accounting_tests.cpp:30:5: error: ‘CAccountingEntry’ was not declared in this scope; did you mean ‘CAccountingentry’?
+   30 |     CAccountingEntry ae;
+      |     ^~~~~~~~~~~~~~~~
+      |     CAccountingentry
+test/accounting_tests.cpp:31:14: error: ‘int64’ was not declared in this scope
+   31 |     std::map<int64, CAccountingEntry> results;
+      |              ^~~~~
+test/accounting_tests.cpp:31:37: error: template argument 1 is invalid
+   31 |     std::map<int64, CAccountingEntry> results;
+      |                                     ^
+test/accounting_tests.cpp:31:37: error: template argument 3 is invalid
+test/accounting_tests.cpp:31:37: error: template argument 4 is invalid
+test/accounting_tests.cpp:33:5: error: ‘ae’ was not declared in this scope
+   33 |     ae.strAccount = "";
+      |     ^~
+test/accounting_tests.cpp:38:14: error: ‘class CWalletDB’ has no member named ‘WriteAccountingEntry’; did you mean ‘WriteAccountingentry’?
+   38 |     walletdb.WriteAccountingEntry(ae);
+      |              ^~~~~~~~~~~~~~~~~~~~
+      |              WriteAccountingentry
+test/accounting_tests.cpp:48:14: error: ‘class CWalletDB’ has no member named ‘WriteAccountingEntry’; did you mean ‘WriteAccountingentry’?
+   48 |     walletdb.WriteAccountingEntry(ae);
+      |              ^~~~~~~~~~~~~~~~~~~~
+      |              WriteAccountingentry
+In file included from /usr/include/boost/test/test_tools.hpp:45:
+test/accounting_tests.cpp:53:30: error: request for member ‘size’ in ‘results’, which is of non-class type ‘int’
+   53 |     BOOST_CHECK(2 == results.size());
+      |                              ^~~~
+test/accounting_tests.cpp:54:24: error: invalid types ‘int[int]’ for array subscript
+   54 |     BOOST_CHECK(results[0].nTime == 1333333333);
+      |                        ^
+test/accounting_tests.cpp:55:24: error: invalid types ‘int[int]’ for array subscript
+   55 |     BOOST_CHECK(results[0].strComment.empty());
+      |                        ^
+test/accounting_tests.cpp:57:24: error: invalid types ‘int[int]’ for array subscript
+   57 |     BOOST_CHECK(results[2].nTime == 1333333336);
+      |                        ^
+test/accounting_tests.cpp:58:24: error: invalid types ‘int[int]’ for array subscript
+   58 |     BOOST_CHECK(results[2].strOtherAccount == "c");
+      |                        ^
+test/accounting_tests.cpp:64:14: error: ‘class CWalletDB’ has no member named ‘WriteAccountingEntry’; did you mean ‘WriteAccountingentry’?
+   64 |     walletdb.WriteAccountingEntry(ae);
+      |              ^~~~~~~~~~~~~~~~~~~~
+      |              WriteAccountingentry
+test/accounting_tests.cpp:68:25: error: request for member ‘size’ in ‘results’, which is of non-class type ‘int’
+   68 |     BOOST_CHECK(results.size() == 3);
+      |                         ^~~~
+test/accounting_tests.cpp:70:24: error: invalid types ‘int[int]’ for array subscript
+   70 |     BOOST_CHECK(results[0].nTime == 1333333333);
+      |                        ^
+test/accounting_tests.cpp:72:24: error: invalid types ‘int[int]’ for array subscript
+   72 |     BOOST_CHECK(results[2].nTime == 1333333336);
+      |                        ^
+test/accounting_tests.cpp:73:24: error: invalid types ‘int[int]’ for array subscript
+   73 |     BOOST_CHECK(results[3].nTime == 1333333330);
+      |                        ^
+test/accounting_tests.cpp:74:24: error: invalid types ‘int[int]’ for array subscript
+   74 |     BOOST_CHECK(results[3].strComment.empty());
+      |                        ^
+test/accounting_tests.cpp:92:25: error: request for member ‘size’ in ‘results’, which is of non-class type ‘int’
+   92 |     BOOST_CHECK(results.size() == 3);
+      |                         ^~~~
+test/accounting_tests.cpp:95:24: error: invalid types ‘int[int]’ for array subscript
+   95 |     BOOST_CHECK(results[1].nTime == 1333333333);
+      |                        ^
+test/accounting_tests.cpp:97:24: error: invalid types ‘int[int]’ for array subscript
+   97 |     BOOST_CHECK(results[3].nTime == 1333333336);
+      |                        ^
+test/accounting_tests.cpp:98:24: error: invalid types ‘int[int]’ for array subscript
+   98 |     BOOST_CHECK(results[4].nTime == 1333333330);
+      |                        ^
+test/accounting_tests.cpp:99:24: error: invalid types ‘int[int]’ for array subscript
+   99 |     BOOST_CHECK(results[4].strComment.empty());
+      |                        ^
+test/accounting_tests.cpp:106:14: error: ‘class CWalletDB’ has no member named ‘WriteAccountingEntry’; did you mean ‘WriteAccountingentry’?
+  106 |     walletdb.WriteAccountingEntry(ae);
+      |              ^~~~~~~~~~~~~~~~~~~~
+      |              WriteAccountingentry
+test/accounting_tests.cpp:110:25: error: request for member ‘size’ in ‘results’, which is of non-class type ‘int’
+  110 |     BOOST_CHECK(results.size() == 4);
+      |                         ^~~~
+test/accounting_tests.cpp:113:24: error: invalid types ‘int[int]’ for array subscript
+  113 |     BOOST_CHECK(results[1].nTime == 1333333333);
+      |                        ^
+test/accounting_tests.cpp:115:24: error: invalid types ‘int[int]’ for array subscript
+  115 |     BOOST_CHECK(results[3].nTime == 1333333336);
+      |                        ^
+test/accounting_tests.cpp:116:24: error: invalid types ‘int[int]’ for array subscript
+  116 |     BOOST_CHECK(results[3].strComment.empty());
+      |                        ^
+test/accounting_tests.cpp:117:24: error: invalid types ‘int[int]’ for array subscript
+  117 |     BOOST_CHECK(results[4].nTime == 1333333330);
+      |                        ^
+test/accounting_tests.cpp:118:24: error: invalid types ‘int[int]’ for array subscript
+  118 |     BOOST_CHECK(results[4].strComment.empty());
+      |                        ^
+test/accounting_tests.cpp:119:24: error: invalid types ‘int[int]’ for array subscript
+  119 |     BOOST_CHECK(results[5].nTime == 1333333334);
+      |                        ^
+/app/src/util.h: In instantiation of ‘uint256 Hash(T1, T1, T2, T2) [with T1 = char*; T2 = char*]’:
+/app/src/main.h:993:43:   required from here
+/app/src/util.h:491:16: warning: ‘int SHA256_Init(SHA256_CTX*)’ is deprecated: Since OpenSSL 3.0 [-Wdeprecated-declarations]
+  491 |     SHA256_Init(&ctx);
+      |     ~~~~~~~~~~~^~~~~~
+/usr/include/openssl/sha.h:73:27: note: declared here
+   73 | OSSL_DEPRECATEDIN_3_0 int SHA256_Init(SHA256_CTX *c);
+      |                           ^~~~~~~~~~~
+/app/src/util.h:491:16: warning: ‘int SHA256_Init(SHA256_CTX*)’ is deprecated: Since OpenSSL 3.0 [-Wdeprecated-declarations]
+  491 |     SHA256_Init(&ctx);
+      |     ~~~~~~~~~~~^~~~~~
+/usr/include/openssl/sha.h:73:27: note: declared here
+   73 | OSSL_DEPRECATEDIN_3_0 int SHA256_Init(SHA256_CTX *c);
+      |                           ^~~~~~~~~~~
+/app/src/util.h:492:18: warning: ‘int SHA256_Update(SHA256_CTX*, const void*, size_t)’ is deprecated: Since OpenSSL 3.0 [-Wdeprecated-declarations]
+  492 |     SHA256_Update(&ctx, (p1begin == p1end ? pblank : (unsigned char*)&p1begin[0]), (p1end - p1begin) * sizeof(p1begin[0]));
+      |     ~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/usr/include/openssl/sha.h:74:27: note: declared here
+   74 | OSSL_DEPRECATEDIN_3_0 int SHA256_Update(SHA256_CTX *c,
+      |                           ^~~~~~~~~~~~~
+/app/src/util.h:492:18: warning: ‘int SHA256_Update(SHA256_CTX*, const void*, size_t)’ is deprecated: Since OpenSSL 3.0 [-Wdeprecated-declarations]
+  492 |     SHA256_Update(&ctx, (p1begin == p1end ? pblank : (unsigned char*)&p1begin[0]), (p1end - p1begin) * sizeof(p1begin[0]));
+      |     ~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/usr/include/openssl/sha.h:74:27: note: declared here
+   74 | OSSL_DEPRECATEDIN_3_0 int SHA256_Update(SHA256_CTX *c,
+      |                           ^~~~~~~~~~~~~
+/app/src/util.h:493:18: warning: ‘int SHA256_Update(SHA256_CTX*, const void*, size_t)’ is deprecated: Since OpenSSL 3.0 [-Wdeprecated-declarations]
+  493 |     SHA256_Update(&ctx, (p2begin == p2end ? pblank : (unsigned char*)&p2begin[0]), (p2end - p2begin) * sizeof(p2begin[0]));
+      |     ~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/usr/include/openssl/sha.h:74:27: note: declared here
+   74 | OSSL_DEPRECATEDIN_3_0 int SHA256_Update(SHA256_CTX *c,
+      |                           ^~~~~~~~~~~~~
+/app/src/util.h:493:18: warning: ‘int SHA256_Update(SHA256_CTX*, const void*, size_t)’ is deprecated: Since OpenSSL 3.0 [-Wdeprecated-declarations]
+  493 |     SHA256_Update(&ctx, (p2begin == p2end ? pblank : (unsigned char*)&p2begin[0]), (p2end - p2begin) * sizeof(p2begin[0]));
+      |     ~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/usr/include/openssl/sha.h:74:27: note: declared here
+   74 | OSSL_DEPRECATEDIN_3_0 int SHA256_Update(SHA256_CTX *c,
+      |                           ^~~~~~~~~~~~~
+/app/src/util.h:494:17: warning: ‘int SHA256_Final(unsigned char*, SHA256_CTX*)’ is deprecated: Since OpenSSL 3.0 [-Wdeprecated-declarations]
+  494 |     SHA256_Final((unsigned char*)&hash1, &ctx);
+      |     ~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/usr/include/openssl/sha.h:76:27: note: declared here
+   76 | OSSL_DEPRECATEDIN_3_0 int SHA256_Final(unsigned char *md, SHA256_CTX *c);
+      |                           ^~~~~~~~~~~~
+/app/src/util.h:494:17: warning: ‘int SHA256_Final(unsigned char*, SHA256_CTX*)’ is deprecated: Since OpenSSL 3.0 [-Wdeprecated-declarations]
+  494 |     SHA256_Final((unsigned char*)&hash1, &ctx);
+      |     ~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/usr/include/openssl/sha.h:76:27: note: declared here
+   76 | OSSL_DEPRECATEDIN_3_0 int SHA256_Final(unsigned char *md, SHA256_CTX *c);
+      |                           ^~~~~~~~~~~~
+test/DoS_tests.cpp: In member function ‘void DoS_tests::DoS_bantime::test_method()’:
+test/DoS_tests.cpp:69:5: error: ‘int64’ was not declared in this scope
+   69 |     int64 nStartTime = GetTime();
+      |     ^~~~~
+test/DoS_tests.cpp:70:17: error: ‘nStartTime’ was not declared in this scope; did you mean ‘strptime’?
+   70 |     SetMockTime(nStartTime); // Overrides future calls to GetTime()
+      |                 ^~~~~~~~~~
+      |                 strptime
+test/DoS_tests.cpp: At global scope:
+test/DoS_tests.cpp:85:45: error: ‘int64’ has not been declared
+   85 | static bool CheckNBits(unsigned int nbits1, int64 time1, unsigned int nbits2, int64 time2)\
+      |                                             ^~~~~
+test/DoS_tests.cpp:85:79: error: ‘int64’ has not been declared
+   85 | static bool CheckNBits(unsigned int nbits1, int64 time1, unsigned int nbits2, int64 time2)\
+      |                                                                               ^~~~~
+test/DoS_tests.cpp: In function ‘bool DoS_tests::CheckNBits(unsigned int, int, unsigned int, int)’:
+test/DoS_tests.cpp:89:5: error: ‘int64’ was not declared in this scope
+   89 |     int64 deltaTime = time2-time1;
+      |     ^~~~~
+test/DoS_tests.cpp:92:48: error: ‘deltaTime’ was not declared in this scope; did you mean ‘GetTime’?
+   92 |     required.SetCompact(ComputeMinWork(nbits1, deltaTime));
+      |                                                ^~~~~~~~~
+      |                                                GetTime
+test/DoS_tests.cpp: In member function ‘void DoS_tests::DoS_checknbits::test_method()’:
+test/DoS_tests.cpp:104:22: error: ‘int64’ was not declared in this scope
+  104 |     typedef std::map<int64, unsigned int> BlockData;
+      |                      ^~~~~
+test/DoS_tests.cpp:104:41: error: template argument 1 is invalid
+  104 |     typedef std::map<int64, unsigned int> BlockData;
+      |                                         ^
+test/DoS_tests.cpp:104:41: error: template argument 3 is invalid
+test/DoS_tests.cpp:104:41: error: template argument 4 is invalid
+test/DoS_tests.cpp:109:9: error: cannot convert ‘boost::assign_detail::generic_list<std::pair<int, int> >’ to ‘BlockData’ {aka ‘int’} in initialization
+  106 |         map_list_of(1239852051,486604799)(1262749024,486594666)
+      |         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  107 |         (1279305360,469854461)(1280200847,469830746)(1281678674,469809688)
+      |         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  108 |         (1296207707,453179945)(1302624061,453036989)(1309640330,437004818)
+      |         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  109 |         (1313172719,436789733);
+      |         ^~~~~~~~~~~~~~~~~~~~~~
+      |         |
+      |         boost::assign_detail::generic_list<std::pair<int, int> >
+In file included from /usr/include/boost/iterator/iterator_categories.hpp:14,
+                 from /usr/include/boost/iterator/iterator_facade.hpp:13,
+                 from /usr/include/boost/range/iterator_range_core.hpp:27,
+                 from /usr/include/boost/range/iterator_range.hpp:13,
+                 from /usr/include/boost/assign/list_of.hpp:20,
+                 from test/DoS_tests.cpp:6:
+/usr/include/boost/mpl/eval_if.hpp: In instantiation of ‘struct boost::mpl::eval_if<mpl_::bool_<false>, boost::range_const_iterator<int, void>, boost::range_mutable_iterator<int, void> >’:
+/usr/include/boost/foreach.hpp:366:13:   required from ‘struct boost::foreach_detail_::foreach_iterator<int, mpl_::bool_<false> >’
+/usr/include/boost/foreach.hpp:675:1:   required by substitution of ‘template<class T, class C> boost::foreach_detail_::auto_any<typename boost::foreach_detail_::foreach_iterator<T, C>::type> boost::foreach_detail_::begin(auto_any_t, type2type<T, C>*, mpl_::false_*) [with T = int; C = mpl_::bool_<false>]’
+test/DoS_tests.cpp:113:5:   required from here
+/usr/include/boost/mpl/eval_if.hpp:38:31: error: no type named ‘type’ in ‘boost::mpl::eval_if<mpl_::bool_<false>, boost::range_const_iterator<int, void>, boost::range_mutable_iterator<int, void> >::f_’ {aka ‘struct boost::range_mutable_iterator<int, void>’}
+   38 |     typedef typename f_::type type;
+      |                               ^~~~
+In file included from test/DoS_tests.cpp:9:
+test/DoS_tests.cpp:113:5: error: no matching function for call to ‘begin(const boost::foreach_detail_::auto_any_base&, boost::foreach_detail_::type2type<int, mpl_::bool_<false> >*, boost::mpl::or_<boost::is_rvalue_reference<int&>, boost::mpl::and_<boost::mpl::not_<boost::foreach::is_noncopyable<int> >, boost::foreach::is_lightweight_proxy<int>, mpl_::bool_<true>, mpl_::bool_<true>, mpl_::bool_<true> >, mpl_::bool_<false>, mpl_::bool_<false>, mpl_::bool_<false> >*)’
+  113 |     BOOST_FOREACH(const BlockData::value_type& i, chainData)
+      |     ^~~~~~~~~~~~~
+/usr/include/boost/foreach.hpp:667:1: note: candidate: ‘template<class T, class C> boost::foreach_detail_::auto_any<typename boost::foreach_detail_::foreach_iterator<T, C>::type> boost::foreach_detail_::begin(auto_any_t, type2type<T, C>*, mpl_::true_*)’
+  667 | begin(auto_any_t col, type2type<T, C> *, boost::mpl::true_ *) // rvalue
+      | ^~~~~
+/usr/include/boost/foreach.hpp:667:1: note:   template argument deduction/substitution failed:
+test/DoS_tests.cpp:113:5: note:   cannot convert ‘(true ? 0 :  boost::foreach_detail_::or_<boost::is_rvalue_reference<int&>, boost::mpl::and_<boost::mpl::not_<boost::foreach::is_noncopyable<int> >, boost::foreach::is_lightweight_proxy<int>, mpl_::bool_<true>, mpl_::bool_<true>, mpl_::bool_<true> > >(boost::foreach_detail_::is_rvalue_<int&>(chainData, 0), boost::foreach_detail_::and_<boost::mpl::not_<boost::foreach::is_noncopyable<int> >, boost::foreach::is_lightweight_proxy<int> >(boost::foreach_detail_::not_<boost::foreach::is_noncopyable<int> >(boost_foreach_is_noncopyable<int>((* & boost::foreach_detail_::to_ptr<int>(chainData)), boost_foreach_argument_dependent_lookup_hack_value)), boost_foreach_is_lightweight_proxy<int>((* & boost::foreach_detail_::to_ptr<int>(chainData)), boost_foreach_argument_dependent_lookup_hack_value))))’ (type ‘boost::mpl::or_<boost::is_rvalue_reference<int&>, boost::mpl::and_<boost::mpl::not_<boost::foreach::is_noncopyable<int> >, boost::foreach::is_lightweight_proxy<int>, mpl_::bool_<true>, mpl_::bool_<true>, mpl_::bool_<true> >, mpl_::bool_<false>, mpl_::bool_<false>, mpl_::bool_<false> >*’) to type ‘mpl_::true_*’ {aka ‘mpl_::bool_<true>*’}
+  113 |     BOOST_FOREACH(const BlockData::value_type& i, chainData)
+      |     ^~~~~~~~~~~~~
+/usr/include/boost/foreach.hpp:675:1: note: candidate: ‘template<class T, class C> boost::foreach_detail_::auto_any<typename boost::foreach_detail_::foreach_iterator<T, C>::type> boost::foreach_detail_::begin(auto_any_t, type2type<T, C>*, mpl_::false_*)’
+  675 | begin(auto_any_t col, type2type<T, C> *, boost::mpl::false_ *) // lvalue
+      | ^~~~~
+/usr/include/boost/foreach.hpp:675:1: note:   substitution of deduced template arguments resulted in errors seen above
+/usr/include/boost/foreach.hpp:696:1: note: candidate: ‘template<class T, class C> boost::foreach_detail_::auto_any<T*> boost::foreach_detail_::begin(auto_any_t, type2type<T*, C>*, mpl_::true_*)’
+  696 | begin(auto_any_t col, type2type<T *, C> *, boost::mpl::true_ *) // null-terminated C-style strings
+      | ^~~~~
+/usr/include/boost/foreach.hpp:696:1: note:   template argument deduction/substitution failed:
+test/DoS_tests.cpp:113:5: note:   mismatched types ‘T*’ and ‘int’
+  113 |     BOOST_FOREACH(const BlockData::value_type& i, chainData)
+      |     ^~~~~~~~~~~~~
+test/DoS_tests.cpp:113:5: error: no matching function for call to ‘end(const boost::foreach_detail_::auto_any_base&, boost::foreach_detail_::type2type<int, mpl_::bool_<false> >*, boost::mpl::or_<boost::is_rvalue_reference<int&>, boost::mpl::and_<boost::mpl::not_<boost::foreach::is_noncopyable<int> >, boost::foreach::is_lightweight_proxy<int>, mpl_::bool_<true>, mpl_::bool_<true>, mpl_::bool_<true> >, mpl_::bool_<false>, mpl_::bool_<false>, mpl_::bool_<false> >*)’
+  113 |     BOOST_FOREACH(const BlockData::value_type& i, chainData)
+      |     ^~~~~~~~~~~~~
+/usr/include/boost/foreach.hpp:707:1: note: candidate: ‘template<class T, class C> boost::foreach_detail_::auto_any<typename boost::foreach_detail_::foreach_iterator<T, C>::type> boost::foreach_detail_::end(auto_any_t, type2type<T, C>*, mpl_::true_*)’
+  707 | end(auto_any_t col, type2type<T, C> *, boost::mpl::true_ *) // rvalue
+      | ^~~
+/usr/include/boost/foreach.hpp:707:1: note:   template argument deduction/substitution failed:
+test/DoS_tests.cpp:113:5: note:   cannot convert ‘(true ? 0 :  boost::foreach_detail_::or_<boost::is_rvalue_reference<int&>, boost::mpl::and_<boost::mpl::not_<boost::foreach::is_noncopyable<int> >, boost::foreach::is_lightweight_proxy<int>, mpl_::bool_<true>, mpl_::bool_<true>, mpl_::bool_<true> > >(boost::foreach_detail_::is_rvalue_<int&>(chainData, 0), boost::foreach_detail_::and_<boost::mpl::not_<boost::foreach::is_noncopyable<int> >, boost::foreach::is_lightweight_proxy<int> >(boost::foreach_detail_::not_<boost::foreach::is_noncopyable<int> >(boost_foreach_is_noncopyable<int>((* & boost::foreach_detail_::to_ptr<int>(chainData)), boost_foreach_argument_dependent_lookup_hack_value)), boost_foreach_is_lightweight_proxy<int>((* & boost::foreach_detail_::to_ptr<int>(chainData)), boost_foreach_argument_dependent_lookup_hack_value))))’ (type ‘boost::mpl::or_<boost::is_rvalue_reference<int&>, boost::mpl::and_<boost::mpl::not_<boost::foreach::is_noncopyable<int> >, boost::foreach::is_lightweight_proxy<int>, mpl_::bool_<true>, mpl_::bool_<true>, mpl_::bool_<true> >, mpl_::bool_<false>, mpl_::bool_<false>, mpl_::bool_<false> >*’) to type ‘mpl_::true_*’ {aka ‘mpl_::bool_<true>*’}
+  113 |     BOOST_FOREACH(const BlockData::value_type& i, chainData)
+      |     ^~~~~~~~~~~~~
+/usr/include/boost/foreach.hpp:715:1: note: candidate: ‘template<class T, class C> boost::foreach_detail_::auto_any<typename boost::foreach_detail_::foreach_iterator<T, C>::type> boost::foreach_detail_::end(auto_any_t, type2type<T, C>*, mpl_::false_*)’
+  715 | end(auto_any_t col, type2type<T, C> *, boost::mpl::false_ *) // lvalue
+      | ^~~
+/usr/include/boost/foreach.hpp:715:1: note:   template argument deduction/substitution failed:
+/usr/include/boost/foreach.hpp:736:1: note: candidate: ‘template<class T, class C> boost::foreach_detail_::auto_any<int> boost::foreach_detail_::end(auto_any_t, type2type<T*, C>*, mpl_::true_*)’
+  736 | end(auto_any_t, type2type<T *, C> *, boost::mpl::true_ *) // null-terminated C-style strings
+      | ^~~
+/usr/include/boost/foreach.hpp:736:1: note:   template argument deduction/substitution failed:
+test/DoS_tests.cpp:113:5: note:   mismatched types ‘T*’ and ‘int’
+  113 |     BOOST_FOREACH(const BlockData::value_type& i, chainData)
+      |     ^~~~~~~~~~~~~
+test/DoS_tests.cpp:113:46: error: qualified-id in declaration before ‘&’ token
+  113 |     BOOST_FOREACH(const BlockData::value_type& i, chainData)
+      |                                              ^
+test/DoS_tests.cpp:113:46: error: expected ‘;’ before ‘&’ token
+test/DoS_tests.cpp:113:48: error: ‘i’ was not declared in this scope; did you mean ‘ip’?
+  113 |     BOOST_FOREACH(const BlockData::value_type& i, chainData)
+      |                                                ^
+test/DoS_tests.cpp:113:5: error: no matching function for call to ‘deref(const boost::foreach_detail_::auto_any_base&, boost::foreach_detail_::type2type<int, mpl_::bool_<false> >*)’
+  113 |     BOOST_FOREACH(const BlockData::value_type& i, chainData)
+      |     ^~~~~~~~~~~~~
+/usr/include/boost/foreach.hpp:775:1: note: candidate: ‘template<class T, class C> typename boost::foreach_detail_::foreach_reference<T, C>::type boost::foreach_detail_::deref(auto_any_t, type2type<T, C>*)’
+  775 | deref(auto_any_t cur, type2type<T, C> *)
+      | ^~~~~
+/usr/include/boost/foreach.hpp:775:1: note:   template argument deduction/substitution failed:
+/usr/include/boost/foreach.hpp: In substitution of ‘template<class T, class C> typename boost::foreach_detail_::foreach_reference<T, C>::type boost::foreach_detail_::deref(auto_any_t, type2type<T, C>*) [with T = int; C = mpl_::bool_<false>]’:
+test/DoS_tests.cpp:113:5:   required from here
+/usr/include/boost/foreach.hpp:775:1: error: no type named ‘type’ in ‘struct boost::foreach_detail_::foreach_reference<int, mpl_::bool_<false> >’
+test/DoS_tests.cpp:113:5: error: expected ‘)’ before ‘;’ token
+  113 |     BOOST_FOREACH(const BlockData::value_type& i, chainData)
+      |     ^~~~~~~~~~~~~
+/app/src/util.h: In instantiation of ‘uint256 Hash(T1, T1, T2, T2) [with T1 = char*; T2 = char*]’:
+/app/src/main.h:993:43:   required from here
+/app/src/util.h:491:16: warning: ‘int SHA256_Init(SHA256_CTX*)’ is deprecated: Since OpenSSL 3.0 [-Wdeprecated-declarations]
+  491 |     SHA256_Init(&ctx);
+      |     ~~~~~~~~~~~^~~~~~
+/usr/include/openssl/sha.h:73:27: note: declared here
+   73 | OSSL_DEPRECATEDIN_3_0 int SHA256_Init(SHA256_CTX *c);
+      |                           ^~~~~~~~~~~
+/app/src/util.h:491:16: warning: ‘int SHA256_Init(SHA256_CTX*)’ is deprecated: Since OpenSSL 3.0 [-Wdeprecated-declarations]
+  491 |     SHA256_Init(&ctx);
+      |     ~~~~~~~~~~~^~~~~~
+/usr/include/openssl/sha.h:73:27: note: declared here
+   73 | OSSL_DEPRECATEDIN_3_0 int SHA256_Init(SHA256_CTX *c);
+      |                           ^~~~~~~~~~~
+/app/src/util.h:492:18: warning: ‘int SHA256_Update(SHA256_CTX*, const void*, size_t)’ is deprecated: Since OpenSSL 3.0 [-Wdeprecated-declarations]
+  492 |     SHA256_Update(&ctx, (p1begin == p1end ? pblank : (unsigned char*)&p1begin[0]), (p1end - p1begin) * sizeof(p1begin[0]));
+      |     ~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/usr/include/openssl/sha.h:74:27: note: declared here
+   74 | OSSL_DEPRECATEDIN_3_0 int SHA256_Update(SHA256_CTX *c,
+      |                           ^~~~~~~~~~~~~
+/app/src/util.h:492:18: warning: ‘int SHA256_Update(SHA256_CTX*, const void*, size_t)’ is deprecated: Since OpenSSL 3.0 [-Wdeprecated-declarations]
+  492 |     SHA256_Update(&ctx, (p1begin == p1end ? pblank : (unsigned char*)&p1begin[0]), (p1end - p1begin) * sizeof(p1begin[0]));
+      |     ~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/usr/include/openssl/sha.h:74:27: note: declared here
+   74 | OSSL_DEPRECATEDIN_3_0 int SHA256_Update(SHA256_CTX *c,
+      |                           ^~~~~~~~~~~~~
+/app/src/util.h:493:18: warning: ‘int SHA256_Update(SHA256_CTX*, const void*, size_t)’ is deprecated: Since OpenSSL 3.0 [-Wdeprecated-declarations]
+  493 |     SHA256_Update(&ctx, (p2begin == p2end ? pblank : (unsigned char*)&p2begin[0]), (p2end - p2begin) * sizeof(p2begin[0]));
+      |     ~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/usr/include/openssl/sha.h:74:27: note: declared here
+   74 | OSSL_DEPRECATEDIN_3_0 int SHA256_Update(SHA256_CTX *c,
+      |                           ^~~~~~~~~~~~~
+/app/src/util.h:493:18: warning: ‘int SHA256_Update(SHA256_CTX*, const void*, size_t)’ is deprecated: Since OpenSSL 3.0 [-Wdeprecated-declarations]
+  493 |     SHA256_Update(&ctx, (p2begin == p2end ? pblank : (unsigned char*)&p2begin[0]), (p2end - p2begin) * sizeof(p2begin[0]));
+      |     ~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/usr/include/openssl/sha.h:74:27: note: declared here
+   74 | OSSL_DEPRECATEDIN_3_0 int SHA256_Update(SHA256_CTX *c,
+      |                           ^~~~~~~~~~~~~
+/app/src/util.h:494:17: warning: ‘int SHA256_Final(unsigned char*, SHA256_CTX*)’ is deprecated: Since OpenSSL 3.0 [-Wdeprecated-declarations]
+  494 |     SHA256_Final((unsigned char*)&hash1, &ctx);
+      |     ~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/usr/include/openssl/sha.h:76:27: note: declared here
+   76 | OSSL_DEPRECATEDIN_3_0 int SHA256_Final(unsigned char *md, SHA256_CTX *c);
+      |                           ^~~~~~~~~~~~
+/app/src/util.h:494:17: warning: ‘int SHA256_Final(unsigned char*, SHA256_CTX*)’ is deprecated: Since OpenSSL 3.0 [-Wdeprecated-declarations]
+  494 |     SHA256_Final((unsigned char*)&hash1, &ctx);
+      |     ~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/usr/include/openssl/sha.h:76:27: note: declared here
+   76 | OSSL_DEPRECATEDIN_3_0 int SHA256_Final(unsigned char *md, SHA256_CTX *c);
+      |                           ^~~~~~~~~~~~
+In file included from /usr/include/boost/mpl/aux_/integral_wrapper.hpp:22,
+                 from /usr/include/boost/mpl/int.hpp:20,
+                 from /usr/include/boost/mpl/lambda_fwd.hpp:23,
+                 from /usr/include/boost/mpl/aux_/na_spec.hpp:18,
+                 from /usr/include/boost/mpl/or.hpp:24,
+                 from /usr/include/boost/iterator/interoperable.hpp:11,
+                 from /usr/include/boost/iterator/iterator_facade.hpp:11:
+test/DoS_tests.cpp:113:5: error: ‘_foreach_continue113’ was not declared in this scope
+  113 |     BOOST_FOREACH(const BlockData::value_type& i, chainData)
+      |     ^~~~~~~~~~~~~
+test/DoS_tests.cpp:122:27: error: qualified-id in declaration before ‘firstcheck’
+  122 |     BlockData::value_type firstcheck = *(chainData.begin());
+      |                           ^~~~~~~~~~
+test/DoS_tests.cpp:123:27: error: qualified-id in declaration before ‘lastcheck’
+  123 |     BlockData::value_type lastcheck = *(chainData.rbegin());
+      |                           ^~~~~~~~~
+In file included from /usr/include/boost/test/test_tools.hpp:45,
+                 from /usr/include/boost/test/unit_test.hpp:18,
+                 from test/DoS_tests.cpp:8:
+test/DoS_tests.cpp:127:29: error: ‘firstcheck’ was not declared in this scope
+  127 |     BOOST_CHECK(!CheckNBits(firstcheck.second, lastcheck.first+60*10, lastcheck.second, lastcheck.first));
+      |                             ^~~~~~~~~~
+test/DoS_tests.cpp:127:48: error: ‘lastcheck’ was not declared in this scope
+  127 |     BOOST_CHECK(!CheckNBits(firstcheck.second, lastcheck.first+60*10, lastcheck.second, lastcheck.first));
+      |                                                ^~~~~~~~~
+test/DoS_tests.cpp:128:29: error: ‘firstcheck’ was not declared in this scope
+  128 |     BOOST_CHECK(!CheckNBits(firstcheck.second, lastcheck.first+60*60*24*14, lastcheck.second, lastcheck.first));
+      |                             ^~~~~~~~~~
+test/DoS_tests.cpp:128:48: error: ‘lastcheck’ was not declared in this scope
+  128 |     BOOST_CHECK(!CheckNBits(firstcheck.second, lastcheck.first+60*60*24*14, lastcheck.second, lastcheck.first));
+      |                                                ^~~~~~~~~
+test/DoS_tests.cpp:131:28: error: ‘firstcheck’ was not declared in this scope
+  131 |     BOOST_CHECK(CheckNBits(firstcheck.second, lastcheck.first+60*60*24*365*4, lastcheck.second, lastcheck.first));
+      |                            ^~~~~~~~~~
+test/DoS_tests.cpp:131:47: error: ‘lastcheck’ was not declared in this scope
+  131 |     BOOST_CHECK(CheckNBits(firstcheck.second, lastcheck.first+60*60*24*365*4, lastcheck.second, lastcheck.first));
+      |                                               ^~~~~~~~~
+test/DoS_tests.cpp: In member function ‘void DoS_tests::DoS_mapOrphans::test_method()’:
+test/DoS_tests.cpp:209:45: warning: implicitly-declared ‘CScript& CScript::operator=(const CScript&)’ is deprecated [-Wdeprecated-copy]
+  209 |             tx.vin[j].scriptSig = tx.vin[0].scriptSig;
+      |                                             ^~~~~~~~~
+/app/src/script.h:277:5: note: because ‘CScript’ has user-provided ‘CScript::CScript(const CScript&)’
+  277 |     CScript(const CScript& b) : std::vector<unsigned char>(b.begin(), b.end()) { }
+      |     ^~~~~~~
+test/DoS_tests.cpp: In member function ‘void DoS_tests::DoS_checkSig::test_method()’:
+test/DoS_tests.cpp:281:40: error: too many arguments to function ‘bool VerifySignature(const CTransaction&, const CTransaction&, unsigned int, int)’
+  281 |             BOOST_CHECK(VerifySignature(orphans[j], tx, j, true, SIGHASH_ALL));
+      |                         ~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/app/src/script.h:607:6: note: declared here
+  607 | bool VerifySignature(const CTransaction& txFrom, const CTransaction& txTo, unsigned int nIn, int nHashType);
+      |      ^~~~~~~~~~~~~~~
+test/DoS_tests.cpp:291:35: warning: implicitly-declared ‘CScript& CScript::operator=(const CScript&)’ is deprecated [-Wdeprecated-copy]
+  291 |     tx.vin[0].scriptSig = CScript();
+      |                                   ^
+/app/src/script.h:277:5: note: because ‘CScript’ has user-provided ‘CScript::CScript(const CScript&)’
+  277 |     CScript(const CScript& b) : std::vector<unsigned char>(b.begin(), b.end()) { }
+      |     ^~~~~~~
+test/DoS_tests.cpp:292:33: error: too many arguments to function ‘bool VerifySignature(const CTransaction&, const CTransaction&, unsigned int, int)’
+  292 |     BOOST_CHECK(!VerifySignature(orphans[0], tx, 0, true, SIGHASH_ALL));
+      |                  ~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/app/src/script.h:607:6: note: declared here
+  607 | bool VerifySignature(const CTransaction& txFrom, const CTransaction& txTo, unsigned int nIn, int nHashType);
+      |      ^~~~~~~~~~~~~~~
+test/DoS_tests.cpp:293:27: warning: implicitly-declared ‘CScript& CScript::operator=(const CScript&)’ is deprecated [-Wdeprecated-copy]
+  293 |     tx.vin[0].scriptSig = save;
+      |                           ^~~~
+/app/src/script.h:277:5: note: because ‘CScript’ has user-provided ‘CScript::CScript(const CScript&)’
+  277 |     CScript(const CScript& b) : std::vector<unsigned char>(b.begin(), b.end()) { }
+      |     ^~~~~~~
+test/DoS_tests.cpp:297:33: error: too many arguments to function ‘bool VerifySignature(const CTransaction&, const CTransaction&, unsigned int, int)’
+  297 |     BOOST_CHECK(!VerifySignature(orphans[0], tx, 0, true, SIGHASH_ALL));
+      |                  ~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/app/src/script.h:607:6: note: declared here
+  607 | bool VerifySignature(const CTransaction& txFrom, const CTransaction& txTo, unsigned int nIn, int nHashType);
+      |      ^~~~~~~~~~~~~~~
+test/DoS_tests.cpp:298:33: error: too many arguments to function ‘bool VerifySignature(const CTransaction&, const CTransaction&, unsigned int, int)’
+  298 |     BOOST_CHECK(!VerifySignature(orphans[1], tx, 1, true, SIGHASH_ALL));
+      |                  ~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/app/src/script.h:607:6: note: declared here
+  607 | bool VerifySignature(const CTransaction& txFrom, const CTransaction& txTo, unsigned int nIn, int nHashType);
+      |      ^~~~~~~~~~~~~~~
+test/DoS_tests.cpp:308:36: error: too many arguments to function ‘bool VerifySignature(const CTransaction&, const CTransaction&, unsigned int, int)’
+  308 |         BOOST_CHECK(VerifySignature(orphans[j], tx, j, true, SIGHASH_ALL));
+      |                     ~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/app/src/script.h:607:6: note: declared here
+  607 | bool VerifySignature(const CTransaction& txFrom, const CTransaction& txTo, unsigned int nIn, int nHashType);
+      |      ^~~~~~~~~~~~~~~
+/app/src/util.h: In instantiation of ‘uint256 Hash(T1, T1, T2, T2) [with T1 = char*; T2 = char*]’:
+/app/src/main.h:993:43:   required from here
+/app/src/util.h:491:16: warning: ‘int SHA256_Init(SHA256_CTX*)’ is deprecated: Since OpenSSL 3.0 [-Wdeprecated-declarations]
+  491 |     SHA256_Init(&ctx);
+      |     ~~~~~~~~~~~^~~~~~
+/usr/include/openssl/sha.h:73:27: note: declared here
+   73 | OSSL_DEPRECATEDIN_3_0 int SHA256_Init(SHA256_CTX *c);
+      |                           ^~~~~~~~~~~
+/app/src/util.h:491:16: warning: ‘int SHA256_Init(SHA256_CTX*)’ is deprecated: Since OpenSSL 3.0 [-Wdeprecated-declarations]
+  491 |     SHA256_Init(&ctx);
+      |     ~~~~~~~~~~~^~~~~~
+/usr/include/openssl/sha.h:73:27: note: declared here
+   73 | OSSL_DEPRECATEDIN_3_0 int SHA256_Init(SHA256_CTX *c);
+      |                           ^~~~~~~~~~~
+/app/src/util.h:492:18: warning: ‘int SHA256_Update(SHA256_CTX*, const void*, size_t)’ is deprecated: Since OpenSSL 3.0 [-Wdeprecated-declarations]
+  492 |     SHA256_Update(&ctx, (p1begin == p1end ? pblank : (unsigned char*)&p1begin[0]), (p1end - p1begin) * sizeof(p1begin[0]));
+      |     ~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/usr/include/openssl/sha.h:74:27: note: declared here
+   74 | OSSL_DEPRECATEDIN_3_0 int SHA256_Update(SHA256_CTX *c,
+      |                           ^~~~~~~~~~~~~
+/app/src/util.h:492:18: warning: ‘int SHA256_Update(SHA256_CTX*, const void*, size_t)’ is deprecated: Since OpenSSL 3.0 [-Wdeprecated-declarations]
+  492 |     SHA256_Update(&ctx, (p1begin == p1end ? pblank : (unsigned char*)&p1begin[0]), (p1end - p1begin) * sizeof(p1begin[0]));
+      |     ~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/usr/include/openssl/sha.h:74:27: note: declared here
+   74 | OSSL_DEPRECATEDIN_3_0 int SHA256_Update(SHA256_CTX *c,
+      |                           ^~~~~~~~~~~~~
+/app/src/util.h:493:18: warning: ‘int SHA256_Update(SHA256_CTX*, const void*, size_t)’ is deprecated: Since OpenSSL 3.0 [-Wdeprecated-declarations]
+  493 |     SHA256_Update(&ctx, (p2begin == p2end ? pblank : (unsigned char*)&p2begin[0]), (p2end - p2begin) * sizeof(p2begin[0]));
+      |     ~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/usr/include/openssl/sha.h:74:27: note: declared here
+   74 | OSSL_DEPRECATEDIN_3_0 int SHA256_Update(SHA256_CTX *c,
+      |                           ^~~~~~~~~~~~~
+/app/src/util.h:493:18: warning: ‘int SHA256_Update(SHA256_CTX*, const void*, size_t)’ is deprecated: Since OpenSSL 3.0 [-Wdeprecated-declarations]
+  493 |     SHA256_Update(&ctx, (p2begin == p2end ? pblank : (unsigned char*)&p2begin[0]), (p2end - p2begin) * sizeof(p2begin[0]));
+      |     ~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/usr/include/openssl/sha.h:74:27: note: declared here
+   74 | OSSL_DEPRECATEDIN_3_0 int SHA256_Update(SHA256_CTX *c,
+      |                           ^~~~~~~~~~~~~
+/app/src/util.h:494:17: warning: ‘int SHA256_Final(unsigned char*, SHA256_CTX*)’ is deprecated: Since OpenSSL 3.0 [-Wdeprecated-declarations]
+  494 |     SHA256_Final((unsigned char*)&hash1, &ctx);
+      |     ~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/usr/include/openssl/sha.h:76:27: note: declared here
+   76 | OSSL_DEPRECATEDIN_3_0 int SHA256_Final(unsigned char *md, SHA256_CTX *c);
+      |                           ^~~~~~~~~~~~
+/app/src/util.h:494:17: warning: ‘int SHA256_Final(unsigned char*, SHA256_CTX*)’ is deprecated: Since OpenSSL 3.0 [-Wdeprecated-declarations]
+  494 |     SHA256_Final((unsigned char*)&hash1, &ctx);
+      |     ~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/usr/include/openssl/sha.h:76:27: note: declared here
+   76 | OSSL_DEPRECATEDIN_3_0 int SHA256_Final(unsigned char *md, SHA256_CTX *c);
+      |                           ^~~~~~~~~~~~
+/app/src/main.h: In instantiation of ‘static _OI std::__copy_move<false, false, std::random_access_iterator_tag>::__copy_m(_II, _II, _OI) [with _II = const CTxIn*; _OI = CTxIn*]’:
+/usr/include/c++/13/bits/stl_algobase.h:506:30:   required from ‘_OI std::__copy_move_a2(_II, _II, _OI) [with bool _IsMove = false; _II = const CTxIn*; _OI = CTxIn*]’
+/usr/include/c++/13/bits/stl_algobase.h:533:42:   required from ‘_OI std::__copy_move_a1(_II, _II, _OI) [with bool _IsMove = false; _II = const CTxIn*; _OI = CTxIn*]’
+/usr/include/c++/13/bits/stl_algobase.h:541:31:   required from ‘_OI std::__copy_move_a(_II, _II, _OI) [with bool _IsMove = false; _II = __gnu_cxx::__normal_iterator<const CTxIn*, vector<CTxIn> >; _OI = __gnu_cxx::__normal_iterator<CTxIn*, vector<CTxIn> >]’
+/usr/include/c++/13/bits/stl_algobase.h:633:7:   required from ‘_OI std::copy(_II, _II, _OI) [with _II = __gnu_cxx::__normal_iterator<const CTxIn*, vector<CTxIn> >; _OI = __gnu_cxx::__normal_iterator<CTxIn*, vector<CTxIn> >]’
+/usr/include/c++/13/bits/vector.tcc:250:31:   required from ‘std::vector<_Tp, _Alloc>& std::vector<_Tp, _Alloc>::operator=(const std::vector<_Tp, _Alloc>&) [with _Tp = CTxIn; _Alloc = std::allocator<CTxIn>]’
+/app/src/main.h:429:7:   required from here
+/app/src/main.h:254:7: warning: implicitly-declared ‘CScript& CScript::operator=(const CScript&)’ is deprecated [-Wdeprecated-copy]
+  254 | class CTxIn
+      |       ^~~~~
+/app/src/script.h:277:5: note: because ‘CScript’ has user-provided ‘CScript::CScript(const CScript&)’
+  277 |     CScript(const CScript& b) : std::vector<unsigned char>(b.begin(), b.end()) { }
+      |     ^~~~~~~
+In file included from /usr/include/c++/13/string:51,
+                 from /usr/include/boost/test/utils/basic_cstring/bcs_char_traits.hpp:25,
+                 from /usr/include/boost/test/utils/basic_cstring/basic_cstring.hpp:21,
+                 from /usr/include/boost/test/detail/global_typedef.hpp:15,
+                 from /usr/include/boost/test/tools/detail/print_helper.hpp:20,
+                 from /usr/include/boost/test/utils/lazy_ostream.hpp:16,
+                 from /usr/include/boost/test/tools/context.hpp:19,
+                 from /usr/include/boost/test/test_tools.hpp:42,
+                 from /usr/include/boost/test/unit_test.hpp:18,
+                 from test/allocator_tests.cpp:1:
+/usr/include/c++/13/bits/stl_algobase.h:388:25: note: synthesized method ‘CTxIn& CTxIn::operator=(const CTxIn&)’ first required here
+  388 |               *__result = *__first;
+      |               ~~~~~~~~~~^~~~~~~~~~
+/app/src/main.h: In instantiation of ‘static _OI std::__copy_move<false, false, std::random_access_iterator_tag>::__copy_m(_II, _II, _OI) [with _II = const CTxOut*; _OI = CTxOut*]’:
+/usr/include/c++/13/bits/stl_algobase.h:506:30:   required from ‘_OI std::__copy_move_a2(_II, _II, _OI) [with bool _IsMove = false; _II = const CTxOut*; _OI = CTxOut*]’
+/usr/include/c++/13/bits/stl_algobase.h:533:42:   required from ‘_OI std::__copy_move_a1(_II, _II, _OI) [with bool _IsMove = false; _II = const CTxOut*; _OI = CTxOut*]’
+/usr/include/c++/13/bits/stl_algobase.h:541:31:   required from ‘_OI std::__copy_move_a(_II, _II, _OI) [with bool _IsMove = false; _II = __gnu_cxx::__normal_iterator<const CTxOut*, vector<CTxOut> >; _OI = __gnu_cxx::__normal_iterator<CTxOut*, vector<CTxOut> >]’
+/usr/include/c++/13/bits/stl_algobase.h:633:7:   required from ‘_OI std::copy(_II, _II, _OI) [with _II = __gnu_cxx::__normal_iterator<const CTxOut*, vector<CTxOut> >; _OI = __gnu_cxx::__normal_iterator<CTxOut*, vector<CTxOut> >]’
+/usr/include/c++/13/bits/vector.tcc:250:31:   required from ‘std::vector<_Tp, _Alloc>& std::vector<_Tp, _Alloc>::operator=(const std::vector<_Tp, _Alloc>&) [with _Tp = CTxOut; _Alloc = std::allocator<CTxOut>]’
+/app/src/main.h:429:7:   required from here
+/app/src/main.h:336:7: warning: implicitly-declared ‘CScript& CScript::operator=(const CScript&)’ is deprecated [-Wdeprecated-copy]
+  336 | class CTxOut
+      |       ^~~~~~
+/app/src/script.h:277:5: note: because ‘CScript’ has user-provided ‘CScript::CScript(const CScript&)’
+  277 |     CScript(const CScript& b) : std::vector<unsigned char>(b.begin(), b.end()) { }
+      |     ^~~~~~~
+/usr/include/c++/13/bits/stl_algobase.h:388:25: note: synthesized method ‘CTxOut& CTxOut::operator=(const CTxOut&)’ first required here
+  388 |               *__result = *__first;
+      |               ~~~~~~~~~~^~~~~~~~~~
+/app/src/main.h: In instantiation of ‘static _OI std::__copy_move<false, false, std::random_access_iterator_tag>::__copy_m(_II, _II, _OI) [with _II = const CTxIn*; _OI = CTxIn*]’:
+/usr/include/c++/13/bits/stl_algobase.h:506:30:   required from ‘_OI std::__copy_move_a2(_II, _II, _OI) [with bool _IsMove = false; _II = const CTxIn*; _OI = CTxIn*]’
+/usr/include/c++/13/bits/stl_algobase.h:533:42:   required from ‘_OI std::__copy_move_a1(_II, _II, _OI) [with bool _IsMove = false; _II = const CTxIn*; _OI = CTxIn*]’
+/usr/include/c++/13/bits/stl_algobase.h:541:31:   required from ‘_OI std::__copy_move_a(_II, _II, _OI) [with bool _IsMove = false; _II = __gnu_cxx::__normal_iterator<const CTxIn*, vector<CTxIn> >; _OI = __gnu_cxx::__normal_iterator<CTxIn*, vector<CTxIn> >]’
+/usr/include/c++/13/bits/stl_algobase.h:633:7:   required from ‘_OI std::copy(_II, _II, _OI) [with _II = __gnu_cxx::__normal_iterator<const CTxIn*, vector<CTxIn> >; _OI = __gnu_cxx::__normal_iterator<CTxIn*, vector<CTxIn> >]’
+/usr/include/c++/13/bits/vector.tcc:250:31:   required from ‘std::vector<_Tp, _Alloc>& std::vector<_Tp, _Alloc>::operator=(const std::vector<_Tp, _Alloc>&) [with _Tp = CTxIn; _Alloc = std::allocator<CTxIn>]’
+/app/src/main.h:429:7:   required from here
+/app/src/main.h:254:7: warning: implicitly-declared ‘CScript& CScript::operator=(const CScript&)’ is deprecated [-Wdeprecated-copy]
+  254 | class CTxIn
+      |       ^~~~~
+/app/src/script.h:277:5: note: because ‘CScript’ has user-provided ‘CScript::CScript(const CScript&)’
+  277 |     CScript(const CScript& b) : std::vector<unsigned char>(b.begin(), b.end()) { }
+      |     ^~~~~~~
+In file included from /usr/include/c++/13/string:51,
+                 from /usr/include/boost/test/utils/basic_cstring/bcs_char_traits.hpp:25,
+                 from /usr/include/boost/test/utils/basic_cstring/basic_cstring.hpp:21,
+                 from /usr/include/boost/test/detail/global_typedef.hpp:15,
+                 from /usr/include/boost/test/tools/detail/print_helper.hpp:20,
+                 from /usr/include/boost/test/utils/lazy_ostream.hpp:16,
+                 from /usr/include/boost/test/tools/context.hpp:19,
+                 from /usr/include/boost/test/test_tools.hpp:42:
+/usr/include/c++/13/bits/stl_algobase.h:388:25: note: synthesized method ‘CTxIn& CTxIn::operator=(const CTxIn&)’ first required here
+  388 |               *__result = *__first;
+      |               ~~~~~~~~~~^~~~~~~~~~
+/app/src/main.h: In instantiation of ‘static _OI std::__copy_move<false, false, std::random_access_iterator_tag>::__copy_m(_II, _II, _OI) [with _II = const CTxOut*; _OI = CTxOut*]’:
+/usr/include/c++/13/bits/stl_algobase.h:506:30:   required from ‘_OI std::__copy_move_a2(_II, _II, _OI) [with bool _IsMove = false; _II = const CTxOut*; _OI = CTxOut*]’
+/usr/include/c++/13/bits/stl_algobase.h:533:42:   required from ‘_OI std::__copy_move_a1(_II, _II, _OI) [with bool _IsMove = false; _II = const CTxOut*; _OI = CTxOut*]’
+/usr/include/c++/13/bits/stl_algobase.h:541:31:   required from ‘_OI std::__copy_move_a(_II, _II, _OI) [with bool _IsMove = false; _II = __gnu_cxx::__normal_iterator<const CTxOut*, vector<CTxOut> >; _OI = __gnu_cxx::__normal_iterator<CTxOut*, vector<CTxOut> >]’
+/usr/include/c++/13/bits/stl_algobase.h:633:7:   required from ‘_OI std::copy(_II, _II, _OI) [with _II = __gnu_cxx::__normal_iterator<const CTxOut*, vector<CTxOut> >; _OI = __gnu_cxx::__normal_iterator<CTxOut*, vector<CTxOut> >]’
+/usr/include/c++/13/bits/vector.tcc:250:31:   required from ‘std::vector<_Tp, _Alloc>& std::vector<_Tp, _Alloc>::operator=(const std::vector<_Tp, _Alloc>&) [with _Tp = CTxOut; _Alloc = std::allocator<CTxOut>]’
+/app/src/main.h:429:7:   required from here
+/app/src/main.h:336:7: warning: implicitly-declared ‘CScript& CScript::operator=(const CScript&)’ is deprecated [-Wdeprecated-copy]
+  336 | class CTxOut
+      |       ^~~~~~
+/app/src/script.h:277:5: note: because ‘CScript’ has user-provided ‘CScript::CScript(const CScript&)’
+  277 |     CScript(const CScript& b) : std::vector<unsigned char>(b.begin(), b.end()) { }
+      |     ^~~~~~~
+/usr/include/c++/13/bits/stl_algobase.h:388:25: note: synthesized method ‘CTxOut& CTxOut::operator=(const CTxOut&)’ first required here
+  388 |               *__result = *__first;
+      |               ~~~~~~~~~~^~~~~~~~~~
+In file included from /usr/include/boost/test/unit_test.hpp:19:
+test/accounting_tests.cpp: At global scope:
+test/accounting_tests.cpp:123:1: fatal error: opening dependency file obj/test/accounting_tests.d: No such file or directory
+  123 | BOOST_AUTO_TEST_SUITE_END()
+      | ^~~~~~~~~~~~~~~~~~~~~~~~~
+compilation terminated.
+make: *** [makefile.test:211: obj/test/accounting_tests.o] Error 1
+/app/src/main.h: In instantiation of ‘static _OI std::__copy_move<false, false, std::random_access_iterator_tag>::__copy_m(_II, _II, _OI) [with _II = const CTxIn*; _OI = CTxIn*]’:
+/usr/include/c++/13/bits/stl_algobase.h:506:30:   required from ‘_OI std::__copy_move_a2(_II, _II, _OI) [with bool _IsMove = false; _II = const CTxIn*; _OI = CTxIn*]’
+/usr/include/c++/13/bits/stl_algobase.h:533:42:   required from ‘_OI std::__copy_move_a1(_II, _II, _OI) [with bool _IsMove = false; _II = const CTxIn*; _OI = CTxIn*]’
+/usr/include/c++/13/bits/stl_algobase.h:541:31:   required from ‘_OI std::__copy_move_a(_II, _II, _OI) [with bool _IsMove = false; _II = __gnu_cxx::__normal_iterator<const CTxIn*, vector<CTxIn> >; _OI = __gnu_cxx::__normal_iterator<CTxIn*, vector<CTxIn> >]’
+/usr/include/c++/13/bits/stl_algobase.h:633:7:   required from ‘_OI std::copy(_II, _II, _OI) [with _II = __gnu_cxx::__normal_iterator<const CTxIn*, vector<CTxIn> >; _OI = __gnu_cxx::__normal_iterator<CTxIn*, vector<CTxIn> >]’
+/usr/include/c++/13/bits/vector.tcc:250:31:   required from ‘std::vector<_Tp, _Alloc>& std::vector<_Tp, _Alloc>::operator=(const std::vector<_Tp, _Alloc>&) [with _Tp = CTxIn; _Alloc = std::allocator<CTxIn>]’
+/app/src/main.h:429:7:   required from here
+/app/src/main.h:254:7: warning: implicitly-declared ‘CScript& CScript::operator=(const CScript&)’ is deprecated [-Wdeprecated-copy]
+  254 | class CTxIn
+      |       ^~~~~
+/app/src/script.h:277:5: note: because ‘CScript’ has user-provided ‘CScript::CScript(const CScript&)’
+  277 |     CScript(const CScript& b) : std::vector<unsigned char>(b.begin(), b.end()) { }
+      |     ^~~~~~~
+In file included from /usr/include/c++/13/algorithm:60,
+                 from test/DoS_tests.cpp:4:
+/usr/include/c++/13/bits/stl_algobase.h:388:25: note: synthesized method ‘CTxIn& CTxIn::operator=(const CTxIn&)’ first required here
+  388 |               *__result = *__first;
+      |               ~~~~~~~~~~^~~~~~~~~~
+/app/src/main.h: In instantiation of ‘static _OI std::__copy_move<false, false, std::random_access_iterator_tag>::__copy_m(_II, _II, _OI) [with _II = const CTxOut*; _OI = CTxOut*]’:
+/usr/include/c++/13/bits/stl_algobase.h:506:30:   required from ‘_OI std::__copy_move_a2(_II, _II, _OI) [with bool _IsMove = false; _II = const CTxOut*; _OI = CTxOut*]’
+/usr/include/c++/13/bits/stl_algobase.h:533:42:   required from ‘_OI std::__copy_move_a1(_II, _II, _OI) [with bool _IsMove = false; _II = const CTxOut*; _OI = CTxOut*]’
+/usr/include/c++/13/bits/stl_algobase.h:541:31:   required from ‘_OI std::__copy_move_a(_II, _II, _OI) [with bool _IsMove = false; _II = __gnu_cxx::__normal_iterator<const CTxOut*, vector<CTxOut> >; _OI = __gnu_cxx::__normal_iterator<CTxOut*, vector<CTxOut> >]’
+/usr/include/c++/13/bits/stl_algobase.h:633:7:   required from ‘_OI std::copy(_II, _II, _OI) [with _II = __gnu_cxx::__normal_iterator<const CTxOut*, vector<CTxOut> >; _OI = __gnu_cxx::__normal_iterator<CTxOut*, vector<CTxOut> >]’
+/usr/include/c++/13/bits/vector.tcc:250:31:   required from ‘std::vector<_Tp, _Alloc>& std::vector<_Tp, _Alloc>::operator=(const std::vector<_Tp, _Alloc>&) [with _Tp = CTxOut; _Alloc = std::allocator<CTxOut>]’
+/app/src/main.h:429:7:   required from here
+/app/src/main.h:336:7: warning: implicitly-declared ‘CScript& CScript::operator=(const CScript&)’ is deprecated [-Wdeprecated-copy]
+  336 | class CTxOut
+      |       ^~~~~~
+/app/src/script.h:277:5: note: because ‘CScript’ has user-provided ‘CScript::CScript(const CScript&)’
+  277 |     CScript(const CScript& b) : std::vector<unsigned char>(b.begin(), b.end()) { }
+      |     ^~~~~~~
+/usr/include/c++/13/bits/stl_algobase.h:388:25: note: synthesized method ‘CTxOut& CTxOut::operator=(const CTxOut&)’ first required here
+  388 |               *__result = *__first;
+      |               ~~~~~~~~~~^~~~~~~~~~
+In file included from /usr/include/boost/test/unit_test.hpp:19:
+test/DoS_tests.cpp: At global scope:
+test/DoS_tests.cpp:314:1: fatal error: opening dependency file obj/test/DoS_tests.d: No such file or directory
+  314 | BOOST_AUTO_TEST_SUITE_END()
+      | ^~~~~~~~~~~~~~~~~~~~~~~~~
+compilation terminated.
+make: *** [makefile.test:211: obj/test/DoS_tests.o] Error 1
+In file included from /usr/include/boost/test/unit_test.hpp:19:
+test/allocator_tests.cpp: At global scope:
+test/allocator_tests.cpp:115:1: fatal error: opening dependency file obj/test/allocator_tests.d: No such file or directory
+  115 | BOOST_AUTO_TEST_SUITE_END()
+      | ^~~~~~~~~~~~~~~~~~~~~~~~~
+compilation terminated.
+make: *** [makefile.test:211: obj/test/allocator_tests.o] Error 1

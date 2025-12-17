@@ -2206,8 +2206,6 @@ bool CBlock::CheckBlock(bool fCheckPOW, bool fCheckMerkleRoot, bool fCheckSig) c
 
     int64_t futureLimit = GetBlockTime();
 
-    if (nTime > 1513942698) // Block 315065
-        futureLimit = futureLimit + (9 * 60);
 
 
     // Check timestamp
