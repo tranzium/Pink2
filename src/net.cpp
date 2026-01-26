@@ -557,10 +557,10 @@ bool CNode::IsBanned(CNetAddr ip)
     bool fResult = false;
     {
         LOCK(cs_setBanned);
-        std::map<CNetAddr, int64_t>::iterator i = setBanned.find(ip);
+        auto i = setBanned.find(ip);
         if (i != setBanned.end())
         {
-            int64_t t = (*i).second;
+            int64_t t = i->second;
             if (GetAdjustedTime() < t)
                 fResult = true;
         }

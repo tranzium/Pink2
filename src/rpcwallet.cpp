@@ -275,9 +275,9 @@ Value getaccount(const Array& params, bool fHelp)
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Pinkcoin address");
 
     string strAccount;
-    map<CTxDestination, string>::iterator mi = pwalletMain->mapAddressBook.find(address.Get());
-    if (mi != pwalletMain->mapAddressBook.end() && !(*mi).second.empty())
-        strAccount = (*mi).second;
+    auto mi = pwalletMain->mapAddressBook.find(address.Get());
+    if (mi != pwalletMain->mapAddressBook.end() && !mi->second.empty())
+        strAccount = mi->second;
     return strAccount;
 }
 
@@ -945,7 +945,7 @@ Value ListReceived(const Array& params, bool fByAccounts)
     {
         const CBitcoinAddress& address = item.first;
         const string& strAccount = item.second;
-        map<CBitcoinAddress, tallyitem>::iterator it = mapTally.find(address);
+        auto it = mapTally.find(address);
         if (it == mapTally.end() && !fIncludeEmpty)
             continue;
 
@@ -953,8 +953,8 @@ Value ListReceived(const Array& params, bool fByAccounts)
         int nConf = std::numeric_limits<int>::max();
         if (it != mapTally.end())
         {
-            nAmount = (*it).second.nAmount;
-            nConf = (*it).second.nConf;
+            nAmount = it->second.nAmount;
+            nConf = it->second.nConf;
         }
 
         if (fByAccounts)
@@ -1312,10 +1312,10 @@ Value gettransaction(const Array& params, bool fHelp)
             else
             {
                 entry.push_back(Pair("blockhash", hashBlock.GetHex()));
-                map<uint256, CBlockIndex*>::iterator mi = mapBlockIndex.find(hashBlock);
-                if (mi != mapBlockIndex.end() && (*mi).second)
+                auto mi = mapBlockIndex.find(hashBlock);
+                if (mi != mapBlockIndex.end() && mi->second)
                 {
-                    CBlockIndex* pindex = (*mi).second;
+                    CBlockIndex* pindex = mi->second;
                     if (pindex->IsInMainChain())
                         entry.push_back(Pair("confirmations", 1 + nBestHeight - pindex->nHeight));
                     else

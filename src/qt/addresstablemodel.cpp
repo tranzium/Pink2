@@ -614,7 +614,7 @@ QString AddressTableModel::labelForAddress(const QString &address) const
         } else
         {
             CBitcoinAddress address_parsed(sAddr);
-            std::map<CTxDestination, std::string>::iterator mi = wallet->mapAddressBook.find(address_parsed.Get());
+            auto mi = wallet->mapAddressBook.find(address_parsed.Get());
             if (mi != wallet->mapAddressBook.end())
             {
                 return QString::fromStdString(mi->second);

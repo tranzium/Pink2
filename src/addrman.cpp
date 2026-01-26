@@ -79,14 +79,14 @@ double CAddrInfo::GetChance(int64_t nNow) const
 
 CAddrInfo* CAddrMan::Find(const CNetAddr& addr, int *pnId)
 {
-    std::map<CNetAddr, int>::iterator it = mapAddr.find(addr);
+    auto it = mapAddr.find(addr);
     if (it == mapAddr.end())
         return nullptr;
     if (pnId)
-        *pnId = (*it).second;
-    std::map<int, CAddrInfo>::iterator it2 = mapInfo.find((*it).second);
+        *pnId = it->second;
+    auto it2 = mapInfo.find(it->second);
     if (it2 != mapInfo.end())
-        return &(*it2).second;
+        return &it2->second;
     return nullptr;
 }
 

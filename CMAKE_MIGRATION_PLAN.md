@@ -45,7 +45,7 @@ Stealth addresses can be hidden and/or removed where it is safe to do so.
 - [x] `NULL` → `nullptr` (354 occurrences converted)
 - [x] `.size() == 0` → `.empty()` (88 occurrences in safe files)
 - [x] Raw loops → range-based for loops (17 conversions in safe files)
-- [ ] Use `auto` for complex iterator types
+- [x] Use `auto` for complex iterator types (19 conversions in safe files)
 - [ ] Consistent use of `const` and references
 
 #### 2.2 UI Cleanup
@@ -139,7 +139,8 @@ These are **not** part of the current migration focus.
   - Removed stale `build-win64/` directory (pre-preset test build)
 - **C++ Modernization (Phase 2.1 continued):**
   - Converted 17 iterator-based for loops to range-based for loops
-  - Files: ntp.cpp, bitcoinrpc.cpp, rpcdump.cpp, addrman.cpp, rpcsmessage.cpp, net.cpp, smessage.cpp, qt/guiutil.cpp, qt/transactiontablemodel.cpp
+  - Converted 19 verbose iterator declarations to `auto`
+  - Files: ntp.cpp, bitcoinrpc.cpp, rpcdump.cpp, addrman.cpp, rpcsmessage.cpp, net.cpp, smessage.cpp, rpcwallet.cpp, rpcrawtransaction.cpp, alert.cpp, checkpoints.cpp, qt/*.cpp
   - Skipped: Loops that modify iterator during iteration (erase patterns)
 - **Dead Code Removal (Phase 2.3):**
   - Added `CAddrMan::empty()` method for API consistency
