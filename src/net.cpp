@@ -1467,7 +1467,7 @@ void ThreadOpenConnections2(void* parg)
         for (int64_t nLoop = 0;; nLoop++)
         {
             ProcessOneShot();
-            BOOST_FOREACH(string strAddr, mapMultiArgs["-connect"])
+            BOOST_FOREACH(const string& strAddr, mapMultiArgs["-connect"])
             {
                 CAddress addr;
                 OpenNetworkConnection(addr, nullptr, strAddr.c_str());

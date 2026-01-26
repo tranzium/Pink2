@@ -544,7 +544,7 @@ DBErrors CWalletDB::LoadWallet(CWallet* pwallet)
         pwallet->nTimeFirstKey = 1; // 0 would be considered 'no value'
 
 
-    BOOST_FOREACH(uint256 hash, wss.vWalletUpgrade)
+    BOOST_FOREACH(const uint256& hash, wss.vWalletUpgrade)
         WriteTx(hash, pwallet->mapWallet[hash]);
 
     // Rewrite encrypted wallets of versions 0.4.0 and 0.5.0rc:

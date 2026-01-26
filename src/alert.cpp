@@ -49,7 +49,7 @@ std::string CUnsignedAlert::ToString() const
     BOOST_FOREACH(int n, setCancel)
         strSetCancel += strprintf("%d ", n);
     std::string strSetSubVer;
-    BOOST_FOREACH(std::string str, setSubVer)
+    BOOST_FOREACH(const std::string& str, setSubVer)
         strSetSubVer += "\"" + str + "\" ";
     return strprintf(
         "CAlert(\n"

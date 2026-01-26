@@ -209,7 +209,7 @@ void CoinControlDialog::customSelectCoins()
 		map<QString, vector<COutput> > mapCoins;
 		model->listCoins(mapCoins);
 
-		BOOST_FOREACH(PAIRTYPE(QString, vector<COutput>) coins, mapCoins)
+		BOOST_FOREACH(const PAIRTYPE(QString, vector<COutput>)& coins, mapCoins)
 		{
 			QTreeWidgetItem *itemWalletAddress = new QTreeWidgetItem();
 		
@@ -723,7 +723,7 @@ void CoinControlDialog::updateView()
     map<QString, vector<COutput> > mapCoins;
     model->listCoins(mapCoins);
 
-    BOOST_FOREACH(PAIRTYPE(QString, vector<COutput>) coins, mapCoins)
+    BOOST_FOREACH(const PAIRTYPE(QString, vector<COutput>)& coins, mapCoins)
     {
         QTreeWidgetItem *itemWalletAddress = new QTreeWidgetItem();
         QString sWalletAddress = coins.first;
