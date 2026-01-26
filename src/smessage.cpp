@@ -89,7 +89,7 @@ uint32_t nPeerIdCounter = 1;
 CCriticalSection cs_smsg;
 CCriticalSection cs_smsgDB;
 
-leveldb::DB *smsgDB = NULL;
+leveldb::DB *smsgDB = nullptr;
 
 
 namespace fs = boost::filesystem;
@@ -130,7 +130,7 @@ bool SecMsgCrypter::Encrypt(unsigned char* chPlaintext, uint32_t nPlain, std::ve
     if(!ctx)
         throw std::runtime_error("Error allocating cipher context");
 
-    if (fOk) fOk = EVP_EncryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, &chKey[0], &chIV[0]);
+    if (fOk) fOk = EVP_EncryptInit_ex(ctx, EVP_aes_256_cbc(), nullptr, &chKey[0], &chIV[0]);
     if (fOk) fOk = EVP_EncryptUpdate(ctx, &vchCiphertext[0], &nCLen, chPlaintext, nLen);
     if (fOk) fOk = EVP_EncryptFinal_ex(ctx, (&vchCiphertext[0])+nCLen, &nFLen);
     EVP_CIPHER_CTX_free(ctx);
@@ -159,7 +159,7 @@ bool SecMsgCrypter::Decrypt(unsigned char* chCiphertext, uint32_t nCipher, std::
     if(!ctx)
         throw std::runtime_error("Error allocating cipher context");
 
-    if (fOk) fOk = EVP_DecryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, &chKey[0], &chIV[0]);
+    if (fOk) fOk = EVP_DecryptInit_ex(ctx, EVP_aes_256_cbc(), nullptr, &chKey[0], &chIV[0]);
     if (fOk) fOk = EVP_DecryptUpdate(ctx, &vchPlaintext[0], &nPLen, &chCiphertext[0], nCipher);
     if (fOk) fOk = EVP_DecryptFinal_ex(ctx, (&vchPlaintext[0])+nPLen, &nFLen);
     EVP_CIPHER_CTX_free(ctx);
@@ -303,7 +303,7 @@ bool SecMsgDB::TxnCommit()
     writeOptions.sync = true;
     leveldb::Status status = pdb->Write(writeOptions, activeBatch);
     delete activeBatch;
-    activeBatch = NULL;
+    activeBatch = nullptr;
     
     if (!status.ok())
     {
@@ -317,7 +317,7 @@ bool SecMsgDB::TxnCommit()
 bool SecMsgDB::TxnAbort()
 {
     delete activeBatch;
-    activeBatch = NULL;
+    activeBatch = nullptr;
     return true;
 };
 
@@ -1036,7 +1036,7 @@ int SecureMsgReadIni()
             continue;
         
         if (!(pName = strtok(cLine, "="))
-            || !(pValue = strtok(NULL, "=")))
+            || !(pValue = strtok(nullptr, "=")))
             continue;
         
         if (strcmp(pName, "newAddressRecv") == 0)
@@ -1162,8 +1162,8 @@ bool SecureMsgStart(bool fScanChain)
     };
     
     // -- start threads
-    if (!NewThread(ThreadSecureMsg, NULL)
-        || !NewThread(ThreadSecureMsgPow, NULL))
+    if (!NewThread(ThreadSecureMsg, nullptr)
+        || !NewThread(ThreadSecureMsgPow, nullptr))
     {
         printf("SecureMsg could not start threads, secure messaging disabled.\n");
         fSecMsgenabled = false;
@@ -1191,7 +1191,7 @@ bool SecureMsgShutdown()
     {
         LOCK(cs_smsgDB);
         delete smsgDB;
-        smsgDB = NULL;
+        smsgDB = nullptr;
     };
     
     // -- main program will wait 5 seconds for threads to terminate.
@@ -1235,8 +1235,8 @@ bool SecureMsgEnable()
     }; // LOCK(cs_smsg);
     
     // -- start threads
-    if (!NewThread(ThreadSecureMsg, NULL)
-        || !NewThread(ThreadSecureMsgPow, NULL))
+    if (!NewThread(ThreadSecureMsg, nullptr)
+        || !NewThread(ThreadSecureMsgPow, nullptr))
     {
         printf("SecureMsgenable could not start threads, secure messaging disabled.\n");
         fSecMsgenabled = false;
@@ -1307,7 +1307,7 @@ bool SecureMsgDisable()
     {
         LOCK(cs_smsgDB);
         delete smsgDB;
-        smsgDB = NULL;
+        smsgDB = nullptr;
     };
     
     
@@ -2141,7 +2141,7 @@ bool SecureMsgScanBlockChain()
     if (lockMain)
     {
         CBlockIndex *pindexScan = pindexGenesisBlock;
-        if (pindexScan == NULL)
+        if (pindexScan == nullptr)
         {
             printf("Error: pindexGenesisBlock not set.\n");
             return false;
@@ -3155,7 +3155,7 @@ int SecureMsgValidate(unsigned char *pHeader, unsigned char *pPayload, uint32_t 
     HMAC_CTX *ctx= HMAC_CTX_new();
     
     unsigned int nBytes;
-    if (!HMAC_Init_ex(ctx, &civ[0], 32, EVP_sha256(), NULL)
+    if (!HMAC_Init_ex(ctx, &civ[0], 32, EVP_sha256(), nullptr)
         || !HMAC_Update(ctx, (unsigned char*) pHeader+4, SMSG_HDR_LEN-4)
         || !HMAC_Update(ctx, (unsigned char*) pPayload, nPayload)
         || !HMAC_Update(ctx, pPayload, nPayload)
@@ -3169,7 +3169,7 @@ int SecureMsgValidate(unsigned char *pHeader, unsigned char *pPayload, uint32_t 
     {
         if (sha256Hash[31] == 0
             && sha256Hash[30] == 0
-            && (~(sha256Hash[29]) & ((1<<0) || (1<<1) || (1<<2)) ))
+            && (~(sha256Hash[29]) & ((1<<0) | (1<<1) | (1<<2)) ))
         {
             if (fDebugSmsg)
                 printf("Hash Valid.\n");
@@ -3233,7 +3233,7 @@ int SecureMsgSetHash(unsigned char *pHeader, unsigned char *pPayload, uint32_t n
             memcpy(civ+i, &nonse, 4);
         
         unsigned int nBytes;
-        if (!HMAC_Init_ex(ctx, &civ[0], 32, EVP_sha256(), NULL)
+        if (!HMAC_Init_ex(ctx, &civ[0], 32, EVP_sha256(), nullptr)
             || !HMAC_Update(ctx, (unsigned char*) pHeader+4, SMSG_HDR_LEN-4)
             || !HMAC_Update(ctx, (unsigned char*) pPayload, nPayload)
             || !HMAC_Update(ctx, pPayload, nPayload)
@@ -3254,7 +3254,7 @@ int SecureMsgSetHash(unsigned char *pHeader, unsigned char *pPayload, uint32_t n
         
         if (sha256Hash[31] == 0
             && sha256Hash[30] == 0
-            && (~(sha256Hash[29]) & ((1<<0) || (1<<1) || (1<<2)) ))
+            && (~(sha256Hash[29]) & ((1<<0) | (1<<1) | (1<<2)) ))
         //    && sha256Hash[29] == 0)
         {
             found = true;
@@ -3421,7 +3421,7 @@ int SecureMspinkcrypt(SecureMessage& smsg, std::string& addressFrom, std::string
     
     // -- ECDH_compute_key returns the same P if fed compressed or uncompressed public keys
     EC_KEY_set_method(pkeyr, EC_KEY_OpenSSL());
-    int lenP = ECDH_compute_key(&vchP[0], 32, EC_KEY_get0_public_key(pkeyK), pkeyr, NULL);
+    int lenP = ECDH_compute_key(&vchP[0], 32, EC_KEY_get0_public_key(pkeyK), pkeyr, nullptr);
     
     if (lenP != 32)
     {
@@ -3556,7 +3556,7 @@ int SecureMspinkcrypt(SecureMessage& smsg, std::string& addressFrom, std::string
     
     HMAC_CTX *ctx= HMAC_CTX_new();
     
-    if (!HMAC_Init_ex(ctx, &key_m[0], 32, EVP_sha256(), NULL)
+    if (!HMAC_Init_ex(ctx, &key_m[0], 32, EVP_sha256(), nullptr)
         || !HMAC_Update(ctx, (unsigned char*) &smsg.timestamp, sizeof(smsg.timestamp))
         || !HMAC_Update(ctx, &vchCiphertext[0], vchCiphertext.size())
         || !HMAC_Final(ctx, smsg.mac, &nBytes)
@@ -3833,7 +3833,7 @@ int SecureMsgDecrypt(bool fTestOnly, std::string& address, unsigned char *pHeade
     EC_KEY* pkeyR = keyR.GetECKey();
     
     EC_KEY_set_method(pkeyk, EC_KEY_OpenSSL());
-    int lenPdec = ECDH_compute_key(&vchP[0], 32, EC_KEY_get0_public_key(pkeyR), pkeyk, NULL);
+    int lenPdec = ECDH_compute_key(&vchP[0], 32, EC_KEY_get0_public_key(pkeyR), pkeyk, nullptr);
     
     if (lenPdec != 32)
     {
@@ -3858,7 +3858,7 @@ int SecureMsgDecrypt(bool fTestOnly, std::string& address, unsigned char *pHeade
 
     HMAC_CTX *ctx= HMAC_CTX_new();
     
-    if (!HMAC_Init_ex(ctx, &key_m[0], 32, EVP_sha256(), NULL)
+    if (!HMAC_Init_ex(ctx, &key_m[0], 32, EVP_sha256(), nullptr)
         || !HMAC_Update(ctx, (unsigned char*) &psmsg->timestamp, sizeof(psmsg->timestamp))
         || !HMAC_Update(ctx, pPayload, nPayload)
         || !HMAC_Final(ctx, MAC, &nBytes)

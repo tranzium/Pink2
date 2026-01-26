@@ -370,7 +370,7 @@ const CRPCCommand *CRPCTable::operator[](string name) const
 {
     map<string, const CRPCCommand*>::const_iterator it = mapCommands.find(name);
     if (it == mapCommands.end())
-        return NULL;
+        return nullptr;
     return (*it).second;
 }
 
@@ -404,7 +404,7 @@ string rfc1123Time()
     time_t now;
     time(&now);
     struct tm* now_gmt = gmtime(&now);
-    string locale(setlocale(LC_TIME, NULL));
+    string locale(setlocale(LC_TIME, nullptr));
     setlocale(LC_TIME, "C"); // we want POSIX (aka "C") weekday/month strings
     strftime(buffer, sizeof(buffer), "%a, %d %b %Y %H:%M:%S +0000", now_gmt);
     setlocale(LC_TIME, locale.c_str());
@@ -484,7 +484,7 @@ bool ReadHTTPRequestLine(std::basic_istream<char>& stream, int &proto,
 
     proto = 0;
     const char *ver = strstr(strProto.c_str(), "HTTP/1.");
-    if (ver != NULL)
+    if (ver != nullptr)
         proto = atoi(ver+7);
 
     return true;
@@ -500,7 +500,7 @@ int ReadHTTPStatus(std::basic_istream<char>& stream, int &proto)
         return HTTP_INTERNAL_SERVER_ERROR;
     proto = 0;
     const char *ver = strstr(str.c_str(), "HTTP/1.");
-    if (ver != NULL)
+    if (ver != nullptr)
         proto = atoi(ver+7);
     return atoi(vWords[1].c_str());
 }
@@ -760,7 +760,7 @@ void ThreadRPCServer(void* parg)
         PrintException(&e, "ThreadRPCServer()");
     } catch (...) {
         vnThreadsRunning[THREAD_RPCLISTENER]--;
-        PrintException(NULL, "ThreadRPCServer()");
+        PrintException(nullptr, "ThreadRPCServer()");
     }
     printf("ThreadRPCServer exited\n");
 }
@@ -884,12 +884,12 @@ void ThreadRPCServer2(void* parg)
         context.set_options(ssl::context::no_sslv2);
 
         filesystem::path pathCertFile(GetArg("-rpcsslcertificatechainfile", "server.cert"));
-        if (!pathCertFile.is_complete()) pathCertFile = filesystem::path(GetDataDir()) / pathCertFile;
+        if (!pathCertFile.is_absolute()) pathCertFile = filesystem::path(GetDataDir()) / pathCertFile;
         if (filesystem::exists(pathCertFile)) context.use_certificate_chain_file(pathCertFile.string());
         else printf("ThreadRPCServer ERROR: missing server certificate file %s\n", pathCertFile.string().c_str());
 
         filesystem::path pathPKFile(GetArg("-rpcsslprivatekeyfile", "server.pem"));
-        if (!pathPKFile.is_complete()) pathPKFile = filesystem::path(GetDataDir()) / pathPKFile;
+        if (!pathPKFile.is_absolute()) pathPKFile = filesystem::path(GetDataDir()) / pathPKFile;
         if (filesystem::exists(pathPKFile)) context.use_private_key_file(pathPKFile.string(), ssl::context::pem);
         else printf("ThreadRPCServer ERROR: missing server private key file %s\n", pathPKFile.string().c_str());
 
@@ -1393,7 +1393,7 @@ int CommandLineRPC(int argc, char *argv[])
     }
     catch (...)
     {
-        PrintException(NULL, "CommandLineRPC()");
+        PrintException(nullptr, "CommandLineRPC()");
     }
 
     if (strPrint != "")
@@ -1416,7 +1416,7 @@ void specialOutput(std::string strMethod, std::string *strOut)
 
         vector<CNodeStats> vstats;
         CopyNodeStats(vstats);
-        Value ret = NULL;
+        Value ret = nullptr;
         string pNode = "";
 
         BOOST_FOREACH(const CNodeStats& stats, vstats) {
@@ -1438,18 +1438,18 @@ int main(int argc, char *argv[])
 #ifdef _MSC_VER
     // Turn off Microsoft heap dump noise
     _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_FILE);
-    _CrtSetReportFile(_CRT_WARN, CreateFile("NUL", GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, 0));
+    _CrtSetReportFile(_CRT_WARN, CreateFile("NUL", GENERIC_WRITE, 0, nullptr, OPEN_EXISTING, 0, 0));
 #endif
-    setbuf(stdin, NULL);
-    setbuf(stdout, NULL);
-    setbuf(stderr, NULL);
+    setbuf(stdin, nullptr);
+    setbuf(stdout, nullptr);
+    setbuf(stderr, nullptr);
 
     try
     {
         if (argc >= 2 && string(argv[1]) == "-server")
         {
             printf("server ready\n");
-            ThreadRPCServer(NULL);
+            ThreadRPCServer(nullptr);
         }
         else
         {
@@ -1459,7 +1459,7 @@ int main(int argc, char *argv[])
     catch (std::exception& e) {
         PrintException(&e, "main()");
     } catch (...) {
-        PrintException(NULL, "main()");
+        PrintException(nullptr, "main()");
     }
     return 0;
 }

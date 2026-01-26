@@ -1241,7 +1241,7 @@ Value listsinceblock(const Array& params, bool fHelp)
             "listsinceblock [blockhash] [target-confirmations]\n"
             "Get all transactions in blocks since block [blockhash], or all transactions if omitted");
 
-    CBlockIndex *pindex = NULL;
+    CBlockIndex *pindex = nullptr;
     int target_confirms = 1;
 
     if (params.size() > 0)
@@ -1490,7 +1490,7 @@ Value walletpassphrase(const Array& params, bool fHelp)
             "walletpassphrase <passphrase> <timeout>\n"
             "Stores the wallet decryption key in memory for <timeout> seconds.");
 
-    NewThread(ThreadTopUpKeyPool, NULL);
+    NewThread(ThreadTopUpKeyPool, nullptr);
     int64_t* pnSleepTime = new int64_t(nSleepTime);
     NewThread(ThreadCleanWalletPassphrase, pnSleepTime);
 
@@ -2189,7 +2189,7 @@ Value clearwallettransactions(const Array& params, bool fHelp)
             if (ret == DB_NOTFOUND)
                 break;
             else
-            if (datKey.get_data() == NULL || datValue.get_data() == NULL
+            if (datKey.get_data() == nullptr || datValue.get_data() == nullptr
                 || ret != 0)
             {
                 snprintf(cbuf, sizeof(cbuf), "wallet DB error %d, %s", ret, db_strerror(ret));
@@ -2265,7 +2265,7 @@ Value scanforalltxns(const Array& params, bool fHelp)
             pindex = pindex->pprev;
     };
     
-    if (pindex == NULL)
+    if (pindex == nullptr)
         throw runtime_error("Genesis Block is not set.");
     
     {
@@ -2309,7 +2309,7 @@ Value scanforstealthtxns(const Array& params, bool fHelp)
             pindex = pindex->pprev;
     };
     
-    if (pindex == NULL)
+    if (pindex == nullptr)
         throw runtime_error("Genesis Block is not set.");
     
     // -- locks in AddToWalletIfInvolvingMe

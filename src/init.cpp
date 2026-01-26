@@ -16,7 +16,9 @@
 
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
+#if BOOST_VERSION < 108500
 #include <boost/filesystem/convenience.hpp>
+#endif
 #include <boost/interprocess/sync/file_lock.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <openssl/crypto.h>
@@ -59,7 +61,7 @@ void StartShutdown()
     uiInterface.QueueShutdown();
 #else
     // Without UI, Shutdown() can simply be started in a new thread
-    NewThread(Shutdown, NULL);
+    NewThread(Shutdown, nullptr);
 #endif
 }
 
@@ -101,7 +103,7 @@ void Shutdown(void* parg)
         UnregisterWallet(pstakeDB);
         delete pwalletMain;
         delete pstakeDB;
-        NewThread(ExitTimeout, NULL);
+        NewThread(ExitTimeout, nullptr);
         MilliSleep(50);
         printf("Pinkcoin exited\n\n");
         fExit = true;
@@ -162,7 +164,7 @@ bool AppInit(int argc, char* argv[])
         if (!boost::filesystem::is_directory(GetDataDir(false)))
         {
             fprintf(stderr, "Error: Specified directory does not exist\n");
-            Shutdown(NULL);
+            Shutdown(nullptr);
         }
         ReadConfigFile(mapArgs, mapMultiArgs);
 
@@ -198,11 +200,11 @@ bool AppInit(int argc, char* argv[])
     catch (std::exception& e) {
         PrintException(&e, "AppInit()");
     } catch (...) {
-        PrintException(NULL, "AppInit()");
+        PrintException(nullptr, "AppInit()");
     }
     if (!fRet)
     {
-        Shutdown(NULL);
+        Shutdown(nullptr);
         threadGroup.interrupt_all();
         threadGroup.join_all();
     }
@@ -380,7 +382,7 @@ bool AppInit2(boost::thread_group& threadGroup)
 #ifdef _MSC_VER
     // Turn off Microsoft heap dump noise
     _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_FILE);
-    _CrtSetReportFile(_CRT_WARN, CreateFileA("NUL", GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, 0));
+    _CrtSetReportFile(_CRT_WARN, CreateFileA("NUL", GENERIC_WRITE, 0, nullptr, OPEN_EXISTING, 0, 0));
 #endif
 #if _MSC_VER >= 1400
     // Disable confusing "helpful" text message on abort, Ctrl-C
@@ -397,7 +399,7 @@ bool AppInit2(boost::thread_group& threadGroup)
 #endif
     typedef BOOL (WINAPI *PSETPROCDEPPOL)(DWORD);
     PSETPROCDEPPOL setProcDEPPol = (PSETPROCDEPPOL)GetProcAddress(GetModuleHandleA("Kernel32.dll"), "SetProcessDEPPolicy");
-    if (setProcDEPPol != NULL) setProcDEPPol(PROCESS_DEP_ENABLE);
+    if (setProcDEPPol != nullptr) setProcDEPPol(PROCESS_DEP_ENABLE);
 #endif
 #ifndef WIN32
     umask(077);
@@ -407,15 +409,15 @@ bool AppInit2(boost::thread_group& threadGroup)
     sa.sa_handler = HandleSIGTERM;
     sigemptyset(&sa.sa_mask);
     sa.sa_flags = 0;
-    sigaction(SIGTERM, &sa, NULL);
-    sigaction(SIGINT, &sa, NULL);
+    sigaction(SIGTERM, &sa, nullptr);
+    sigaction(SIGINT, &sa, nullptr);
 
     // Reopen debug.log on SIGHUP
     struct sigaction sa_hup;
     sa_hup.sa_handler = HandleSIGHUP;
     sigemptyset(&sa_hup.sa_mask);
     sa_hup.sa_flags = 0;
-    sigaction(SIGHUP, &sa_hup, NULL);
+    sigaction(SIGHUP, &sa_hup, nullptr);
 #endif
 
     threadGroup.create_thread(boost::bind(&DetectShutdownThread, &threadGroup));
@@ -546,11 +548,19 @@ bool AppInit2(boost::thread_group& threadGroup)
     std::string strStakeDBFileName = GetArg("-stakedb", "stake.dat");
 
     // strWalletFileName must be a plain filename without a directory
+#if BOOST_VERSION >= 108500
+    if (strWalletFileName != boost::filesystem::path(strWalletFileName).filename().string())
+#else
     if (strWalletFileName != boost::filesystem::basename(strWalletFileName) + boost::filesystem::extension(strWalletFileName))
+#endif
         return InitError(strprintf(_("Wallet %s resides outside data directory %s."), strWalletFileName.c_str(), strDataDir.c_str()));
 
     // strStakeDBFileName must be a plain filename without a directory
+#if BOOST_VERSION >= 108500
+    if (strStakeDBFileName != boost::filesystem::path(strStakeDBFileName).filename().string())
+#else
     if (strStakeDBFileName != boost::filesystem::basename(strStakeDBFileName) + boost::filesystem::extension(strStakeDBFileName))
+#endif
         return InitError(strprintf(_("DB %s resides outside data directory %s."), strStakeDBFileName.c_str(), strDataDir.c_str()));
 
     // Make sure only a single Bitcoin process is using the data directory.
@@ -1029,11 +1039,11 @@ bool AppInit2(boost::thread_group& threadGroup)
     printf("mapWallet.size() = %" PRIszu "\n",       pwalletMain->mapWallet.size());
     printf("mapAddressBook.size() = %" PRIszu "\n",  pwalletMain->mapAddressBook.size());
 
-    if (!NewThread(StartNode, NULL))
+    if (!NewThread(StartNode, nullptr))
         InitError(_("Error: could not start node"));
 
     if (fServer)
-        NewThread(ThreadRPCServer, NULL);
+        NewThread(ThreadRPCServer, nullptr);
 
     // ********************************************************* Step 13: finished
 

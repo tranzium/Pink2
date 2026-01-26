@@ -71,13 +71,13 @@ bool GetNTPTime(const char *addrConnect, uint64_t& timeRet)
     aiHint.ai_socktype = SOCK_DGRAM;
     aiHint.ai_family = AF_INET;
 
-    struct addrinfo *aiRes = NULL;
+    struct addrinfo *aiRes = nullptr;
     int nErr = getaddrinfo(addrConnect, "123", &aiHint, &aiRes);
     if (nErr)
         return false;
 
     // Connect to NTP
-    for (; aiRes != NULL; aiRes = aiRes->ai_next)
+    for (; aiRes != nullptr; aiRes = aiRes->ai_next)
     {
         socketNTP = socket(aiRes->ai_family , aiRes->ai_socktype, aiRes->ai_protocol);
         if (socketNTP < 0)
@@ -103,7 +103,7 @@ bool GetNTPTime(const char *addrConnect, uint64_t& timeRet)
         break;
     }
 
-    if (aiRes == NULL)
+    if (aiRes == nullptr)
     {
         if (socketNTP >= 0)
             close(socketNTP);

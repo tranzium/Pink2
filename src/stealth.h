@@ -79,7 +79,12 @@ public:
     {
         return memcmp(&scan_pubkey[0], &y.scan_pubkey[0], ec_compressed_size) < 0;
     }
-    
+
+    bool operator ==(const CStealthAddress& y) const
+    {
+        return memcmp(&scan_pubkey[0], &y.scan_pubkey[0], ec_compressed_size) == 0;
+    }
+
     IMPLEMENT_SERIALIZE
     (
         READWRITE(this->options);

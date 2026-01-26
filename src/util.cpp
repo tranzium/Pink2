@@ -116,7 +116,7 @@ public:
         // Securely erase the memory used by the PRNG
         RAND_cleanup();
         // Shutdown OpenSSL library multithreading support
-        CRYPTO_set_locking_callback(NULL);
+        CRYPTO_set_locking_callback(nullptr);
         for (int i = 0; i < CRYPTO_num_locks(); i++)
             delete ppmutexOpenSSL[i];
         OPENSSL_free(ppmutexOpenSSL);
@@ -155,7 +155,7 @@ void RandAddSeedPerfmon()
     unsigned char pdata[250000];
     memset(pdata, 0, sizeof(pdata));
     unsigned long nSize = sizeof(pdata);
-    long ret = RegQueryValueExA(HKEY_PERFORMANCE_DATA, "Global", NULL, NULL, pdata, &nSize);
+    long ret = RegQueryValueExA(HKEY_PERFORMANCE_DATA, "Global", nullptr, nullptr, pdata, &nSize);
     RegCloseKey(HKEY_PERFORMANCE_DATA);
     if (ret == ERROR_SUCCESS)
     {
@@ -214,13 +214,13 @@ inline int OutputDebugStringF(const char* pszFormat, ...)
     else if (!fPrintToDebugger)
     {
         // print to debug.log
-        static FILE* fileout = NULL;
+        static FILE* fileout = nullptr;
 
         if (!fileout)
         {
             boost::filesystem::path pathDebug = GetDataDir() / "debug.log";
             fileout = fopen(pathDebug.string().c_str(), "a");
-            if (fileout) setbuf(fileout, NULL); // unbuffered
+            if (fileout) setbuf(fileout, nullptr); // unbuffered
         }
         if (fileout)
         {
@@ -230,16 +230,16 @@ inline int OutputDebugStringF(const char* pszFormat, ...)
             // Since the order of destruction of static/global objects is undefined,
             // allocate mutexDebugLog on the heap the first time this routine
             // is called to avoid crashes during shutdown.
-            static boost::mutex* mutexDebugLog = NULL;
-            if (mutexDebugLog == NULL) mutexDebugLog = new boost::mutex();
+            static boost::mutex* mutexDebugLog = nullptr;
+            if (mutexDebugLog == nullptr) mutexDebugLog = new boost::mutex();
             boost::mutex::scoped_lock scoped_lock(*mutexDebugLog);
 
             // reopen the log file, if requested
             if (fReopenDebugLog) {
                 fReopenDebugLog = false;
                 boost::filesystem::path pathDebug = GetDataDir() / "debug.log";
-                if (freopen(pathDebug.string().c_str(),"a",fileout) != NULL)
-                    setbuf(fileout, NULL); // unbuffered
+                if (freopen(pathDebug.string().c_str(),"a",fileout) != nullptr)
+                    setbuf(fileout, nullptr); // unbuffered
             }
 
             // Debug print useful for profiling
@@ -307,7 +307,7 @@ string vstrprintf(const char *format, va_list ap)
             delete[] p;
         limit *= 2;
         p = new char[limit];
-        if (p == NULL)
+        if (p == nullptr)
             throw std::bad_alloc();
     }
     string str(p, p+ret);
@@ -959,7 +959,7 @@ static std::string FormatException(std::exception* pex, const char* pszThread)
 {
 #ifdef WIN32
     char pszModule[MAX_PATH] = "";
-    GetModuleFileNameA(NULL, pszModule, sizeof(pszModule));
+    GetModuleFileNameA(nullptr, pszModule, sizeof(pszModule));
 #else
     const char* pszModule = "pinkcoin";
 #endif
@@ -1001,7 +1001,7 @@ boost::filesystem::path GetDefaultDataDir()
 #else
     fs::path pathRet;
     char* pszHome = getenv("HOME");
-    if (pszHome == NULL || strlen(pszHome) == 0)
+    if (pszHome == nullptr || strlen(pszHome) == 0)
         pathRet = fs::path("/");
     else
         pathRet = fs::path(pszHome);
@@ -1055,7 +1055,7 @@ const boost::filesystem::path &GetDataDir(bool fNetSpecific)
 boost::filesystem::path GetConfigFile()
 {
     boost::filesystem::path pathConfigFile(GetArg("-conf", "pinkconf.txt"));
-    if (!pathConfigFile.is_complete()) pathConfigFile = GetDataDir(false) / pathConfigFile;
+    if (!pathConfigFile.is_absolute()) pathConfigFile = GetDataDir(false) / pathConfigFile;
 
     if (!boost::filesystem::exists(pathConfigFile))
     {
@@ -1092,7 +1092,7 @@ void ReadConfigFile(map<string, string>& mapSettingsRet,
 boost::filesystem::path GetPidFile()
 {
     boost::filesystem::path pathPidFile(GetArg("-pid", "pinkcoind.pid"));
-    if (!pathPidFile.is_complete()) pathPidFile = GetDataDir() / pathPidFile;
+    if (!pathPidFile.is_absolute()) pathPidFile = GetDataDir() / pathPidFile;
     return pathPidFile;
 }
 
@@ -1164,7 +1164,7 @@ int64_t GetTime()
 {
     if (nMockTime) return nMockTime;
 
-    return time(NULL);
+    return time(nullptr);
 }
 
 void SetMockTime(int64_t nMockTimeIn)
@@ -1334,7 +1334,7 @@ boost::filesystem::path GetSpecialFolderPath(int nFolder, bool fCreate)
 
     char pszPath[MAX_PATH] = "";
 
-    if(SHGetSpecialFolderPathA(NULL, pszPath, nFolder, fCreate))
+    if(SHGetSpecialFolderPathA(nullptr, pszPath, nFolder, fCreate))
     {
         return fs::path(pszPath);
     }

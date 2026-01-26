@@ -43,14 +43,14 @@ public:
     Dbc* GetTxnCursor()
     {
         if (!pdb)
-            return NULL;
+            return nullptr;
         
         DbTxn* ptxnid = activeTxn; // call TxnBegin first
         
-        Dbc* pcursor = NULL;
+        Dbc* pcursor = nullptr;
         int ret = pdb->cursor(ptxnid, &pcursor, 0);
         if (ret != 0)
-            return NULL;
+            return nullptr;
         return pcursor;
     }
     

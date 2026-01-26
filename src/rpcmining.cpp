@@ -307,7 +307,7 @@ Value getwork(const Array& params, bool fHelp)
             }
 
             // Clear pindexPrev so future getworks make a new block, despite any failures from here on
-            pindexPrev = NULL;
+            pindexPrev = nullptr;
 
             // Store the pindexBest used before CreateNewBlock, to avoid races
             nTransactionsUpdatedLast = nTransactionsUpdated;
@@ -434,7 +434,7 @@ Value getblocktemplate(const Array& params, bool fHelp)
         (nTransactionsUpdated != nTransactionsUpdatedLast && GetAdjustedTime() - nStart > 5))
     {
         // Clear pindexPrev so future calls make a new block, despite any failures from here on
-        pindexPrev = NULL;
+        pindexPrev = nullptr;
 
         // Store the pindexBest used before CreateNewBlock, to avoid races
         nTransactionsUpdatedLast = nTransactionsUpdated;
@@ -445,7 +445,7 @@ Value getblocktemplate(const Array& params, bool fHelp)
         if(pblock)
         {
             delete pblock;
-            pblock = NULL;
+            pblock = nullptr;
         }
         pblock = CreateNewBlock(pwalletMain);
         if (!pblock)
@@ -553,7 +553,7 @@ Value submitblock(const Array& params, bool fHelp)
         throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "Block decode failed");
     }
 
-    bool fAccepted = ProcessBlock(NULL, &block);
+    bool fAccepted = ProcessBlock(nullptr, &block);
     if (!fAccepted)
         return "rejected";
 

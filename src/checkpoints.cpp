@@ -55,7 +55,7 @@ namespace Checkpoints
     {
         if (mapArgs.count("-checkpoint") && mapMultiArgs["-checkpoint"].size() > 0)
         {
-            for (const string strCheckpoint : mapMultiArgs["-checkpoint"])
+            for (const string& strCheckpoint : mapMultiArgs["-checkpoint"])
             {
                 stringstream ss(strCheckpoint);
                 string tempStr;
@@ -100,7 +100,7 @@ namespace Checkpoints
             if (t != mapBlockIndex.end())
                 return t->second;
         }
-        return NULL;
+        return nullptr;
     }
 
     // ppcoin: synchronized checkpoint (centrally broadcasted)
@@ -119,7 +119,7 @@ namespace Checkpoints
             error("GetSyncCheckpoint: block index missing for current sync-checkpoint %s", hashSyncCheckpoint.ToString().c_str());
         else
             return mapBlockIndex[hashSyncCheckpoint];
-        return NULL;
+        return nullptr;
     }
 
     // ppcoin: only descendant of current sync-checkpoint is allowed
@@ -367,7 +367,7 @@ namespace Checkpoints
         if (!key.Sign(Hash(checkpoint.vchMsg.begin(), checkpoint.vchMsg.end()), checkpoint.vchSig))
             return error("SendSyncCheckpoint: Unable to sign checkpoint, check private key?");
 
-        if (!checkpoint.ProcessSyncCheckpoint(NULL))
+        if (!checkpoint.ProcessSyncCheckpoint(nullptr))
         {
             printf("WARNING: SendSyncCheckpoint: Failed to process checkpoint.\n");
             return false;

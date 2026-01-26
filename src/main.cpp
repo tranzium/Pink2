@@ -59,13 +59,13 @@ const unsigned int nHour3 = 1; // 5pm UTC-8
 const unsigned int nHour4 = 6; // 10pm UTC-8
 
 int nCoinbaseMaturity = 20;
-CBlockIndex* pindexGenesisBlock = NULL;
+CBlockIndex* pindexGenesisBlock = nullptr;
 int nBestHeight = -1;
 
 uint256 nBestChainTrust = 0;
 
 uint256 hashBestChain = 0;
-CBlockIndex* pindexBest = NULL;
+CBlockIndex* pindexBest = nullptr;
 int64_t nTimeBestReceived = 0;
 
 CMedianFilter<int> cPeerBlockCounts(8, 0); // Amount of blocks that other nodes claim to have
@@ -450,7 +450,7 @@ int CMerkleTx::SetMerkleBranch(const CBlock* pblock)
     AssertLockHeld(cs_main);
 
     CBlock blockTmp;
-    if (pblock == NULL)
+    if (pblock == nullptr)
     {
         // Load the block this tx is in
         CTxIndex txindex;
@@ -616,7 +616,7 @@ bool CTxMemPool::accept(CTxDB& txdb, CTransaction &tx,
         return false;
 
     // Check for conflicts with in-memory transactions
-    CTransaction* ptxOld = NULL;
+    CTransaction* ptxOld = nullptr;
     for (unsigned int i = 0; i < tx.vin.size(); i++)
     {
         COutPoint outpoint = tx.vin[i].prevout;
@@ -722,7 +722,7 @@ bool CTxMemPool::accept(CTxDB& txdb, CTransaction &tx,
     // If updated, erase old tx from wallet
     if (ptxOld)
         EraseFromWallets(ptxOld->GetHash());
-    SyncWithWallets(tx, NULL, true);
+    SyncWithWallets(tx, nullptr, true);
 
     printf("CTxMemPool::accept() : accepted %s (poolsz %" PRIszu ")\n",
            hash.ToString().substr(0,10).c_str(),
@@ -1347,7 +1347,7 @@ bool IsFlashStake(unsigned int nTime)
 bool IsInitialBlockDownload()
 {
     LOCK(cs_main);
-    if (pindexBest == NULL || nBestHeight < Checkpoints::GetTotalBlocksEstimate())
+    if (pindexBest == nullptr || nBestHeight < Checkpoints::GetTotalBlocksEstimate())
         return true;
     static int64_t nLastUpdate;
     static CBlockIndex* pindexLastBest;
@@ -1881,7 +1881,7 @@ bool static Reorganize(CTxDB& txdb, CBlockIndex* pindexNew)
     // Disconnect shorter branch
     BOOST_FOREACH(CBlockIndex* pindex, vDisconnect)
         if (pindex->pprev)
-            pindex->pprev->pnext = NULL;
+            pindex->pprev->pnext = nullptr;
 
     // Connect longer branch
     BOOST_FOREACH(CBlockIndex* pindex, vConnect)
@@ -1936,7 +1936,7 @@ bool CBlock::SetBestChain(CTxDB& txdb, CBlockIndex* pindexNew)
     if (!txdb.TxnBegin())
         return error("SetBestChain() : TxnBegin failed");
 
-    if (pindexGenesisBlock == NULL && hash == (!fTestNet ? hashGenesisBlock : hashGenesisBlockTestNet))
+    if (pindexGenesisBlock == nullptr && hash == (!fTestNet ? hashGenesisBlock : hashGenesisBlockTestNet))
     {
         txdb.WriteHashBestChain(hash);
         if (!txdb.TxnCommit())
@@ -2005,7 +2005,7 @@ bool CBlock::SetBestChain(CTxDB& txdb, CBlockIndex* pindexNew)
     // New best block
     hashBestChain = hash;
     pindexBest = pindexNew;
-    pblockindexFBBHLast = NULL;
+    pblockindexFBBHLast = nullptr;
     nBestHeight = pindexBest->nHeight;
     nBestChainTrust = pindexNew->nChainTrust;
     nTimeBestReceived = GetAdjustedTime();
@@ -2025,7 +2025,7 @@ bool CBlock::SetBestChain(CTxDB& txdb, CBlockIndex* pindexNew)
     {
         int nUpgraded = 0;
         const CBlockIndex* pindex = pindexBest;
-        for (int i = 0; i < 100 && pindex != NULL; i++)
+        for (int i = 0; i < 100 && pindex != nullptr; i++)
         {
             if (pindex->nVersion > CBlock::CURRENT_VERSION)
                 ++nUpgraded;
@@ -2724,16 +2724,16 @@ static filesystem::path BlockFilePath(unsigned int nFile)
 FILE* OpenBlockFile(unsigned int nFile, unsigned int nBlockPos, const char* pszMode)
 {
     if ((nFile < 1) || (nFile == (unsigned int) -1))
-        return NULL;
+        return nullptr;
     FILE* file = fopen(BlockFilePath(nFile).string().c_str(), pszMode);
     if (!file)
-        return NULL;
+        return nullptr;
     if (nBlockPos != 0 && !strchr(pszMode, 'a') && !strchr(pszMode, 'w'))
     {
         if (fseek(file, nBlockPos, SEEK_SET) != 0)
         {
             fclose(file);
-            return NULL;
+            return nullptr;
         }
     }
     return file;
@@ -2748,9 +2748,9 @@ FILE* AppendBlockFile(unsigned int& nFileRet)
     {
         FILE* file = OpenBlockFile(nCurrentBlockFile, 0, "ab");
         if (!file)
-            return NULL;
+            return nullptr;
         if (fseek(file, 0, SEEK_END) != 0)
-            return NULL;
+            return nullptr;
         // FAT32 file size max 4GB, fseek and ftell max 2GB, so we must stay under 2GB
         if (ftell(file) < (long)(0x7F000000 - MAX_SIZE))
         {
@@ -2990,7 +2990,7 @@ bool LoadExternalBlockFile(FILE* fileIn)
                 {
                     CBlock block;
                     blkdat >> block;
-                    if (ProcessBlock(NULL,&block))
+                    if (ProcessBlock(nullptr,&block))
                     {
                         nLoaded++;
                         nPos += 4 + nSize;
@@ -3518,7 +3518,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
         uint256 hashStop;
         vRecv >> locator >> hashStop;
 
-        CBlockIndex* pindex = NULL;
+        CBlockIndex* pindex = nullptr;
         if (locator.IsNull())
         {
             // If locator is null, return the hashStop block
@@ -3902,7 +3902,7 @@ bool ProcessMessages(CNode* pfrom)
         catch (std::exception& e) {
             PrintExceptionContinue(&e, "ProcessMessages()");
         } catch (...) {
-            PrintExceptionContinue(NULL, "ProcessMessages()");
+            PrintExceptionContinue(nullptr, "ProcessMessages()");
         }
 
         if (!fRet)

@@ -233,7 +233,9 @@ bool BackupStakeDB(const CWallet& stakeDB, const string& strDest)
                     pathDest /= stakeDB.strWalletFile;
 
                 try {
-#if BOOST_VERSION >= 104000
+#if BOOST_VERSION >= 108500
+                    filesystem::copy_file(pathSrc, pathDest, filesystem::copy_options::overwrite_existing);
+#elif BOOST_VERSION >= 104000
                     filesystem::copy_file(pathSrc, pathDest, filesystem::copy_option::overwrite_if_exists);
 #else
                     filesystem::copy_file(pathSrc, pathDest);
@@ -266,7 +268,7 @@ bool CStakeDB::Recover(CDBEnv& dbenv, std::string filename, bool fOnlyKeys)
     int64_t now = GetAdjustedTime();
     std::string newFilename = strprintf("stake.%" PRId64 ".bak", now);
 
-    int result = dbenv.dbenv.dbrename(NULL, filename.c_str(), NULL,
+    int result = dbenv.dbenv.dbrename(nullptr, filename.c_str(), nullptr,
                                       newFilename.c_str(), DB_AUTO_COMMIT);
     if (result == 0)
         printf("Renamed %s to %s\n", filename.c_str(), newFilename.c_str());
@@ -287,7 +289,7 @@ bool CStakeDB::Recover(CDBEnv& dbenv, std::string filename, bool fOnlyKeys)
 
     bool fSuccess = allOK;
     Db* pdbCopy = new Db(&dbenv.dbenv, 0);
-    int ret = pdbCopy->open(NULL,                 // Txn pointer
+    int ret = pdbCopy->open(nullptr,                 // Txn pointer
                             filename.c_str(),   // Filename
                             "main",    // Logical db name
                             DB_BTREE,  // Database type
