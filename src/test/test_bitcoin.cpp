@@ -4,9 +4,19 @@
 #include "db.h"
 #include "main.h"
 #include "wallet.h"
+#include "checkpoints.h"
 
 CWallet* pwalletMain;
 CClientUIInterface uiInterface;
+
+// Global variables that would normally come from init.cpp
+bool fConfChange;
+bool fNTPSuccess;
+unsigned int nNodeLifespan;
+unsigned int nDerivationMethodIndex;
+bool fUseFastIndex;
+enum Checkpoints::CPMode CheckpointsMode;
+CWallet* pstakeDB;
 
 extern bool fPrintToConsole;
 extern void noui_connect();

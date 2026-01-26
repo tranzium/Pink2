@@ -9,14 +9,14 @@
 BOOST_AUTO_TEST_SUITE(accounting_tests)
 
 static void
-GetResults(CWalletDB& walletdb, std::map<int64, CAccountingEntry>& results)
+GetResults(CWalletDB& walletdb, std::map<int64_t, CAccountingentry>& results)
 {
-    std::list<CAccountingEntry> aes;
+    std::list<CAccountingentry> aes;
 
     results.clear();
     BOOST_CHECK(walletdb.ReorderTransactions(pwalletMain) == DB_LOAD_OK);
     walletdb.ListAccountCreditDebit("", aes);
-    BOOST_FOREACH(CAccountingEntry& ae, aes)
+    BOOST_FOREACH(CAccountingentry& ae, aes)
     {
         results[ae.nOrderPos] = ae;
     }
@@ -27,15 +27,15 @@ BOOST_AUTO_TEST_CASE(acc_orderupgrade)
     CWalletDB walletdb(pwalletMain->strWalletFile);
     std::vector<CWalletTx*> vpwtx;
     CWalletTx wtx;
-    CAccountingEntry ae;
-    std::map<int64, CAccountingEntry> results;
+    CAccountingentry ae;
+    std::map<int64_t, CAccountingentry> results;
 
     ae.strAccount = "";
     ae.nCreditDebit = 1;
     ae.nTime = 1333333333;
     ae.strOtherAccount = "b";
     ae.strComment = "";
-    walletdb.WriteAccountingEntry(ae);
+    walletdb.WriteAccountingentry(ae);
 
     wtx.mapValue["comment"] = "z";
     pwalletMain->AddToWallet(wtx);
@@ -45,7 +45,7 @@ BOOST_AUTO_TEST_CASE(acc_orderupgrade)
 
     ae.nTime = 1333333336;
     ae.strOtherAccount = "c";
-    walletdb.WriteAccountingEntry(ae);
+    walletdb.WriteAccountingentry(ae);
 
     GetResults(walletdb, results);
 
@@ -61,7 +61,7 @@ BOOST_AUTO_TEST_CASE(acc_orderupgrade)
     ae.nTime = 1333333330;
     ae.strOtherAccount = "d";
     ae.nOrderPos = pwalletMain->IncOrderPosNext();
-    walletdb.WriteAccountingEntry(ae);
+    walletdb.WriteAccountingentry(ae);
 
     GetResults(walletdb, results);
 
@@ -103,7 +103,7 @@ BOOST_AUTO_TEST_CASE(acc_orderupgrade)
     ae.nTime = 1333333334;
     ae.strOtherAccount = "e";
     ae.nOrderPos = -1;
-    walletdb.WriteAccountingEntry(ae);
+    walletdb.WriteAccountingentry(ae);
 
     GetResults(walletdb, results);
 

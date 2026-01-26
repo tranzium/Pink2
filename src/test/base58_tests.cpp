@@ -5,6 +5,7 @@
 
 #include "base58.h"
 #include "util.h"
+#include "stealth.h"
 
 using namespace json_spirit;
 extern Array read_json(const std::string& filename);
@@ -76,6 +77,10 @@ public:
     {
         return (exp_addrType == "none");
     }
+    bool operator()(const CStealthAddress &stealth) const
+    {
+        return (exp_addrType == "stealth");
+    }
 };
 
 // Visitor to check address payload
@@ -98,6 +103,10 @@ public:
     bool operator()(const CNoDestination &no) const
     {
         return exp_payload.size() == 0;
+    }
+    bool operator()(const CStealthAddress &stealth) const
+    {
+        return false; // Stealth address payload comparison not implemented
     }
 };
 
