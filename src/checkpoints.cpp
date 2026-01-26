@@ -53,7 +53,7 @@ namespace Checkpoints
 
     void GetCheckpointsFromConfig()
     {
-        if (mapArgs.count("-checkpoint") && mapMultiArgs["-checkpoint"].size() > 0)
+        if (mapArgs.count("-checkpoint") && !mapMultiArgs["-checkpoint"].empty())
         {
             for (const string& strCheckpoint : mapMultiArgs["-checkpoint"])
             {

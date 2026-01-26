@@ -148,7 +148,7 @@ Object blockToJSON(const CBlock& block, const CBlockIndex* blockindex, bool fPri
 
 Value getbestblockhash(const Array& params, bool fHelp)
 {
-    if (fHelp || params.size() != 0)
+    if (fHelp || !params.empty())
         throw runtime_error(
             "getbestblockhash\n"
             "Returns the hash of the best block in the longest block chain.");
@@ -158,7 +158,7 @@ Value getbestblockhash(const Array& params, bool fHelp)
 
 Value getblockcount(const Array& params, bool fHelp)
 {
-    if (fHelp || params.size() != 0)
+    if (fHelp || !params.empty())
         throw runtime_error(
             "getblockcount\n"
             "Returns the number of blocks in the longest block chain.");
@@ -169,7 +169,7 @@ Value getblockcount(const Array& params, bool fHelp)
 
 Value getdifficulty(const Array& params, bool fHelp)
 {
-    if (fHelp || params.size() != 0)
+    if (fHelp || !params.empty())
         throw runtime_error(
             "getdifficulty\n"
             "Returns the difficulty as a multiple of the minimum difficulty.");
@@ -198,7 +198,7 @@ Value settxfee(const Array& params, bool fHelp)
 
 Value getrawmempool(const Array& params, bool fHelp)
 {
-    if (fHelp || params.size() != 0)
+    if (fHelp || !params.empty())
         throw runtime_error(
             "getrawmempool\n"
             "Returns all transaction ids in memory pool.");
@@ -277,7 +277,7 @@ Value getblockbynumber(const Array& params, bool fHelp)
 // ppcoin: get information of sync-checkpoint
 Value getcheckpoint(const Array& params, bool fHelp)
 {
-    if (fHelp || params.size() != 0)
+    if (fHelp || !params.empty())
         throw runtime_error(
             "getcheckpoint\n"
             "Show info of synchronized checkpoint.\n");

@@ -396,6 +396,12 @@ public:
         return vRandom.size();
     }
 
+    // Return whether there are no addresses in any table.
+    bool empty()
+    {
+        return vRandom.empty();
+    }
+
     // Consistency check
     void Check()
     {

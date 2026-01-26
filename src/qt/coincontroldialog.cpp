@@ -533,7 +533,7 @@ QString CoinControlDialog::getPriorityLabel(double dPriority)
 {
     vector<COutPoint> vOutpts;
     model->listLockedCoins(vOutpts);
-    if (vOutpts.size() > 0)
+    if (!vOutpts.empty())
     {
        ui->labelLocked->setText(tr("(%1 locked)").arg(vOutpts.size()));
        ui->labelLocked->setVisible(true); 
@@ -609,7 +609,7 @@ void CoinControlDialog::updateLabels(WalletModel *model, QDialog* dialog)
     if (nQuantity > 0)
     {
         // Bytes
-        nBytes = nBytesInputs + ((CoinControlDialog::payAmounts.size() > 0 ? CoinControlDialog::payAmounts.size() + 1 : 2) * 34) + 10; // always assume +1 output for change here
+        nBytes = nBytesInputs + ((!CoinControlDialog::payAmounts.empty() ? CoinControlDialog::payAmounts.size() + 1 : 2) * 34) + 10; // always assume +1 output for change here
         
         // Priority
         dPriority = dPriorityInputs / nBytes;

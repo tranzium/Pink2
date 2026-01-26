@@ -71,7 +71,6 @@ json_spirit::Object JSONRPCError(int code, const std::string& message);
 
 void ThreadRPCServer(void* parg);
 int CommandLineRPC(int argc, char *argv[]);
-//bool specialOutput(std::string strMethod, std::string *strOut);
 
 /** Convert parameter values for RPC call from strings to command-specific JSON objects. */
 json_spirit::Array RPCConvertValues(const std::string &strMethod, const std::vector<std::string> &strParams);
@@ -144,9 +143,7 @@ extern void EnsureWalletIsUnlocked();
 extern uint256 ParseHashV(const json_spirit::Value& v, std::string strName);
 extern uint256 ParseHashO(const json_spirit::Object& o, std::string strKey);
 extern std::vector<unsigned char> ParseHexV(const json_spirit::Value& v, std::string strName);
-extern std::vector<unsigned char> ParseHexO(const json_spirit::Object& o, std::string strKey); 
-
-//extern std::string getnodes(const json_spirit::Array& params, bool fHelp);
+extern std::vector<unsigned char> ParseHexO(const json_spirit::Object& o, std::string strKey);
 
 extern json_spirit::Value getconnectioncount(const json_spirit::Array& params, bool fHelp); // in rpcnet.cpp
 extern json_spirit::Value getpeerinfo(const json_spirit::Array& params, bool fHelp);

@@ -94,7 +94,6 @@ void Shutdown(void* parg)
         }
         
         nTransactionsUpdated++;
-//        CTxDB().Close();
         bitdb.Flush(false);
         StopNode();
         bitdb.Flush(true);
@@ -452,7 +451,7 @@ bool AppInit2(boost::thread_group& threadGroup)
         SoftSetBoolArg("-listen", true);
     }
 
-    if (mapArgs.count("-connect") && mapMultiArgs["-connect"].size() > 0) {
+    if (mapArgs.count("-connect") && !mapMultiArgs["-connect"].empty()) {
         // when only connecting to trusted nodes, do not seed via DNS, or listen by default
         SoftSetBoolArg("-dnsseed", false);
         SoftSetBoolArg("-listen", false);

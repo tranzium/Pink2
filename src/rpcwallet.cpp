@@ -79,7 +79,7 @@ string AccountFromValue(const Value& value)
 
 Value getinfo(const Array& params, bool fHelp)
 {
-    if (fHelp || params.size() != 0)
+    if (fHelp || !params.empty())
         throw runtime_error(
             "getinfo\n"
             "Returns an object containing various state info.");
@@ -128,7 +128,7 @@ Value getnewpubkey(const Array& params, bool fHelp)
 
     // Parse the account first so we don't generate a key if there's an error
     string strAccount;
-    if (params.size() > 0)
+    if (!params.empty())
         strAccount = AccountFromValue(params[0]);
 
     if (!pwalletMain->IsLocked())
@@ -158,7 +158,7 @@ Value getnewaddress(const Array& params, bool fHelp)
 
     // Parse the account first so we don't generate a key if there's an error
     string strAccount;
-    if (params.size() > 0)
+    if (!params.empty())
         strAccount = AccountFromValue(params[0]);
 
     if (!pwalletMain->IsLocked())
@@ -582,7 +582,7 @@ Value getbalance(const Array& params, bool fHelp)
             "If [account] is not specified, returns the server's total available balance.\n"
             "If [account] is specified, returns the balance in the account.");
 
-    if (params.size() == 0)
+    if (params.empty())
         return  ValueFromAmount(pwalletMain->GetBalance());
 
     int nMinDepth = 1;
@@ -905,7 +905,7 @@ Value ListReceived(const Array& params, bool fByAccounts)
 {
     // Minimum confirmations
     int nMinDepth = 1;
-    if (params.size() > 0)
+    if (!params.empty())
         nMinDepth = params[0].get_int();
 
     // Whether to include empty accounts
@@ -1060,7 +1060,7 @@ void ListTransactions(const CWalletTx& wtx, const string& strAccount, int nMinDe
     }
 
     // Received
-    if (listReceived.size() > 0 && wtx.GetDepthInMainChain() >= nMinDepth)
+    if (!listReceived.empty() && wtx.GetDepthInMainChain() >= nMinDepth)
     {
         bool stop = false;
         BOOST_FOREACH(const PAIRTYPE(CTxDestination, int64_t)& r, listReceived)
@@ -1128,7 +1128,7 @@ Value listtransactions(const Array& params, bool fHelp)
             "Returns up to [count] most recent transactions skipping the first [from] transactions for account [account].");
 
     string strAccount = "*";
-    if (params.size() > 0)
+    if (!params.empty())
         strAccount = params[0].get_str();
     int nCount = 10;
     if (params.size() > 1)
@@ -1180,7 +1180,7 @@ Value listtransactions(const Array& params, bool fHelp)
 
 Value listaccounts(const Array& params, bool fHelp)
 {
-    if (fHelp || params.size() > 0)
+    if (fHelp || !params.empty())
         throw runtime_error(
             "listaccounts [minconf=1]\n"
             "Returns Object that has account names as keys, account balances as values.");
@@ -1188,7 +1188,7 @@ Value listaccounts(const Array& params, bool fHelp)
 //    accountingDeprecationCheck();
 
 //    int nMinDepth = 1;
-//   if (params.size() > 0)
+//   if (!params.empty())
 //        nMinDepth = params[0].get_int();
 
     map<string, CBitcoinAddress> mapAccountAddresses;
@@ -1197,36 +1197,6 @@ Value listaccounts(const Array& params, bool fHelp)
             mapAccountAddresses[entry.second] = CBitcoinAddress(entry.first);
     }
 
- /*
-    for (map<uint256, CWalletTx>::iterator it = pwalletMain->mapWallet.begin(); it != pwalletMain->mapWallet.end(); ++it)
-    {
-        const CWalletTx& wtx = (*it).second;
-        int64_t nFee;
-        string strSentAccount;
-        list<pair<CTxDestination, int64_t> > listReceived;
-        list<pair<CTxDestination, int64_t> > listSent;
-        int nDepth = wtx.GetDepthInMainChain();
-        if (nDepth < 0)
-            continue;
-        wtx.GetAmounts(listReceived, listSent, nFee, strSentAccount);
-        mapAccountBalances[strSentAccount] -= nFee;
-        BOOST_FOREACH(const PAIRTYPE(CTxDestination, int64_t)& s, listSent)
-            mapAccountBalances[strSentAccount] -= s.second;
-        if (nDepth >= nMinDepth && wtx.GetBlocksToMaturity() == 0)
-        {
-            BOOST_FOREACH(const PAIRTYPE(CTxDestination, int64_t)& r, listReceived)
-                if (pwalletMain->mapAddressBook.count(r.first))
-                    mapAccountBalances[pwalletMain->mapAddressBook[r.first]] += r.second;
-                else
-                    mapAccountBalances[""] += r.second;
-        }
-    }
-
-    list<CAccountingentry> acentries;
-    CWalletDB(pwalletMain->strWalletFile).ListAccountCreditDebit("*", acentries);
-    BOOST_FOREACH(const CAccountingentry& entry, acentries)
-        mapAccountBalances[entry.strAccount] += entry.nCreditDebit;
-*/
     Object ret;
     BOOST_FOREACH(const PAIRTYPE(string, CBitcoinAddress)& accountAddress, mapAccountAddresses) {
         ret.push_back(Pair(accountAddress.first, accountAddress.second.ToString()));
@@ -1244,7 +1214,7 @@ Value listsinceblock(const Array& params, bool fHelp)
     CBlockIndex *pindex = nullptr;
     int target_confirms = 1;
 
-    if (params.size() > 0)
+    if (!params.empty())
     {
         uint256 blockId = 0;
 
@@ -1385,7 +1355,7 @@ Value keypoolrefill(const Array& params, bool fHelp)
             + HelpRequiringPassphrase());
 
     unsigned int nSize = max(GetArg("-keypool", 100), (int64_t)0);
-    if (params.size() > 0) {
+    if (!params.empty()) {
         if (params[0].get_int() < 0)
             throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid parameter, expected valid size");
         nSize = (unsigned int) params[0].get_int();
@@ -1539,7 +1509,7 @@ Value walletpassphrasechange(const Array& params, bool fHelp)
 
 Value walletlock(const Array& params, bool fHelp)
 {
-    if (pwalletMain->IsCrypted() && (fHelp || params.size() != 0))
+    if (pwalletMain->IsCrypted() && (fHelp || !params.empty()))
         throw runtime_error(
             "walletlock\n"
             "Removes the wallet encryption key from memory, locking the wallet.\n"
@@ -1711,7 +1681,7 @@ Value reservebalance(const Array& params, bool fHelp)
             "Set reserve amount not participating in network protection.\n"
             "If no parameters provided current setting is printed.\n");
 
-    if (params.size() > 0)
+    if (!params.empty())
     {
         bool fReserve = params[0].get_bool();
         if (fReserve)
@@ -1750,7 +1720,7 @@ Value combinethreshold(const Array& params, bool fHelp)
             "Set minimum coin chunk amount before combining stakes.\n"
             "If no parameters provided current setting is printed.\n");
 
-    if (params.size() > 0)
+    if (!params.empty())
     {
        if (params.size() == 1)
         {
@@ -1779,7 +1749,7 @@ Value splitthreshold(const Array& params, bool fHelp)
             "Set maximum coin chunk amount before splitting stakes.\n"
             "If no parameters provided current setting is printed.\n");
 
-    if (params.size() > 0)
+    if (!params.empty())
     {
        if (params.size() == 1)
         {
@@ -1800,7 +1770,7 @@ Value splitthreshold(const Array& params, bool fHelp)
 // ppcoin: check wallet integrity
 Value checkwallet(const Array& params, bool fHelp)
 {
-    if (fHelp || params.size() > 0)
+    if (fHelp || !params.empty())
         throw runtime_error(
             "checkwallet\n"
             "Check wallet for integrity.\n");
@@ -1824,7 +1794,7 @@ Value checkwallet(const Array& params, bool fHelp)
 // ppcoin: repair wallet
 Value repairwallet(const Array& params, bool fHelp)
 {
-    if (fHelp || params.size() > 0)
+    if (fHelp || !params.empty())
         throw runtime_error(
             "repairwallet\n"
             "Repair wallet if checkwallet reports any problem.\n");
@@ -1868,7 +1838,7 @@ Value makekeypair(const Array& params, bool fHelp)
             "[prefix] is optional preferred prefix for the public key.\n");
 
     string strPrefix = "";
-    if (params.size() > 0)
+    if (!params.empty())
         strPrefix = params[0].get_str();
  
     CKey key;
@@ -1894,7 +1864,7 @@ Value getnewstealthaddress(const Array& params, bool fHelp)
         throw runtime_error("Failed: Wallet must be unlocked.");
     
     std::string sLabel;
-    if (params.size() > 0)
+    if (!params.empty())
         sLabel = params[0].get_str();
     
     CStealthAddress sxAddr;
@@ -1917,7 +1887,7 @@ Value liststealthaddresses(const Array& params, bool fHelp)
     
     bool fShowSecrets = false;
     
-    if (params.size() > 0)
+    if (!params.empty())
     {
         std::string str = params[0].get_str();
         
@@ -2110,15 +2080,11 @@ Value sendtostealthaddress(const Array& params, bool fHelp)
         throw JSONRPCError(RPC_WALLET_ERROR, sError);
 
     return wtx.GetHash().GetHex();
-    
-    result.push_back(Pair("result", "Not implemented yet."));
-    
-    return result;
 }
 
 Value clearwallettransactions(const Array& params, bool fHelp)
 {
-    if (fHelp || params.size() > 0)
+    if (fHelp || !params.empty())
         throw runtime_error(
             "clearwallettransactions \n"
             "delete all transactions from wallet - reload with scanforalltxns\n"
@@ -2253,7 +2219,7 @@ Value scanforalltxns(const Array& params, bool fHelp)
     CBlockIndex *pindex = pindexGenesisBlock;
     
     
-    if (params.size() > 0)
+    if (!params.empty())
         nFromHeight = params[0].get_int();
     
     
@@ -2297,7 +2263,7 @@ Value scanforstealthtxns(const Array& params, bool fHelp)
     CBlockIndex *pindex = pindexGenesisBlock;
     
     
-    if (params.size() > 0)
+    if (!params.empty())
         nFromHeight = params[0].get_int();
     
     
@@ -2352,7 +2318,7 @@ Value scanforstealthtxns(const Array& params, bool fHelp)
 
 Value getwalletinfo(const Array& params, bool fHelp)
 {
-    if (fHelp || params.size() != 0)
+    if (fHelp || !params.empty())
         throw runtime_error(
             "getwalletinfo\n"
             "Returns an object containing various wallet state info.\n"
@@ -2388,7 +2354,7 @@ Value setstakesplitthreshold(const Array& params, bool fHelp)
             "This will set the output size of your stakes to never be below this number\n"
             "Note: This function is depreciated in favor of splitthreshold [amount]\n");
 
-    if (params.size() > 0)
+    if (!params.empty())
     {
        if (params.size() == 1)
         {
@@ -2404,38 +2370,12 @@ Value setstakesplitthreshold(const Array& params, bool fHelp)
     Object result;
     result.push_back(Pair("split threshold", ValueFromAmount(nSplitThreshold)));
     return result;
-/*
-	uint64_t nStakeSplitThreshold = boost::lexical_cast<int>(params[0].get_str());
-	if (pwalletMain->IsLocked())
-        throw JSONRPCError(RPC_WALLET_UNLOCK_NEEDED, "Error: Unlock wallet to use this feature");
-	if (nStakeSplitThreshold > 999999)
-		return "out of range - setting split threshold failed";
-	
-	CWalletDB walletdb(pwalletMain->strWalletFile);
-	LOCK(pwalletMain->cs_wallet);
-	{
-		bool fFileBacked = pwalletMain->fFileBacked;
-		
-		Object result;
-		pwalletMain->nStakeSplitThreshold = nStakeSplitThreshold;
-		result.push_back(Pair("split stake threshold set to ", int(pwalletMain->nStakeSplitThreshold)));
-		if(fFileBacked)
-		{
-			walletdb.WriteStakeSplitThreshold(nStakeSplitThreshold);
-			result.push_back(Pair("saved to wallet.dat ", "true"));
-		}
-		else
-			result.push_back(Pair("saved to wallet.dat ", "false"));
-		
-		return result;
-	}
-*/
 }
 
 // presstab HyperStake
 Value getstakesplitthreshold(const Array& params, bool fHelp)
 {
-    if (fHelp || params.size() != 0)
+    if (fHelp || !params.empty())
         throw runtime_error(
             "getstakesplitthreshold\n"
             "Returns the set splitstakethreshold\n"
@@ -2444,11 +2384,6 @@ Value getstakesplitthreshold(const Array& params, bool fHelp)
     Object result;
     result.push_back(Pair("split threshold", ValueFromAmount(nSplitThreshold)));
     return result;
-/*
-	Object result;
-	result.push_back(Pair("split stake threshold set to ", int(pwalletMain->nStakeSplitThreshold)));
-	return result;
-*/
 }
 
 Value addstakeout(const Array &params, bool fHelp)
@@ -2585,7 +2520,7 @@ Value delstakeout(const Array &params, bool fHelp)
 
 Value liststakeout(const Array &params, bool fHelp)
 {
-    if (fHelp || params.size() != 0)
+    if (fHelp || !params.empty())
         throw runtime_error(
             "liststakeout\n"
             "Returns the current Stakeout entries in stake database.\n");
@@ -2618,7 +2553,7 @@ Value liststakeout(const Array &params, bool fHelp)
 
 Value getstakeoutinfo(const Array &params, bool fHelp)
 {
-    if (fHelp || params.size() != 0)
+    if (fHelp || !params.empty())
         throw runtime_error(
             "getstakeoutinfo\n"
             "Returns your aggregated Stakeout Data information\n");

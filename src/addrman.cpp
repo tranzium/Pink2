@@ -205,9 +205,9 @@ void CAddrMan::MakeTried(CAddrInfo& info, int nId, int nOrigin)
     assert(vvNew[nOrigin].count(nId) == 1);
 
     // remove the entry from all new buckets
-    for (std::vector<std::set<int> >::iterator it = vvNew.begin(); it != vvNew.end(); it++)
+    for (auto& bucket : vvNew)
     {
-        if ((*it).erase(nId))
+        if (bucket.erase(nId))
             info.nRefCount--;
     }
     nNew--;
@@ -260,8 +260,6 @@ void CAddrMan::MakeTried(CAddrInfo& info, int nId, int nOrigin)
 
 void CAddrMan::Good_(const CService &addr, int64_t nTime)
 {
-//    printf("Good: addr=%s\n", addr.ToString().c_str());
-
     int nId;
     CAddrInfo *pinfo = Find(addr, &nId);
 
@@ -350,7 +348,6 @@ bool CAddrMan::Add_(const CAddress &addr, const CNetAddr& source, int64_t nTimeP
     } else {
         pinfo = Create(addr, source, &nId);
         pinfo->nTime = max((int64_t)0, (int64_t)pinfo->nTime - nTimePenalty);
-//        printf("Added %s [nTime=%fhr]\n", pinfo->ToString().c_str(), (GetAdjustedTime() - pinfo->nTime) / 3600.0);
         nNew++;
         fNew = true;
     }
@@ -400,7 +397,7 @@ CAddress CAddrMan::Select_()
         {
             int nKBucket = GetRandInt(vvTried.size());
             std::vector<int> &vTried = vvTried[nKBucket];
-            if (vTried.size() == 0) continue;
+            if (vTried.empty()) continue;
             int nPos = GetRandInt(vTried.size());
             assert(mapInfo.count(vTried[nPos]) == 1);
             CAddrInfo &info = mapInfo[vTried[nPos]];
@@ -415,7 +412,7 @@ CAddress CAddrMan::Select_()
         {
             int nUBucket = GetRandInt(vvNew.size());
             std::set<int> &vNew = vvNew[nUBucket];
-            if (vNew.size() == 0) continue;
+            if (vNew.empty()) continue;
             int nPos = GetRandInt(vNew.size());
             std::set<int>::iterator it = vNew.begin();
             while (nPos--)
@@ -437,10 +434,10 @@ int CAddrMan::Check_()
 
     if (vRandom.size() != nTried + nNew) return -7;
 
-    for (std::map<int, CAddrInfo>::iterator it = mapInfo.begin(); it != mapInfo.end(); it++)
+    for (auto& it : mapInfo)
     {
-        int n = (*it).first;
-        CAddrInfo &info = (*it).second;
+        int n = it.first;
+        CAddrInfo &info = it.second;
         if (info.fInTried)
         {
 
@@ -461,24 +458,22 @@ int CAddrMan::Check_()
     if (setTried.size() != nTried) return -9;
     if (mapNew.size() != nNew) return -10;
 
-    for (int n=0; n<vvTried.size(); n++)
+    for (auto& vTried : vvTried)
     {
-        std::vector<int> &vTried = vvTried[n];
-        for (std::vector<int>::iterator it = vTried.begin(); it != vTried.end(); it++)
+        for (int id : vTried)
         {
-            if (!setTried.count(*it)) return -11;
-            setTried.erase(*it);
+            if (!setTried.count(id)) return -11;
+            setTried.erase(id);
         }
     }
 
-    for (int n=0; n<vvNew.size(); n++)
+    for (auto& vNew : vvNew)
     {
-        std::set<int> &vNew = vvNew[n];
-        for (std::set<int>::iterator it = vNew.begin(); it != vNew.end(); it++)
+        for (int id : vNew)
         {
-            if (!mapNew.count(*it)) return -12;
-            if (--mapNew[*it] == 0)
-                mapNew.erase(*it);
+            if (!mapNew.count(id)) return -12;
+            if (--mapNew[id] == 0)
+                mapNew.erase(id);
         }
     }
 

@@ -151,7 +151,7 @@ Value listunspent(const Array& params, bool fHelp)
     RPCTypeCheck(params, list_of(int_type)(int_type)(array_type));
 
     int nMinDepth = 1;
-    if (params.size() > 0)
+    if (!params.empty())
         nMinDepth = params[0].get_int();
 
     int nMaxDepth = 9999999;
@@ -324,7 +324,7 @@ Value decodescript(const Array& params, bool fHelp)
 
     Object r;
     CScript script;
-    if (params[0].get_str().size() > 0){
+    if (!params[0].get_str().empty()){
         vector<unsigned char> scriptData(ParseHexV(params[0], "argument"));
         script = CScript(scriptData.begin(), scriptData.end());
     } else {

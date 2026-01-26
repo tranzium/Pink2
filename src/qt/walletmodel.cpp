@@ -310,7 +310,7 @@ WalletModel::SendCoinsReturn WalletModel::sendCoins(const QList<SendCoinsRecipie
                             return Aborted;
                         };
                         
-                        if (vchNarr.size() > 0)
+                        if (!vchNarr.empty())
                             scriptP = scriptP << OP_RETURN << vchNarr;
                         
                         int pos = vecSend.size()-1;
@@ -654,7 +654,7 @@ void WalletModel::listCoins(std::map<QString, std::vector<COutput> >& mapCoins) 
     {
         COutput cout = out;
 
-        while (wallet->IsChange(cout.tx->vout[cout.i]) && cout.tx->vin.size() > 0 && wallet->IsMine(cout.tx->vin[0]))
+        while (wallet->IsChange(cout.tx->vout[cout.i]) && !cout.tx->vin.empty() && wallet->IsMine(cout.tx->vin[0]))
         {
             if (!wallet->mapWallet.count(cout.tx->vin[0].prevout.hash)) break;
             cout = COutput(&wallet->mapWallet[cout.tx->vin[0].prevout.hash], cout.tx->vin[0].prevout.n, 0);

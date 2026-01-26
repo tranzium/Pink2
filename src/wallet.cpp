@@ -17,11 +17,6 @@
 
 using namespace std;
 
-//unsigned int nStakeSplitAge = 1 * 1 * 60 * 60;
-// int64_t nStakeCombineThreshold = 1000 * COIN; Depreciated.
-
-// CBitcoinAddress addrD4L("2LSrmzJMBSEcBMG7WMNxcdzVMH6tXXQH9M");
-
 //////////////////////////////////////////////////////////////////////////////
 //
 // mapWallet

@@ -460,7 +460,7 @@ bool IsHex(const string& str)
         if (phexdigit[c] < 0)
             return false;
     }
-    return (str.size() > 0) && (str.size()%2 == 0);
+    return (!str.empty()) && (str.size()%2 == 0);
 }
 
 vector<unsigned char> ParseHex(const char* psz)

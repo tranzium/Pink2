@@ -19,7 +19,7 @@ extern void TxToJSON(const CTransaction& tx, const uint256 hashBlock, json_spiri
 
 Value smsgenable(const Array& params, bool fHelp)
 {
-    if (fHelp || params.size() != 0)
+    if (fHelp || !params.empty())
         throw runtime_error(
             "smsgenable \n"
             "Enable secure messaging.");
@@ -40,7 +40,7 @@ Value smsgenable(const Array& params, bool fHelp)
 
 Value smsgdisable(const Array& params, bool fHelp)
 {
-    if (fHelp || params.size() != 0)
+    if (fHelp || !params.empty())
         throw runtime_error(
             "smsgdisable \n"
             "Disable secure messaging.");
@@ -66,7 +66,7 @@ Value smsgoptions(const Array& params, bool fHelp)
             "List and manage options.");
     
     std::string mode = "list";
-    if (params.size() > 0)
+    if (!params.empty())
     {
         mode = params[0].get_str();
     };
@@ -149,7 +149,7 @@ Value smsglocalkeys(const Array& params, bool fHelp)
     Object result;
     
     std::string mode = "whitelist";
-    if (params.size() > 0)
+    if (!params.empty())
     {
         mode = params[0].get_str();
     };
@@ -161,13 +161,13 @@ Value smsglocalkeys(const Array& params, bool fHelp)
     {
         uint32_t nKeys = 0;
         int all = mode == "all" ? 1 : 0;
-        for (std::vector<SecMsgAddress>::iterator it = smsgAddresses.begin(); it != smsgAddresses.end(); ++it)
+        for (auto& smsgAddr : smsgAddresses)
         {
-            if (!all 
-                && !it->fReceiveEnabled)
+            if (!all
+                && !smsgAddr.fReceiveEnabled)
                 continue;
-            
-            CBitcoinAddress coinAddress(it->sAddress);
+
+            CBitcoinAddress coinAddress(smsgAddr.sAddress);
             if (!coinAddress.IsValid())
                 continue;
             
@@ -192,9 +192,9 @@ Value smsglocalkeys(const Array& params, bool fHelp)
             std::string sLabel = pwalletMain->mapAddressBook[keyID];
             std::string sInfo;
             if (all)
-                sInfo = std::string("Receive ") + (it->fReceiveEnabled ? "on,  " : "off, ");
-            sInfo += std::string("Anon ") + (it->fReceiveAnon ? "on" : "off");
-            result.push_back(Pair("key", it->sAddress + " - " + sPublicKey + " " + sInfo + " - " + sLabel));
+                sInfo = std::string("Receive ") + (smsgAddr.fReceiveEnabled ? "on,  " : "off, ");
+            sInfo += std::string("Anon ") + (smsgAddr.fReceiveAnon ? "on" : "off");
+            result.push_back(Pair("key", smsgAddr.sAddress + " - " + sPublicKey + " " + sInfo + " - " + sLabel));
             
             nKeys++;
         };
@@ -346,7 +346,7 @@ Value smsglocalkeys(const Array& params, bool fHelp)
 
 Value smsgscanchain(const Array& params, bool fHelp)
 {
-    if (fHelp || params.size() != 0)
+    if (fHelp || !params.empty())
         throw runtime_error(
             "smsgscanchain \n"
             "Look for public keys in the block chain.");
@@ -367,7 +367,7 @@ Value smsgscanchain(const Array& params, bool fHelp)
 
 Value smsgscanbuckets(const Array& params, bool fHelp)
 {
-    if (fHelp || params.size() != 0)
+    if (fHelp || !params.empty())
         throw runtime_error(
             "smsgscanbuckets \n"
             "Force rescan of all messages in the bucket store.");
@@ -577,7 +577,7 @@ Value smsginbox(const Array& params, bool fHelp)
         throw runtime_error("Wallet is locked.");
     
     std::string mode = "unread";
-    if (params.size() > 0)
+    if (!params.empty())
     {
         mode = params[0].get_str();
     }
@@ -690,7 +690,7 @@ Value smsgoutbox(const Array& params, bool fHelp)
         throw runtime_error("Wallet is locked.");
     
     std::string mode = "all";
-    if (params.size() > 0)
+    if (!params.empty())
     {
         mode = params[0].get_str();
     }
@@ -780,7 +780,7 @@ Value smsgbuckets(const Array& params, bool fHelp)
         throw runtime_error("Secure messaging is disabled.");
     
     std::string mode = "stats";
-    if (params.size() > 0)
+    if (!params.empty())
     {
         mode = params[0].get_str();
     };
@@ -826,7 +826,7 @@ Value smsgbuckets(const Array& params, bool fHelp)
                 if (!boost::filesystem::exists(fullPath))
                 {
                     // -- If there is a file for an empty bucket something is wrong.
-                    if (tokenSet.size() == 0)
+                    if (tokenSet.empty())
                         objM.push_back(Pair("file size", "Empty bucket."));
                     else
                         objM.push_back(Pair("file size, error", "File not found."));

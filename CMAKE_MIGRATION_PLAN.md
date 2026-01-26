@@ -43,7 +43,8 @@ Stealth addresses can be hidden and/or removed where it is safe to do so.
 
 #### 2.1 C++ Syntax Modernization
 - [x] `NULL` → `nullptr` (354 occurrences converted)
-- [ ] Raw loops → range-based for loops where appropriate
+- [x] `.size() == 0` → `.empty()` (88 occurrences in safe files)
+- [x] Raw loops → range-based for loops (17 conversions in safe files)
 - [ ] Use `auto` for complex iterator types
 - [ ] Consistent use of `const` and references
 
@@ -126,12 +127,31 @@ These are **not** part of the current migration focus.
 ### 2026-01-26
 - **C++ Modernization (Phase 2.1):**
   - Converted 354 `NULL` → `nullptr` occurrences
+  - Converted 88 `.size() == 0`/`.size() > 0`/`.size() != 0` → `.empty()`/`!.empty()` (safe files only)
 - **UI Cleanup (Phase 2.2):**
   - Hidden stealth address checkbox in edit address dialog
   - Disabled stealth address loading in address table (backend still functional)
 - **Qt Modernization (Phase 2.2):**
   - Replaced deprecated `qSort`, `qLowerBound`, `qUpperBound` with `std::sort`, `std::lower_bound`, `std::upper_bound`
   - Converted 20 `foreach` macros to C++11 range-based for loops
+- **Housekeeping:**
+  - Updated `.gitignore` for CMake build artifacts
+  - Removed stale `build-win64/` directory (pre-preset test build)
+- **C++ Modernization (Phase 2.1 continued):**
+  - Converted 17 iterator-based for loops to range-based for loops
+  - Files: ntp.cpp, bitcoinrpc.cpp, rpcdump.cpp, addrman.cpp, rpcsmessage.cpp, net.cpp, smessage.cpp, qt/guiutil.cpp, qt/transactiontablemodel.cpp
+  - Skipped: Loops that modify iterator during iteration (erase patterns)
+- **Dead Code Removal (Phase 2.3):**
+  - Added `CAddrMan::empty()` method for API consistency
+  - Removed ~100 lines of dead/commented code:
+    - `bitcoinrpc.cpp`: Removed unused `specialOutput()` function (contained bug)
+    - `bitcoinrpc.h`: Removed matching commented declarations
+    - `rpcwallet.cpp`: Removed old account balance code, unreachable code after returns
+    - `addrman.cpp`: Removed commented debug printf statements
+    - `wallet.cpp`: Removed deprecated constant comments
+    - `init.cpp`: Removed old `CTxDB().Close()` comment
+    - `ntp.cpp`: Removed duplicate include comment
+  - Note: Kept `util.h` template usage examples (useful documentation)
 
 ## macOS Build Notes
 

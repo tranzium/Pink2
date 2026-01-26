@@ -14,7 +14,7 @@ using namespace std;
 
 Value getconnectioncount(const Array& params, bool fHelp)
 {
-    if (fHelp || params.size() != 0)
+    if (fHelp || !params.empty())
         throw runtime_error(
             "getconnectioncount\n"
             "Returns the number of connections to other nodes.");
@@ -38,7 +38,7 @@ static void CopyNodeStats(std::vector<CNodeStats>& vstats)
 
 Value getpeerinfo(const Array& params, bool fHelp)
 {
-    if (fHelp || params.size() != 0)
+    if (fHelp || !params.empty())
         throw runtime_error(
             "getpeerinfo\n"
             "Returns data about each connected network node.");
@@ -70,7 +70,7 @@ Value getpeerinfo(const Array& params, bool fHelp)
 
 Value getnodes(const Array& params, bool fHelp)
 {
-    if (fHelp || params.size() != 0)
+    if (fHelp || !params.empty())
         throw runtime_error(
             "getnodes\n"
             "Returns each connected network node as addnodes in conf friendly format.");

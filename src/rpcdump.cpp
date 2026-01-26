@@ -290,8 +290,8 @@ Value dumpwallet(const Array& params, bool fHelp)
 
     // sort time/key pairs
     std::vector<std::pair<int64_t, CKeyID> > vKeyBirth;
-    for (std::map<CKeyID, int64_t>::const_iterator it = mapKeyBirth.begin(); it != mapKeyBirth.end(); it++) {
-        vKeyBirth.push_back(std::make_pair(it->second, it->first));
+    for (const auto& it : mapKeyBirth) {
+        vKeyBirth.push_back(std::make_pair(it.second, it.first));
     }
     mapKeyBirth.clear();
     std::sort(vKeyBirth.begin(), vKeyBirth.end());
@@ -302,9 +302,9 @@ Value dumpwallet(const Array& params, bool fHelp)
     file << strprintf("# * Best block at time of backup was %i (%s),\n", nBestHeight, hashBestChain.ToString().c_str());
     file << strprintf("#   mined on %s\n", EncodeDumpTime(pindexBest->nTime).c_str());
     file << "\n";
-    for (std::vector<std::pair<int64_t, CKeyID> >::const_iterator it = vKeyBirth.begin(); it != vKeyBirth.end(); it++) {
-        const CKeyID &keyid = it->second;
-        std::string strTime = EncodeDumpTime(it->first);
+    for (const auto& it : vKeyBirth) {
+        const CKeyID &keyid = it.second;
+        std::string strTime = EncodeDumpTime(it.first);
         std::string strAddr = CBitcoinAddress(keyid).ToString();
         bool IsCompressed;
 

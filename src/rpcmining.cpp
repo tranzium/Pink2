@@ -24,7 +24,7 @@ Value getsubsidy(const Array& params, bool fHelp)
             "Returns proof-of-work subsidy value for the specified value of target.");
     
     int nShowHeight;
-    if (params.size() > 0)
+    if (!params.empty())
         nShowHeight = atoi(params[0].get_str());
     else
         nShowHeight = nBestHeight+1; // block currently being solved
@@ -34,7 +34,7 @@ Value getsubsidy(const Array& params, bool fHelp)
 
 Value getmininginfo(const Array& params, bool fHelp)
 {
-    if (fHelp || params.size() != 0)
+    if (fHelp || !params.empty())
         throw runtime_error(
             "getmininginfo\n"
             "Returns an object containing mining-related information.");
@@ -93,7 +93,7 @@ Value getmininginfo(const Array& params, bool fHelp)
 
 Value getstakinginfo(const Array& params, bool fHelp)
 {
-    if (fHelp || params.size() != 0)
+    if (fHelp || !params.empty())
         throw runtime_error(
             "getstakinginfo\n"
             "Returns an object containing staking-related information.");
@@ -156,7 +156,7 @@ Value getworkex(const Array& params, bool fHelp)
     static vector<CBlock*> vNewBlock;
     static CReserveKey reservekey(pwalletMain);
 
-    if (params.size() == 0)
+    if (params.empty())
     {
         // Update block
         static unsigned int nTransactionsUpdatedLast;
@@ -252,7 +252,7 @@ Value getworkex(const Array& params, bool fHelp)
         pblock->nTime = pdata->nTime;
         pblock->nNonce = pdata->nNonce;
 
-        if(coinbase.size() == 0)
+        if(coinbase.empty())
             pblock->vtx[0].vin[0].scriptSig = mapNewBlock[pdata->hashMerkleRoot].second;
         else
             CDataStream(coinbase, SER_NETWORK, PROTOCOL_VERSION) >> pblock->vtx[0]; // FIXME - HACK!
@@ -287,7 +287,7 @@ Value getwork(const Array& params, bool fHelp)
     static vector<CBlock*> vNewBlock;
     static CReserveKey reservekey(pwalletMain);
 
-    if (params.size() == 0)
+    if (params.empty())
     {
         // Update block
         static unsigned int nTransactionsUpdatedLast;
@@ -400,7 +400,7 @@ Value getblocktemplate(const Array& params, bool fHelp)
             "See https://en.bitcoin.it/wiki/BIP_0022 for full specification.");
 
     std::string strMode = "template";
-    if (params.size() > 0)
+    if (!params.empty())
     {
         const Object& oparam = params[0].get_obj();
         const Value& modeval = find_value(oparam, "mode");

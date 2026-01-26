@@ -975,9 +975,9 @@ int SecureMsgAddWalletAddresses()
         
         
         bool fExists        = 0;
-        for (std::vector<SecMsgAddress>::iterator it = smsgAddresses.begin(); it != smsgAddresses.end(); ++it)
+        for (const auto& smsgAddr : smsgAddresses)
         {
-            if (address != it->sAddress)
+            if (address != smsgAddr.sAddress)
                 continue;
             fExists = 1;
             break;
@@ -1109,10 +1109,10 @@ int SecureMsgWriteIni()
         fclose(fp);
         return false;
     };
-    for (std::vector<SecMsgAddress>::iterator it = smsgAddresses.begin(); it != smsgAddresses.end(); ++it)
+    for (const auto& smsgAddr : smsgAddresses)
     {
         errno = 0;
-        if (fprintf(fp, "key=%s|%d|%d\n", it->sAddress.c_str(), it->fReceiveEnabled, it->fReceiveAnon) < 0)
+        if (fprintf(fp, "key=%s|%d|%d\n", smsgAddr.sAddress.c_str(), smsgAddr.fReceiveEnabled, smsgAddr.fReceiveAnon) < 0)
         {
             printf("fprintf error: %s\n", strerror(errno));
             continue;
@@ -2535,15 +2535,15 @@ int SecureMsgScanMessage(unsigned char *pHeader, unsigned char *pPayload, uint32
     MessageData msg; // placeholder
     bool fOwnMessage = false;
     
-    for (std::vector<SecMsgAddress>::iterator it = smsgAddresses.begin(); it != smsgAddresses.end(); ++it)
+    for (const auto& smsgAddr : smsgAddresses)
     {
-        if (!it->fReceiveEnabled)
+        if (!smsgAddr.fReceiveEnabled)
             continue;
-        
-        CBitcoinAddress coinAddress(it->sAddress);
+
+        CBitcoinAddress coinAddress(smsgAddr.sAddress);
         addressTo = coinAddress.ToString();
-        
-        if (!it->fReceiveAnon)
+
+        if (!smsgAddr.fReceiveAnon)
         {
             // -- have to do full decrypt to see address from
             if (SecureMsgDecrypt(false, addressTo, pHeader, pPayload, nPayload, msg) == 0)

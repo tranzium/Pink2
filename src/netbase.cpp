@@ -104,7 +104,7 @@ bool static LookupIntern(const char *pszName, std::vector<CNetAddr>& vIP, unsign
 
     freeaddrinfo(aiRes);
 
-    return (vIP.size() > 0);
+    return (!vIP.empty());
 }
 
 bool LookupHost(const char *pszName, std::vector<CNetAddr>& vIP, unsigned int nMaxSolutions, bool fAllowLookup)

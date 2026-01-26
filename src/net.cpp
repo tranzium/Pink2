@@ -108,13 +108,13 @@ bool GetLocal(CService& addr, const CNetAddr *paddrPeer)
     int nBestReachability = -1;
     {
         LOCK(cs_mapLocalHost);
-        for (map<CNetAddr, LocalServiceInfo>::iterator it = mapLocalHost.begin(); it != mapLocalHost.end(); it++)
+        for (auto& entry : mapLocalHost)
         {
-            int nScore = (*it).second.nScore;
-            int nReachability = (*it).first.GetReachabilityFrom(paddrPeer);
+            int nScore = entry.second.nScore;
+            int nReachability = entry.first.GetReachabilityFrom(paddrPeer);
             if (nReachability > nBestReachability || (nReachability == nBestReachability && nScore > nBestScore))
             {
-                addr = CService((*it).first, (*it).second.nPort);
+                addr = CService(entry.first, entry.second.nPort);
                 nBestReachability = nReachability;
                 nBestScore = nScore;
             }
@@ -332,7 +332,7 @@ bool GetMyExternalIP2(const CService& addrConnect, const char* pszGet, const cha
             if (strLine.find("<") != string::npos)
                 strLine = strLine.substr(0, strLine.find("<"));
             strLine = strLine.substr(strspn(strLine.c_str(), " \t\n\r"));
-            while (strLine.size() > 0 && isspace(strLine[strLine.size()-1]))
+            while (!strLine.empty() && isspace(strLine[strLine.size()-1]))
                 strLine.resize(strLine.size()-1);
             CService addr(strLine,0,true);
             printf("GetMyExternalIP() received [%s] %s\n", strLine.c_str(), addr.ToString().c_str());
@@ -1303,7 +1303,7 @@ void ThreadDNSAddressSeed2(void* parg)
     printf("ThreadDNSAddressSeed started\n");
 
     // goal: only query DNS seeds if address need is acute
-    if ((addrman.size() > 0) &&
+    if ((!addrman.empty()) &&
         (!GetBoolArg("-forcednsseed", false))) {
         MilliSleep(11 * 1000);
 
@@ -1462,7 +1462,7 @@ void ThreadOpenConnections2(void* parg)
     printf("ThreadOpenConnections started\n");
 
     // Connect to specific addresses
-    if (mapArgs.count("-connect") && mapMultiArgs["-connect"].size() > 0)
+    if (mapArgs.count("-connect") && !mapMultiArgs["-connect"].empty())
     {
         for (int64_t nLoop = 0;; nLoop++)
         {
@@ -1502,7 +1502,7 @@ void ThreadOpenConnections2(void* parg)
             return;
 
         // Add seed nodes if IRC isn't working
-        if (addrman.size()==0 && (GetAdjustedTime() - nStart > 60) && !fTestNet)
+        if (addrman.empty() && (GetAdjustedTime() - nStart > 60) && !fTestNet)
         {
             std::vector<CAddress> vAdd;
             for (unsigned int i = 0; i < ARRAYLEN(pnSeed); i++)

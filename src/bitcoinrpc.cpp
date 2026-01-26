@@ -178,10 +178,10 @@ string CRPCTable::help(string strCommand) const
 {
     string strRet;
     set<rpcfn_type> setDone;
-    for (map<string, const CRPCCommand*>::const_iterator mi = mapCommands.begin(); mi != mapCommands.end(); ++mi)
+    for (const auto& mi : mapCommands)
     {
-        const CRPCCommand *pcmd = mi->second;
-        string strMethod = mi->first;
+        const CRPCCommand *pcmd = mi.second;
+        string strMethod = mi.first;
         // We already filter duplicates, but these deprecated screw up the sort order
         if (strMethod.find("label") != string::npos)
             continue;
@@ -218,7 +218,7 @@ Value help(const Array& params, bool fHelp)
             "List commands, or get help for a command.");
 
     string strCommand;
-    if (params.size() > 0)
+    if (!params.empty())
         strCommand = params[0].get_str();
 
     return tableRPC.help(strCommand);
@@ -233,7 +233,7 @@ Value stop(const Array& params, bool fHelp)
             "<detach> is true or false to detach the database or not for this stop only\n"
             "Stop Pinkcoin server (and possibly override the detachdb config value).");
     // Shutdown will take long enough that the response should get back
-    if (params.size() > 0)
+    if (!params.empty())
         bitdb.SetDetach(params[0].get_bool());
     StartShutdown();
     return "Pinkcoin server stopping";
@@ -474,7 +474,7 @@ bool ReadHTTPRequestLine(std::basic_istream<char>& stream, int &proto,
 
     // HTTP URI must be an absolute path, relative to current host
     http_uri = vWords[1];
-    if (http_uri.size() == 0 || http_uri[0] != '/')
+    if (http_uri.empty() || http_uri[0] != '/')
         return false;
 
     // parse proto, if present
@@ -1350,13 +1350,6 @@ int CommandLineRPC(int argc, char *argv[])
             throw runtime_error("too few parameters");
         string strMethod = argv[1];
 
-/*        string strOut;
-        if (specialOutput(strMethod, *strOut))
-        {
-            strPrint = strOut;
-            return nRet;
-        }
-*/
         // Parameters default to strings
         std::vector<std::string> strParams(&argv[2], &argv[argc]);
         Array params = RPCConvertValues(strMethod, strParams);
@@ -1402,35 +1395,6 @@ int CommandLineRPC(int argc, char *argv[])
     }
     return nRet;
 }
-/*
-void specialOutput(std::string strMethod, std::string *strOut)
-{
-    bool ret = false;
-
-    if (strMethod = "getnodes")
-    {
-        if (fHelp || params.size() != 0)
-            throw runtime_error(
-                "getnodes\n"
-                "Returns each connected network node as addnodes in conf friendly format.");
-
-        vector<CNodeStats> vstats;
-        CopyNodeStats(vstats);
-        Value ret = nullptr;
-        string pNode = "";
-
-        BOOST_FOREACH(const CNodeStats& stats, vstats) {
-            pNode += "addnode=" + stats.addrName + crlf;
-        }
-
-        ret.push_back(pNode);
-        return ret;
-    }
-
-}
-*/
-
-
 
 #ifdef TEST
 int main(int argc, char *argv[])

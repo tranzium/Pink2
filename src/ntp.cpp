@@ -11,10 +11,6 @@
 #include "util.h"
 #include "ntp.h"
 
-
-// #include "ntp.h"
-
-
 // This is here to help us know what bytes to pull for what with our bTimeReq[48]
 /*
   uint8_t li_vn_mode;      // Eight bits. li, vn, and mode.
@@ -278,11 +274,11 @@ bool SetNTPOffset(const string &strPool)
         }
 
         // Add it up.
-        for (vector<uint64_t>::iterator it = ntpMicros.begin(); it != ntpMicros.end(); it++)
-             avMicros += *it;
+        for (const auto& micros : ntpMicros)
+             avMicros += micros;
 
         // Average of what we got.
-        if (ntpMicros.size() > 0)
+        if (!ntpMicros.empty())
             avMicros /= ntpMicros.size();
 
         // Set our offset based on the difference and maintain an average.
