@@ -1,29 +1,49 @@
+# Compiled binaries
 src/*.exe
 src/pink2
 src/pink2d
 src/test_pink2
+pinkcoin-qt
+Pinkcoin-Qt
+
+# CMake build directories and generated files
+build/
+install/
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+CTestTestfile.cmake
+*.ninja
+.ninja_*
+compile_commands.json
+_deps/
+.cmake/
+*_autogen/
 src/build.h
-.*.swp
-*.*~*
+
+# Qt compilation and preprocessor
+*.qm
+qrc_*.cpp
+*.pro.user
+
+# Object files and backups
+*.o
 *.bak
 *.rej
 *.orig
-*.o
-.sdcoin
-#compilation and Qt preprocessor part
-*.qm
-Makefile
-pinkcoin-qt
-Pinkcoin-Qt
-#resources cpp
-qrc_*.cpp
-#qt creator
-*.pro.user
-#mac specific
-.DS_Store
-build
-# vscode IDE
-.vscode
-
-!src/leveldb/Makefile
+.*.swp
+*.*~*
 *.autosave
+
+# Legacy Makefile (keep leveldb's)
+Makefile
+!src/leveldb/Makefile
+
+# IDE and OS specific
+.vscode/
+.DS_Store
+
+# Misc
+@/
+node_modules/
+.sdcoin

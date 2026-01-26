@@ -1,0 +1,306 @@
+{
+    "version": 3,
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 16,
+        "patch": 0
+    },
+    "configurePresets": [
+        {
+            "name": "base",
+            "hidden": true,
+            "binaryDir": "${sourceDir}/build/${presetName}",
+            "installDir": "${sourceDir}/install/${presetName}"
+        },
+        {
+            "name": "linux-debug",
+            "displayName": "Linux Debug",
+            "description": "Debug build for Linux",
+            "inherits": "base",
+            "generator": "Ninja",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "BUILD_GUI": "ON",
+                "BUILD_DAEMON": "ON",
+                "BUILD_TESTS": "ON",
+                "ENABLE_HARDENING": "ON"
+            },
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Linux"
+            }
+        },
+        {
+            "name": "linux-release",
+            "displayName": "Linux Release",
+            "description": "Release build for Linux",
+            "inherits": "base",
+            "generator": "Ninja",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "BUILD_GUI": "ON",
+                "BUILD_DAEMON": "ON",
+                "BUILD_TESTS": "ON",
+                "ENABLE_HARDENING": "ON"
+            },
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Linux"
+            }
+        },
+        {
+            "name": "linux-daemon-only",
+            "displayName": "Linux Daemon Only",
+            "description": "Build only the daemon (no Qt GUI)",
+            "inherits": "base",
+            "generator": "Ninja",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "BUILD_GUI": "OFF",
+                "BUILD_DAEMON": "ON",
+                "BUILD_TESTS": "OFF",
+                "ENABLE_HARDENING": "ON"
+            },
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Linux"
+            }
+        },
+        {
+            "name": "macos-debug",
+            "displayName": "macOS Debug",
+            "description": "Debug build for macOS",
+            "inherits": "base",
+            "generator": "Ninja",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "BUILD_GUI": "ON",
+                "BUILD_DAEMON": "ON",
+                "BUILD_TESTS": "ON",
+                "ENABLE_HARDENING": "ON",
+                "CMAKE_OSX_DEPLOYMENT_TARGET": "10.12"
+            },
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Darwin"
+            }
+        },
+        {
+            "name": "macos-release",
+            "displayName": "macOS Release",
+            "description": "Release build for macOS",
+            "inherits": "base",
+            "generator": "Ninja",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "BUILD_GUI": "ON",
+                "BUILD_DAEMON": "ON",
+                "BUILD_TESTS": "ON",
+                "ENABLE_HARDENING": "ON",
+                "CMAKE_OSX_DEPLOYMENT_TARGET": "10.12"
+            },
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Darwin"
+            }
+        },
+        {
+            "name": "windows-cross",
+            "displayName": "Windows (Cross-compile)",
+            "description": "Cross-compile for Windows 64-bit from Linux",
+            "inherits": "base",
+            "generator": "Ninja",
+            "toolchainFile": "${sourceDir}/cmake/toolchains/mingw-w64-x86_64.cmake",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "BUILD_GUI": "ON",
+                "BUILD_DAEMON": "ON",
+                "BUILD_TESTS": "OFF",
+                "ENABLE_HARDENING": "ON",
+                "STATIC_BUILD": "ON"
+            },
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Linux"
+            }
+        },
+        {
+            "name": "windows-mxe",
+            "displayName": "Windows MXE (Cross-compile)",
+            "description": "Cross-compile for Windows 64-bit using MXE",
+            "inherits": "base",
+            "generator": "Ninja",
+            "toolchainFile": "${sourceDir}/cmake/toolchains/mxe-x86_64.cmake",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "BUILD_GUI": "ON",
+                "BUILD_DAEMON": "ON",
+                "BUILD_TESTS": "OFF",
+                "ENABLE_HARDENING": "ON",
+                "STATIC_BUILD": "ON",
+                "USE_UPNP": "OFF"
+            },
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Linux"
+            }
+        },
+        {
+            "name": "windows-mxe-daemon",
+            "displayName": "Windows MXE Daemon Only",
+            "description": "Cross-compile headless daemon for Windows using MXE",
+            "inherits": "base",
+            "generator": "Ninja",
+            "toolchainFile": "${sourceDir}/cmake/toolchains/mxe-x86_64.cmake",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "BUILD_GUI": "OFF",
+                "BUILD_DAEMON": "ON",
+                "BUILD_TESTS": "OFF",
+                "ENABLE_HARDENING": "ON",
+                "STATIC_BUILD": "ON",
+                "USE_UPNP": "OFF",
+                "USE_QRCODE": "OFF"
+            },
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Linux"
+            }
+        },
+        {
+            "name": "arm64-cross",
+            "displayName": "ARM64 (Cross-compile)",
+            "description": "Cross-compile for ARM64 (Raspberry Pi 3/4/5, ARM servers)",
+            "inherits": "base",
+            "generator": "Ninja",
+            "toolchainFile": "${sourceDir}/cmake/toolchains/aarch64-linux-gnu.cmake",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "BUILD_GUI": "OFF",
+                "BUILD_DAEMON": "ON",
+                "BUILD_TESTS": "OFF",
+                "ENABLE_HARDENING": "ON"
+            },
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Linux"
+            }
+        },
+        {
+            "name": "windows-native",
+            "displayName": "Windows Native (MSVC)",
+            "description": "Native Windows build with Visual Studio",
+            "inherits": "base",
+            "generator": "Visual Studio 17 2022",
+            "architecture": {
+                "value": "x64",
+                "strategy": "set"
+            },
+            "cacheVariables": {
+                "BUILD_GUI": "ON",
+                "BUILD_DAEMON": "ON",
+                "BUILD_TESTS": "ON",
+                "ENABLE_HARDENING": "ON"
+            },
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Windows"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "linux-debug",
+            "displayName": "Linux Debug Build",
+            "configurePreset": "linux-debug"
+        },
+        {
+            "name": "linux-release",
+            "displayName": "Linux Release Build",
+            "configurePreset": "linux-release"
+        },
+        {
+            "name": "linux-daemon-only",
+            "displayName": "Linux Daemon Only Build",
+            "configurePreset": "linux-daemon-only"
+        },
+        {
+            "name": "macos-debug",
+            "displayName": "macOS Debug Build",
+            "configurePreset": "macos-debug"
+        },
+        {
+            "name": "macos-release",
+            "displayName": "macOS Release Build",
+            "configurePreset": "macos-release"
+        },
+        {
+            "name": "windows-cross",
+            "displayName": "Windows Cross-compile Build",
+            "configurePreset": "windows-cross"
+        },
+        {
+            "name": "windows-mxe",
+            "displayName": "Windows MXE Build",
+            "configurePreset": "windows-mxe"
+        },
+        {
+            "name": "windows-mxe-daemon",
+            "displayName": "Windows MXE Daemon Build",
+            "configurePreset": "windows-mxe-daemon"
+        },
+        {
+            "name": "arm64-cross",
+            "displayName": "ARM64 Cross-compile Build",
+            "configurePreset": "arm64-cross"
+        },
+        {
+            "name": "windows-native-debug",
+            "displayName": "Windows Native Debug Build",
+            "configurePreset": "windows-native",
+            "configuration": "Debug"
+        },
+        {
+            "name": "windows-native-release",
+            "displayName": "Windows Native Release Build",
+            "configurePreset": "windows-native",
+            "configuration": "Release"
+        }
+    ],
+    "testPresets": [
+        {
+            "name": "linux-tests",
+            "displayName": "Linux Tests",
+            "configurePreset": "linux-release",
+            "output": {
+                "outputOnFailure": true
+            },
+            "execution": {
+                "timeout": 600,
+                "jobs": 4
+            }
+        },
+        {
+            "name": "macos-tests",
+            "displayName": "macOS Tests",
+            "configurePreset": "macos-release",
+            "output": {
+                "outputOnFailure": true
+            },
+            "execution": {
+                "timeout": 600,
+                "jobs": 4
+            }
+        }
+    ]
+}
