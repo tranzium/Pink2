@@ -289,7 +289,7 @@ void AddressBookPage::on_signMessage_clicked()
     QModelIndexList indexes = table->selectionModel()->selectedRows(AddressTableModel::Address);
     QString addr;
 
-    foreach (QModelIndex index, indexes)
+    for (const QModelIndex& index : indexes)
     {
         QVariant address = index.data();
         addr = address.toString();
@@ -304,7 +304,7 @@ void AddressBookPage::on_verifyMessage_clicked()
     QModelIndexList indexes = table->selectionModel()->selectedRows(AddressTableModel::Address);
     QString addr;
 
-    foreach (QModelIndex index, indexes)
+    for (const QModelIndex& index : indexes)
     {
         QVariant address = index.data();
         addr = address.toString();
@@ -433,7 +433,7 @@ void AddressBookPage::done(int retval)
     // Figure out which address was selected, and return it
     QModelIndexList indexes = table->selectionModel()->selectedRows(AddressTableModel::Address);
 
-    foreach (QModelIndex index, indexes)
+    for (const QModelIndex& index : indexes)
     {
         QVariant address = table->model()->data(index);
         returnValue = address.toString();
@@ -480,7 +480,7 @@ void AddressBookPage::on_showQRCode_clicked()
     QTableView *table = ui->tableView;
     QModelIndexList indexes = table->selectionModel()->selectedRows(AddressTableModel::Address);
 
-    foreach (QModelIndex index, indexes)
+    for (const QModelIndex& index : indexes)
     {
         QString address = index.data().toString(), label = index.sibling(index.row(), 0).data(Qt::EditRole).toString();
 

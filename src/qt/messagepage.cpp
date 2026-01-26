@@ -179,7 +179,7 @@ void MessagePage::on_sendButton_clicked()
 
     if (SecureMsgSend(addFrom, sendTo, message, sError) != 0)
     {
-        QMessageBox::warning(NULL, tr("Send Secure Message"),
+        QMessageBox::warning(nullptr, tr("Send Secure Message"),
             tr("Send failed: %1.").arg(sError.c_str()),
             QMessageBox::Ok, QMessageBox::Ok);
 
@@ -287,19 +287,19 @@ void MessagePage::selectionChanged()
 
         int type = 0;
 
-        foreach (QModelIndex index, typeColumn)
+        for (const QModelIndex& index : typeColumn)
             type = (table->model()->data(index).toString() == MessageModel::Sent ? MessageTableEntry::Sent : MessageTableEntry::Received);
 
-        foreach (QModelIndex index, labelColumn)
+        for (const QModelIndex& index : labelColumn)
             ui->contactLabel->setText(table->model()->data(index).toString());
 
-        foreach (QModelIndex index, addressFromColumn)
+        for (const QModelIndex& index : addressFromColumn)
             if(type == MessageTableEntry::Sent)
                 replyFromAddress = table->model()->data(index).toString();
             else
                 replyToAddress = table->model()->data(index).toString();
 
-        foreach (QModelIndex index, addressToColumn)
+        for (const QModelIndex& index : addressToColumn)
             if(type == MessageTableEntry::Sent)
                 replyToAddress = table->model()->data(index).toString();
             else

@@ -9,6 +9,7 @@
 
 #include <QFont>
 #include <QColor>
+#include <algorithm>
 
 const QString AddressTableModel::Send = "S";
 const QString AddressTableModel::Receive = "R";
@@ -101,28 +102,29 @@ public:
                                   QString::fromStdString(nPercent)));
             }
 
-            std::set<CStealthAddress>::iterator it;
-            for (it = wallet->stealthAddresses.begin(); it != wallet->stealthAddresses.end(); ++it)
-            {
-                bool fMine = !(it->scan_secret.size() < 1);
-
-                cachedAddressTable.append(AddressTableEntry(fMine ? AddressTableEntry::Receiving : AddressTableEntry::Sending,
-                                  QString::fromStdString(it->label),
-                                  QString::fromStdString(it->Encoded()),
-                                  QString::fromStdString(""),
-                                  true));
-            };
+            // Stealth addresses hidden from UI (backend still functional)
+            // std::set<CStealthAddress>::iterator it;
+            // for (it = wallet->stealthAddresses.begin(); it != wallet->stealthAddresses.end(); ++it)
+            // {
+            //     bool fMine = !(it->scan_secret.size() < 1);
+            //
+            //     cachedAddressTable.append(AddressTableEntry(fMine ? AddressTableEntry::Receiving : AddressTableEntry::Sending,
+            //                       QString::fromStdString(it->label),
+            //                       QString::fromStdString(it->Encoded()),
+            //                       QString::fromStdString(""),
+            //                       true));
+            // };
         }
-        // qLowerBound() and qUpperBound() require our cachedAddressTable list to be sorted in asc order
-        qSort(cachedAddressTable.begin(), cachedAddressTable.end(), AddressTableEntryLessThan());
+        // std::lower_bound() and std::upper_bound() require our cachedAddressTable list to be sorted in asc order
+        std::sort(cachedAddressTable.begin(), cachedAddressTable.end(), AddressTableEntryLessThan());
     }
 
     void updateEntry(const QString &address, const QString &label, bool isMine, int status, const QString &percent)
     {
         // Find address / label in model
-        QList<AddressTableEntry>::iterator lower = qLowerBound(
+        QList<AddressTableEntry>::iterator lower = std::lower_bound(
             cachedAddressTable.begin(), cachedAddressTable.end(), address, AddressTableEntryLessThan());
-        QList<AddressTableEntry>::iterator upper = qUpperBound(
+        QList<AddressTableEntry>::iterator upper = std::upper_bound(
             cachedAddressTable.begin(), cachedAddressTable.end(), address, AddressTableEntryLessThan());
         int lowerIndex = (lower - cachedAddressTable.begin());
         int upperIndex = (upper - cachedAddressTable.begin());

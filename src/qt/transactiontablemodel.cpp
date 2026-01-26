@@ -16,7 +16,7 @@
 #include <QColor>
 #include <QIcon>
 #include <QDateTime>
-#include <QtAlgorithms>
+#include <algorithm>
 
 // Amount column is right-aligned it contains numbers
 static int column_alignments[] = {
@@ -96,9 +96,9 @@ public:
             bool inWallet = mi != wallet->mapWallet.end();
 
             // Find bounds of this transaction in model
-            QList<TransactionRecord>::iterator lower = qLowerBound(
+            QList<TransactionRecord>::iterator lower = std::lower_bound(
                 cachedWallet.begin(), cachedWallet.end(), hash, TxLessThan());
-            QList<TransactionRecord>::iterator upper = qUpperBound(
+            QList<TransactionRecord>::iterator upper = std::upper_bound(
                 cachedWallet.begin(), cachedWallet.end(), hash, TxLessThan());
             int lowerIndex = (lower - cachedWallet.begin());
             int upperIndex = (upper - cachedWallet.begin());
@@ -142,7 +142,7 @@ public:
                     {
                         parent->beginInsertRows(QModelIndex(), lowerIndex, lowerIndex+toInsert.size()-1);
                         int insert_idx = lowerIndex;
-                        foreach(const TransactionRecord &rec, toInsert)
+                        for (const TransactionRecord& rec : toInsert)
                         {
                             cachedWallet.insert(insert_idx, rec);
                             insert_idx += 1;

@@ -153,7 +153,7 @@ void SendMessagesDialog::on_sendButton_clicked()
 
     // Format confirmation message
     QStringList formatted;
-    foreach(const SendMessagesRecipient &rcp, recipients)
+    for (const SendMessagesRecipient& rcp : recipients)
     {
         formatted.append(tr("<b>%1</b> to %2 (%3)").arg(rcp.message, Qt::escape(rcp.label), rcp.address));
     }

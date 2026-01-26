@@ -18,6 +18,7 @@
 #include <QMessageBox>
 #include <QMenu>
 #include <QFont>
+#include <algorithm>
 #include <QColor>
 
 Q_DECLARE_METATYPE(std::vector<unsigned char>);
@@ -293,7 +294,7 @@ private:
             cachedMessageTable.append(message);
         } else
         {
-            int index = qLowerBound(cachedMessageTable.begin(), cachedMessageTable.end(), message.received_datetime, MessageTableEntryLessThan()) - cachedMessageTable.begin();
+            int index = std::lower_bound(cachedMessageTable.begin(), cachedMessageTable.end(), message.received_datetime, MessageTableEntryLessThan()) - cachedMessageTable.begin();
             parent->beginInsertRows(QModelIndex(), index, index);
             cachedMessageTable.insert(
                         index,
@@ -309,7 +310,7 @@ MessageModel::MessageModel(CWallet *wallet, WalletModel *walletModel, QObject *p
 {
     columns << tr("Type") << tr("Sent Date Time") << tr("Received Date Time") << tr("Label") << tr("To Address") << tr("From Address") << tr("Message");
     
-    proxyModel = NULL;
+    proxyModel = nullptr;
     
     optionsModel = walletModel->getOptionsModel();
 
@@ -370,7 +371,7 @@ MessageModel::StatusCode MessageModel::sendMessages(const QList<SendMessagesReci
         return OK;
 
     // Pre-check input data for validity
-    foreach(const SendMessagesRecipient &rcp, recipients)
+    for (const SendMessagesRecipient& rcp : recipients)
     {
         if(!walletModel->validateAddress(rcp.address))
             return InvalidAddress;
@@ -389,7 +390,7 @@ MessageModel::StatusCode MessageModel::sendMessages(const QList<SendMessagesReci
         std::string sError;
         if (SecureMsgSend(addFrom, sendTo, message, sError) != 0)
         {
-            QMessageBox::warning(NULL, tr("Send Secure Message"),
+            QMessageBox::warning(nullptr, tr("Send Secure Message"),
                 tr("Send failed: %1.").arg(sError.c_str()),
                 QMessageBox::Ok, QMessageBox::Ok);
             
@@ -470,7 +471,7 @@ QVariant MessageModel::data(const QModelIndex &index, int role) const
                 {
                     case MessageTableEntry::Sent:     return Sent;
                     case MessageTableEntry::Received: return Received;
-                    default: break;
+                    default: return QVariant();
                 }
             case Key:               return QVariant::fromValue(rec->chKey);
         }

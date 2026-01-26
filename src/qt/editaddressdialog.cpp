@@ -20,8 +20,8 @@ EditAddressDialog::EditAddressDialog(Mode mode, QWidget *parent) :
         setWindowTitle(tr("New receiving address"));
         ui->addressEdit->setEnabled(false);
         ui->addressEdit->setVisible(false);
-        ui->stealthCB->setEnabled(true);
-        ui->stealthCB->setVisible(true);
+        ui->stealthCB->setEnabled(false);
+        ui->stealthCB->setVisible(false);  // Stealth addresses hidden
         ui->Percent->setVisible(false);
         ui->spinPercent->setVisible(false);
         break;
@@ -50,7 +50,7 @@ EditAddressDialog::EditAddressDialog(Mode mode, QWidget *parent) :
         ui->addressEdit->setEnabled(false);
         ui->addressEdit->setVisible(true);
         ui->stealthCB->setEnabled(false);
-        ui->stealthCB->setVisible(true);
+        ui->stealthCB->setVisible(false);  // Stealth addresses hidden
         ui->Percent->setVisible(false);
         ui->spinPercent->setVisible(false);
         break;
