@@ -74,6 +74,12 @@ cmake --build build/linux-daemon-only --parallel $(nproc)
 
 ### Linux GUI Wallet
 
+QT5 translation dependencies
+
+```bash
+sudo apt-get install qttools5-dev-tools qttools5-dev
+```
+
 ```bash
 cmake --preset linux-release
 cmake --build build/linux-release --parallel $(nproc)
