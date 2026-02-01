@@ -136,7 +136,7 @@ target_link_libraries(pinkcoin_core
         json_spirit
         leveldb
         memenv
-        Boost::system
+        $<$<TARGET_EXISTS:Boost::system>:Boost::system>
         Boost::filesystem
         Boost::program_options
         Boost::thread
