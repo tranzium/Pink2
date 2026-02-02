@@ -38,7 +38,7 @@ private:
     bool fDetachDB;
     bool fDbEnvInit;
     bool fMockDb;
-    boost::filesystem::path pathEnv;
+    std::filesystem::path pathEnv;
     std::string strPath;
 
     void EnvShutdown();
@@ -72,7 +72,7 @@ public:
     typedef std::pair<std::vector<unsigned char>, std::vector<unsigned char> > KeyValPair;
     bool Salvage(std::string strFile, bool fAggressive, std::vector<KeyValPair>& vResult);
 
-    bool Open(boost::filesystem::path pathEnv_);
+    bool Open(std::filesystem::path pathEnv_);
     void Close();
     void Flush(bool fShutdown);
     void CheckpointLSN(std::string strFile);
@@ -318,7 +318,7 @@ public:
 class CAddrDB
 {
 private:
-    boost::filesystem::path pathAddr;
+    std::filesystem::path pathAddr;
 public:
     CAddrDB();
     bool Write(const CAddrMan& addr);

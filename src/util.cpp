@@ -23,8 +23,8 @@ namespace boost {
 
 #include <boost/program_options/detail/config_file.hpp>
 #include <boost/program_options/parsers.hpp>
-#include <boost/filesystem.hpp>
-#include <boost/filesystem/fstream.hpp>
+#include <filesystem>
+#include <fstream>
 #include <boost/thread.hpp>
 #include <openssl/crypto.h>
 #include <openssl/rand.h>
@@ -217,7 +217,7 @@ inline int OutputDebugStringF(const char* pszFormat, ...)
 
         if (!fileout)
         {
-            boost::filesystem::path pathDebug = GetDataDir() / "debug.log";
+            std::filesystem::path pathDebug = GetDataDir() / "debug.log";
             fileout = fopen(pathDebug.string().c_str(), "a");
             if (fileout) setbuf(fileout, nullptr); // unbuffered
         }
@@ -236,7 +236,7 @@ inline int OutputDebugStringF(const char* pszFormat, ...)
             // reopen the log file, if requested
             if (fReopenDebugLog) {
                 fReopenDebugLog = false;
-                boost::filesystem::path pathDebug = GetDataDir() / "debug.log";
+                std::filesystem::path pathDebug = GetDataDir() / "debug.log";
                 if (freopen(pathDebug.string().c_str(),"a",fileout) != nullptr)
                     setbuf(fileout, nullptr); // unbuffered
             }
@@ -987,9 +987,9 @@ void PrintExceptionContinue(std::exception* pex, const char* pszThread)
     strMiscWarning = message;
 }
 
-boost::filesystem::path GetDefaultDataDir()
+std::filesystem::path GetDefaultDataDir()
 {
-    namespace fs = boost::filesystem;
+    namespace fs = std::filesystem;
     // Windows < Vista: C:\Documents and Settings\Username\Application Data\Pink2
     // Windows >= Vista: C:\Users\Username\AppData\Roaming\Pink2
     // Mac: ~/Library/Application Support/Pink2
@@ -1016,9 +1016,9 @@ boost::filesystem::path GetDefaultDataDir()
 #endif
 }
 
-const boost::filesystem::path &GetDataDir(bool fNetSpecific)
+const std::filesystem::path &GetDataDir(bool fNetSpecific)
 {
-    namespace fs = boost::filesystem;
+    namespace fs = std::filesystem;
 
     static fs::path pathCached[2];
     static CCriticalSection csPathCached;
@@ -1034,7 +1034,7 @@ const boost::filesystem::path &GetDataDir(bool fNetSpecific)
 
     LOCK(csPathCached);
     if (mapArgs.count("-datadir")) {
-        path = fs::system_complete(mapArgs["-datadir"]);
+        path = fs::absolute(mapArgs["-datadir"]);
         if (!fs::is_directory(path)) {
             path = "";
             return path;
@@ -1051,14 +1051,14 @@ const boost::filesystem::path &GetDataDir(bool fNetSpecific)
     return path;
 }
 
-boost::filesystem::path GetConfigFile()
+std::filesystem::path GetConfigFile()
 {
-    boost::filesystem::path pathConfigFile(GetArg("-conf", "pinkconf.txt"));
+    std::filesystem::path pathConfigFile(GetArg("-conf", "pinkconf.txt"));
     if (!pathConfigFile.is_absolute()) pathConfigFile = GetDataDir(false) / pathConfigFile;
 
-    if (!boost::filesystem::exists(pathConfigFile))
+    if (!std::filesystem::exists(pathConfigFile))
     {
-        boost::filesystem::path pathConfigFile2("pinkcoin.conf");
+        std::filesystem::path pathConfigFile2("pinkcoin.conf");
         pathConfigFile = GetDataDir(false) / pathConfigFile2;
     }
     return pathConfigFile;
@@ -1067,7 +1067,7 @@ boost::filesystem::path GetConfigFile()
 void ReadConfigFile(map<string, string>& mapSettingsRet,
                     map<string, vector<string> >& mapMultiSettingsRet)
 {
-    boost::filesystem::ifstream streamConfig(GetConfigFile());
+    std::ifstream streamConfig(GetConfigFile());
     if (!streamConfig.good())
         return; // No bitcoin.conf file is OK
 
@@ -1088,15 +1088,15 @@ void ReadConfigFile(map<string, string>& mapSettingsRet,
     }
 }
 
-boost::filesystem::path GetPidFile()
+std::filesystem::path GetPidFile()
 {
-    boost::filesystem::path pathPidFile(GetArg("-pid", "pinkcoind.pid"));
+    std::filesystem::path pathPidFile(GetArg("-pid", "pinkcoind.pid"));
     if (!pathPidFile.is_absolute()) pathPidFile = GetDataDir() / pathPidFile;
     return pathPidFile;
 }
 
 #ifndef WIN32
-void CreatePidFile(const boost::filesystem::path &path, pid_t pid)
+void CreatePidFile(const std::filesystem::path &path, pid_t pid)
 {
     FILE* file = fopen(path.string().c_str(), "w");
     if (file)
@@ -1107,7 +1107,7 @@ void CreatePidFile(const boost::filesystem::path &path, pid_t pid)
 }
 #endif
 
-bool RenameOver(boost::filesystem::path src, boost::filesystem::path dest)
+bool RenameOver(std::filesystem::path src, std::filesystem::path dest)
 {
 #ifdef WIN32
     return MoveFileExA(src.string().c_str(), dest.string().c_str(),
@@ -1131,9 +1131,9 @@ void FileCommit(FILE *fileout)
 void ShrinkDebugFile()
 {
     // Scroll debug.log if it's getting too big
-    boost::filesystem::path pathLog = GetDataDir() / "debug.log";
+    std::filesystem::path pathLog = GetDataDir() / "debug.log";
     FILE* file = fopen(pathLog.string().c_str(), "r");
-    if (file && boost::filesystem::file_size(pathLog) > 10 * 1000000)
+    if (file && std::filesystem::file_size(pathLog) > 10 * 1000000)
     {
         // Restart the file with some of the end
         char pch[200000];
@@ -1327,9 +1327,9 @@ std::string FormatSubVersion(const std::string& name, int nClientVersion, const 
 }
 
 #ifdef WIN32
-boost::filesystem::path GetSpecialFolderPath(int nFolder, bool fCreate)
+std::filesystem::path GetSpecialFolderPath(int nFolder, bool fCreate)
 {
-    namespace fs = boost::filesystem;
+    namespace fs = std::filesystem;
 
     char pszPath[MAX_PATH] = "";
 

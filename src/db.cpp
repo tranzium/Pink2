@@ -8,8 +8,7 @@
 #include "util.h"
 #include "main.h"
 #include "ui_interface.h"
-#include <boost/filesystem.hpp>
-#include <boost/filesystem/fstream.hpp>
+#include <filesystem>
 
 #ifndef WIN32
 #include "sys/stat.h"
@@ -59,7 +58,7 @@ void CDBEnv::Close()
     EnvShutdown();
 }
 
-bool CDBEnv::Open(boost::filesystem::path pathEnv_)
+bool CDBEnv::Open(std::filesystem::path pathEnv_)
 {
     if (fDbEnvInit)
         return true;
@@ -68,11 +67,11 @@ bool CDBEnv::Open(boost::filesystem::path pathEnv_)
         return false;
 
     pathEnv = pathEnv_;
-    boost::filesystem::path pathDataDir = pathEnv;
+    std::filesystem::path pathDataDir = pathEnv;
     strPath = pathDataDir.string();
-    boost::filesystem::path pathLogDir = pathDataDir / "database";
-    boost::filesystem::create_directory(pathLogDir);
-    boost::filesystem::path pathErrorFile = pathDataDir / "db.log";
+    std::filesystem::path pathLogDir = pathDataDir / "database";
+    std::filesystem::create_directory(pathLogDir);
+    std::filesystem::path pathErrorFile = pathDataDir / "db.log";
     printf("dbenv.open LogDir=%s ErrorFile=%s\n", pathLogDir.string().c_str(), pathErrorFile.string().c_str());
 
     unsigned int nEnvFlags = 0;
@@ -519,7 +518,7 @@ bool CAddrDB::Write(const CAddrMan& addr)
     ssPeers << hash;
 
     // open temp output file, and associate with CAutoFile
-    boost::filesystem::path pathTmp = GetDataDir() / tmpfn;
+    std::filesystem::path pathTmp = GetDataDir() / tmpfn;
     FILE *file = fopen(pathTmp.string().c_str(), "wb");
     CAutoFile fileout = CAutoFile(file, SER_DISK, CLIENT_VERSION);
     if (!fileout)
@@ -559,7 +558,7 @@ bool CAddrDB::Read(CAddrMan& addr)
         return error("CAddrman::Read() : open failed");
 
     // use file size to size memory buffer
-    int fileSize = boost::filesystem::file_size(pathAddr);
+    int fileSize = std::filesystem::file_size(pathAddr);
     int dataSize = fileSize - sizeof(uint256);
     // Don't try to resize to a negative number if file is small
     if ( dataSize < 0 ) dataSize = 0;

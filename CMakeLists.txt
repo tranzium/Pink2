@@ -76,7 +76,6 @@ find_package(Threads REQUIRED)
 # Boost
 set(Boost_USE_STATIC_LIBS ${STATIC_BUILD})
 find_package(Boost 1.55 REQUIRED COMPONENTS
-    filesystem
     program_options
     thread
     chrono

@@ -137,7 +137,6 @@ target_link_libraries(pinkcoin_core
         leveldb
         memenv
         $<$<TARGET_EXISTS:Boost::system>:Boost::system>
-        Boost::filesystem
         Boost::program_options
         Boost::thread
         Boost::chrono
