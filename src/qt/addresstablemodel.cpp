@@ -67,7 +67,7 @@ public:
         cachedAddressTable.clear();
         {
             LOCK(wallet->cs_wallet);
-            BOOST_FOREACH(const PAIRTYPE(CTxDestination, std::string)& item, wallet->mapAddressBook)
+            for (const auto& item : wallet->mapAddressBook)
             {
                 const CBitcoinAddress& address = item.first;
                 const std::string& strName = item.second;
@@ -705,7 +705,7 @@ bool AddressTableModel::checkStakePercent(std::string address, std::string &perc
 
     double percentAvailable = 100.000000;
 
-    BOOST_FOREACH(CWallet::mapAddress mapPercent, wallet->mapAddressPercent)
+    for (CWallet::mapAddress mapPercent : wallet->mapAddressPercent)
     {
         CBitcoinAddress thisAddr(mapPercent.first);
         if (thisAddr.ToString() != a.ToString())

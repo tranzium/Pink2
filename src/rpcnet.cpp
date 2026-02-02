@@ -29,7 +29,7 @@ static void CopyNodeStats(std::vector<CNodeStats>& vstats)
 
     LOCK(cs_vNodes);
     vstats.reserve(vNodes.size());
-    BOOST_FOREACH(CNode* pnode, vNodes) {
+    for (CNode* pnode : vNodes) {
         CNodeStats stats;
         pnode->copyStats(stats);
         vstats.push_back(stats);
@@ -48,7 +48,7 @@ Value getpeerinfo(const Array& params, bool fHelp)
 
     Array ret;
 
-    BOOST_FOREACH(const CNodeStats& stats, vstats) {
+    for (const CNodeStats& stats : vstats) {
         Object obj;
 
         obj.push_back(Pair("addr", stats.addrName));
@@ -79,7 +79,7 @@ Value getnodes(const Array& params, bool fHelp)
     CopyNodeStats(vstats);
     string pNode = "";
 
-    BOOST_FOREACH(const CNodeStats& stats, vstats) {
+    for (const CNodeStats& stats : vstats) {
         if (stats.addrName.rfind(":9134") != string::npos)
         {
             string ipAddress = stats.addrName.substr(0, stats.addrName.length() - 5);
@@ -137,7 +137,7 @@ Value sendalert(const Array& params, bool fHelp)
     // Relay alert
     {
         LOCK(cs_vNodes);
-        BOOST_FOREACH(CNode* pnode, vNodes)
+        for (CNode* pnode : vNodes)
             alert.RelayTo(pnode);
     }
 

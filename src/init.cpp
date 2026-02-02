@@ -628,7 +628,7 @@ bool AppInit2(boost::thread_group& threadGroup)
             return false;
     }
 
-    if (filesystem::exists(GetDataDir() / strWalletFileName))
+    if (boost::filesystem::exists(GetDataDir() / strWalletFileName))
     {
         CDBEnv::VerifyResult r = bitdb.Verify(strWalletFileName, CWalletDB::Recover);
         if (r == CDBEnv::RECOVER_OK)
@@ -643,7 +643,7 @@ bool AppInit2(boost::thread_group& threadGroup)
             return InitError(_("wallet.dat corrupt, salvage failed"));
     }
 
-    if (filesystem::exists(GetDataDir() / strStakeDBFileName))
+    if (boost::filesystem::exists(GetDataDir() / strStakeDBFileName))
     {
         CDBEnv::VerifyResult r = bitdb.Verify(strStakeDBFileName, CStakeDB::Recover);
         if (r == CDBEnv::RECOVER_OK)
@@ -665,7 +665,7 @@ bool AppInit2(boost::thread_group& threadGroup)
 
     if (mapArgs.count("-onlynet")) {
         std::set<enum Network> nets;
-        BOOST_FOREACH(const std::string& snet, mapMultiArgs["-onlynet"]) {
+        for (const std::string& snet : mapMultiArgs["-onlynet"]) {
             enum Network net = ParseNetwork(snet);
             if (net == NET_UNROUTABLE)
                 return InitError(strprintf(_("Unknown network specified in -onlynet: '%s'"), snet.c_str()));
@@ -721,7 +721,7 @@ bool AppInit2(boost::thread_group& threadGroup)
     {
         std::string strError;
         if (mapArgs.count("-bind")) {
-            BOOST_FOREACH(const std::string& strBind, mapMultiArgs["-bind"]) {
+            for (const std::string& strBind : mapMultiArgs["-bind"]) {
                 CService addrBind;
                 if (!Lookup(strBind.c_str(), addrBind, GetListenPort(), false))
                     return InitError(strprintf(_("Cannot resolve -bind address: '%s'"), strBind.c_str()));
@@ -741,7 +741,7 @@ bool AppInit2(boost::thread_group& threadGroup)
 
     if (mapArgs.count("-externalip"))
     {
-        BOOST_FOREACH(const string& strAddr, mapMultiArgs["-externalip"]) {
+        for (const string& strAddr : mapMultiArgs["-externalip"]) {
             CService addrLocal(strAddr, GetListenPort(), fNameLookup);
             if (!addrLocal.IsValid())
                 return InitError(strprintf(_("Cannot resolve -externalip address: '%s'"), strAddr.c_str()));
@@ -786,7 +786,7 @@ bool AppInit2(boost::thread_group& threadGroup)
             InitError(_("Unable to sign checkpoint, wrong checkpointkey?\n"));
     }
 
-    BOOST_FOREACH(const string& strDest, mapMultiArgs["-seednode"])
+    for (const string& strDest : mapMultiArgs["-seednode"])
         AddOneShot(strDest);
 
     // ********************************************************* Step 7: set adjusted time from NTP
@@ -977,7 +977,7 @@ bool AppInit2(boost::thread_group& threadGroup)
     {
         uiInterface.InitMessage(_("Importing blockchain data file."));
 
-        BOOST_FOREACH(const string& strFile, mapMultiArgs["-loadblock"])
+        for (const string& strFile : mapMultiArgs["-loadblock"])
         {
             FILE *file = fopen(strFile.c_str(), "rb");
             if (file)
@@ -986,13 +986,13 @@ bool AppInit2(boost::thread_group& threadGroup)
         exit(0);
     }
 
-    filesystem::path pathBootstrap = GetDataDir() / "bootstrap.dat";
-    if (filesystem::exists(pathBootstrap)) {
+    boost::filesystem::path pathBootstrap = GetDataDir() / "bootstrap.dat";
+    if (boost::filesystem::exists(pathBootstrap)) {
         uiInterface.InitMessage(_("Importing bootstrap blockchain data file."));
 
         FILE *file = fopen(pathBootstrap.string().c_str(), "rb");
         if (file) {
-            filesystem::path pathBootstrapOld = GetDataDir() / "bootstrap.dat.old";
+            boost::filesystem::path pathBootstrapOld = GetDataDir() / "bootstrap.dat.old";
             LoadExternalBlockFile(file);
             RenameOver(pathBootstrap, pathBootstrapOld);
         }
