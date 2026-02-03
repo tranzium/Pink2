@@ -7,6 +7,7 @@
 #include "txdb.h"
 #include "miner.h"
 #include "kernel.h"
+#include <tuple>
 
 using namespace std;
 
@@ -76,7 +77,7 @@ uint64_t nLastBlockSize = 0;
 int64_t nLastCoinStakeSearchInterval = 0;
  
 // We want to sort transactions by priority and fee, so:
-typedef boost::tuple<double, double, CTransaction*> TxPriority;
+typedef std::tuple<double, double, CTransaction*> TxPriority;
 class TxPriorityCompare
 {
     bool byFee;
@@ -86,15 +87,15 @@ public:
     {
         if (byFee)
         {
-            if (a.get<1>() == b.get<1>())
-                return a.get<0>() < b.get<0>();
-            return a.get<1>() < b.get<1>();
+            if (std::get<1>(a) == std::get<1>(b))
+                return std::get<0>(a) < std::get<0>(b);
+            return std::get<1>(a) < std::get<1>(b);
         }
         else
         {
-            if (a.get<0>() == b.get<0>())
-                return a.get<1>() < b.get<1>();
-            return a.get<0>() < b.get<0>();
+            if (std::get<0>(a) == std::get<0>(b))
+                return std::get<1>(a) < std::get<1>(b);
+            return std::get<0>(a) < std::get<0>(b);
         }
     }
 };
@@ -262,9 +263,9 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake, int64_t* pFees)
         while (!vecPriority.empty())
         {
             // Take highest priority transaction off the priority queue:
-            double dPriority = vecPriority.front().get<0>();
-            double dFeePerKb = vecPriority.front().get<1>();
-            CTransaction& tx = *(vecPriority.front().get<2>());
+            double dPriority = std::get<0>(vecPriority.front());
+            double dFeePerKb = std::get<1>(vecPriority.front());
+            CTransaction& tx = *(std::get<2>(vecPriority.front()));
 
             std::pop_heap(vecPriority.begin(), vecPriority.end(), comparer);
             vecPriority.pop_back();
