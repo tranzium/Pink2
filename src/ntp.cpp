@@ -121,7 +121,7 @@ bool GetNTPTime(const char *addrConnect, uint64_t& timeRet)
     bTimeReq[0] = 0x1b;
 
     // Time we send our request
-    startMicros = boost::chrono::duration_cast<boost::chrono::microseconds>(boost::chrono::system_clock::now().time_since_epoch()).count();
+    startMicros = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     int n = send(socketNTP, (char*)&bTimeReq, 48, 0);
 
     if (n < 0) {
@@ -131,7 +131,7 @@ bool GetNTPTime(const char *addrConnect, uint64_t& timeRet)
 
     n = recv(socketNTP, (char*)&bTimeReq, 48, 0);
     // Time we got it
-    endMicros = boost::chrono::duration_cast<boost::chrono::microseconds>(boost::chrono::system_clock::now().time_since_epoch()).count();
+    endMicros = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
     freeaddrinfo(aiRes);
     close(socketNTP);
@@ -200,7 +200,7 @@ void *threadGetNTPTime(int nServer, const string strPool, uint64_t startMicros)
     uint64_t myTime = 0;
     if (GetNTPTime(strAddress.c_str(), myTime))
     {
-        uint64_t nowMicros = boost::chrono::duration_cast<boost::chrono::microseconds>(boost::chrono::system_clock::now().time_since_epoch()).count();
+        uint64_t nowMicros = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
         // Subtract how long it took our thread to get the time.
         myTime -= (nowMicros - startMicros);
@@ -241,7 +241,7 @@ bool SetNTPOffset(const string &strPool)
 
         // Let our threads know when we're starting from so they can give
         // us times that are consistent with what we need.
-        nowMicros = boost::chrono::duration_cast<boost::chrono::microseconds>(boost::chrono::system_clock::now().time_since_epoch()).count();
+        nowMicros = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
         // Any regional ntp pool can be used. But we prepend the number for NTP's randomized selection.
         // By default we use pool.ntp.org - which generally selects pools that are appropriate for your ip.
@@ -254,11 +254,11 @@ bool SetNTPOffset(const string &strPool)
 
         // Ideally we want times from NTP servers that can respond to us in < 500ms.
         // We'll wait longer if we don't get what we need.
-        boost::this_thread::sleep_for(boost::chrono::milliseconds(500 * nWait));
+        std::this_thread::sleep_for(std::chrono::milliseconds(500 * nWait));
 
         // Get this now so we know exactly when we woke up again.
         // Helps us get an accurate offset.
-        nowMicros = boost::chrono::duration_cast<boost::chrono::microseconds>(boost::chrono::system_clock::now().time_since_epoch()).count();
+        nowMicros = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
         for (int i = 0; i < 4; i++)
         {

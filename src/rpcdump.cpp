@@ -10,9 +10,12 @@
 #include "ui_interface.h"
 #include "base58.h"
 
-#include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/variant/get.hpp>
 #include <boost/algorithm/string.hpp>
+
+#include <ctime>
+#include <iomanip>
+#include <sstream>
 
 #define printf OutputDebugStringF
 
@@ -21,40 +24,34 @@ using namespace std;
 
 void EnsureWalletIsUnlocked();
 
-namespace bt = boost::posix_time;
-
-// Extended DecodeDumpTime implementation, see this page for details:
-// http://stackoverflow.com/questions/3786201/parsing-of-date-time-from-string-boost
-const std::locale formats[] = {
-    std::locale(std::locale::classic(),new bt::time_input_facet("%Y-%m-%dT%H:%M:%SZ")),
-    std::locale(std::locale::classic(),new bt::time_input_facet("%Y-%m-%d %H:%M:%S")),
-    std::locale(std::locale::classic(),new bt::time_input_facet("%Y/%m/%d %H:%M:%S")),
-    std::locale(std::locale::classic(),new bt::time_input_facet("%d.%m.%Y %H:%M:%S")),
-    std::locale(std::locale::classic(),new bt::time_input_facet("%Y-%m-%d"))
+static const char* const dumpTimeFormats[] = {
+    "%Y-%m-%dT%H:%M:%SZ",
+    "%Y-%m-%d %H:%M:%S",
+    "%Y/%m/%d %H:%M:%S",
+    "%d.%m.%Y %H:%M:%S",
+    "%Y-%m-%d"
 };
 
-const size_t formats_n = sizeof(formats)/sizeof(formats[0]);
-
-std::time_t pt_to_time_t(const bt::ptime& pt)
-{
-    bt::ptime timet_start(boost::gregorian::date(1970,1,1));
-    bt::time_duration diff = pt - timet_start;
-    return diff.ticks()/bt::time_duration::rep_type::ticks_per_second;
-}
+static const size_t dumpTimeFormats_n = sizeof(dumpTimeFormats)/sizeof(dumpTimeFormats[0]);
 
 int64_t DecodeDumpTime(const std::string& s)
 {
-    bt::ptime pt;
-
-    for(size_t i=0; i<formats_n; ++i)
+    for (size_t i = 0; i < dumpTimeFormats_n; ++i)
     {
+        std::tm tm = {};
         std::istringstream is(s);
-        is.imbue(formats[i]);
-        is >> pt;
-        if(pt != bt::ptime()) break;
+        is >> std::get_time(&tm, dumpTimeFormats[i]);
+        if (!is.fail())
+        {
+#ifdef WIN32
+            return static_cast<int64_t>(_mkgmtime(&tm));
+#else
+            return static_cast<int64_t>(timegm(&tm));
+#endif
+        }
     }
 
-    return pt_to_time_t(pt);
+    return 0;
 }
 
 std::string static EncodeDumpTime(int64_t nTime) {

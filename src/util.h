@@ -21,10 +21,9 @@
 #include <string>
 
 #include <boost/thread.hpp>
-#include <boost/chrono.hpp>
+#include <chrono>
 #include <filesystem>
-#include <boost/date_time/gregorian/gregorian_types.hpp>
-#include <boost/date_time/posix_time/posix_time_types.hpp>
+#include <thread>
 
 #include <openssl/sha.h>
 #include <openssl/ripemd.h>
@@ -92,11 +91,7 @@ T* alignup(T* p)
 
 inline void MilliSleep(int64_t n)
 {
-#if BOOST_VERSION >= 105000
-    boost::this_thread::sleep_for(boost::chrono::milliseconds(n));
-#else
-    boost::this_thread::sleep(boost::posix_time::milliseconds(n));
-#endif
+    std::this_thread::sleep_for(std::chrono::milliseconds(n));
 }
 
 /* This GNU C extension enables the compiler to check the format string against the parameters provided.
@@ -320,14 +315,14 @@ inline int64_t GetPerformanceCounter()
 
 inline int64_t GetTimeMillis()
 {
-    return (boost::posix_time::ptime(boost::posix_time::microsec_clock::universal_time()) -
-            boost::posix_time::ptime(boost::gregorian::date(1970,1,1))).total_milliseconds();
+    return std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::system_clock::now().time_since_epoch()).count();
 }
 
 inline int64_t GetTimeMicros()
 {
-    return (boost::posix_time::ptime(boost::posix_time::microsec_clock::universal_time()) -
-            boost::posix_time::ptime(boost::gregorian::date(1970,1,1))).total_microseconds();
+    return std::chrono::duration_cast<std::chrono::microseconds>(
+        std::chrono::system_clock::now().time_since_epoch()).count();
 }
 
 inline std::string DateTimeStrFormat(const char* pszFormat, int64_t nTime)
