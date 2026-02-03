@@ -415,7 +415,7 @@ bool AppInit2(boost::thread_group& threadGroup)
     sigaction(SIGHUP, &sa_hup, nullptr);
 #endif
 
-    threadGroup.create_thread(boost::bind(&DetectShutdownThread, &threadGroup));
+    threadGroup.create_thread([&threadGroup]() { DetectShutdownThread(&threadGroup); });
 
     // ********************************************************* Step 2: parameter interactions
 
@@ -783,7 +783,7 @@ bool AppInit2(boost::thread_group& threadGroup)
     {
         uiInterface.InitMessage(_("Starting NTP sync thread..."));
         printf("Starting NTP sync thread...\n");
-        threadGroup.create_thread(boost::bind(threadNTPUpdate, mapArgs["-ntpserver"]));
+        threadGroup.create_thread([ntpServer = mapArgs["-ntpserver"]]() { threadNTPUpdate(ntpServer); });
     }
 
     // ********************************************************* Step 8: load blockchain

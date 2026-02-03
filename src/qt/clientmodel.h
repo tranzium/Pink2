@@ -2,6 +2,8 @@
 #define CLIENTMODEL_H
 
 #include <QObject>
+#include <boost/signals2/connection.hpp>
+#include <vector>
 
 class OptionsModel;
 class AddressTableModel;
@@ -58,6 +60,8 @@ private:
 
     void subscribeToCoreSignals();
     void unsubscribeFromCoreSignals();
+
+    std::vector<boost::signals2::connection> coreSignalConnections;
 signals:
     void numConnectionsChanged(int count);
     void numBlocksChanged(int count, int countOfPeers);

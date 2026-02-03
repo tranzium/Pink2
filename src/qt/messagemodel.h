@@ -5,6 +5,7 @@
 
 #include "uint256.h"
 
+#include <boost/signals2/connection.hpp>
 #include <vector>
 #include "allocators.h" /* for SecureString */
 #include "smessage.h"
@@ -175,6 +176,8 @@ private:
 
     void subscribeToCoreSignals();
     void unsubscribeFromCoreSignals();
+
+    std::vector<boost::signals2::connection> coreSignalConnections;
 
 public slots:
 

@@ -6,6 +6,8 @@
 #include "messagemodel.h"
 #include "addresstablemodel.h"
 
+#include <functional>
+
 #include "ui_interface.h"
 #include "base58.h"
 #include "json_spirit.h"
@@ -602,19 +604,22 @@ void MessageModel::subscribeToCoreSignals()
     qRegisterMetaType<SecMsgStored>("SecMsgStored");
 
     // Connect signals
-    NotifySecMsgInboxChanged.connect(boost::bind(NotifySecMsgInbox, this, boost::placeholders::_1));
-    NotifySecMsgOutboxChanged.connect(boost::bind(NotifySecMsgOutbox, this, boost::placeholders::_1));
-    NotifySecMsgWalletUnlocked.connect(boost::bind(NotifySecMsgWallet, this));
-    
+    coreSignalConnections.push_back(
+        NotifySecMsgInboxChanged.connect(std::bind(NotifySecMsgInbox, this, std::placeholders::_1)));
+    coreSignalConnections.push_back(
+        NotifySecMsgOutboxChanged.connect(std::bind(NotifySecMsgOutbox, this, std::placeholders::_1)));
+    coreSignalConnections.push_back(
+        NotifySecMsgWalletUnlocked.connect(std::bind(NotifySecMsgWallet, this)));
+
     connect(walletModel, SIGNAL(encryptionStatusChanged(int)), this, SLOT(setEncryptionStatus(int)));
 }
 
 void MessageModel::unsubscribeFromCoreSignals()
 {
     // Disconnect signals
-    NotifySecMsgInboxChanged.disconnect(boost::bind(NotifySecMsgInbox, this, boost::placeholders::_1));
-    NotifySecMsgOutboxChanged.disconnect(boost::bind(NotifySecMsgOutbox, this, boost::placeholders::_1));
-    NotifySecMsgWalletUnlocked.disconnect(boost::bind(NotifySecMsgWallet, this));
-    
+    for (auto& conn : coreSignalConnections)
+        conn.disconnect();
+    coreSignalConnections.clear();
+
     disconnect(walletModel, SIGNAL(encryptionStatusChanged(int)), this, SLOT(setEncryptionStatus(int)));
 }

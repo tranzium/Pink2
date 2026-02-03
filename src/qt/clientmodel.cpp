@@ -8,6 +8,8 @@
 #include "main.h"
 #include "ui_interface.h"
 
+#include <functional>
+
 #include <QDateTime>
 #include <QTimer>
 
@@ -178,13 +180,16 @@ static void NotifyAlertChanged(ClientModel *clientmodel, const uint256 &hash, Ch
 void ClientModel::subscribeToCoreSignals()
 {
     // Connect signals to client
-    uiInterface.NotifyNumConnectionsChanged.connect(boost::bind(NotifyNumConnectionsChanged, this, boost::placeholders::_1));
-    uiInterface.NotifyAlertChanged.connect(boost::bind(NotifyAlertChanged, this, boost::placeholders::_1, boost::placeholders::_2));
+    coreSignalConnections.push_back(
+        uiInterface.NotifyNumConnectionsChanged.connect(std::bind(NotifyNumConnectionsChanged, this, std::placeholders::_1)));
+    coreSignalConnections.push_back(
+        uiInterface.NotifyAlertChanged.connect(std::bind(NotifyAlertChanged, this, std::placeholders::_1, std::placeholders::_2)));
 }
 
 void ClientModel::unsubscribeFromCoreSignals()
 {
     // Disconnect signals from client
-    uiInterface.NotifyNumConnectionsChanged.disconnect(boost::bind(NotifyNumConnectionsChanged, this, boost::placeholders::_1));
-    uiInterface.NotifyAlertChanged.disconnect(boost::bind(NotifyAlertChanged, this, boost::placeholders::_1, boost::placeholders::_2));
+    for (auto& conn : coreSignalConnections)
+        conn.disconnect();
+    coreSignalConnections.clear();
 }
