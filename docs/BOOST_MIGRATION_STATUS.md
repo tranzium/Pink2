@@ -35,12 +35,17 @@
 - **Commit:** cf658da
 - **Notes:** C++11 range-based for loops
 
-## Remaining Low-Hanging Fruit
-
 ### boost::tuple → std::tuple
-- **Files:** ~4 uses
-- **Effort:** Easy
-- **Notes:** Direct replacement, std::tuple available since C++11
+- **Status:** Uncommitted (in working tree)
+- **Files:** miner.cpp, script.cpp, serialize.h, walletdb.cpp, test/multisig_tests.cpp
+- **Notes:**
+  - `boost::tuple` → `std::tuple`
+  - `boost::get<N>(tuple)` → `std::get<N>(tuple)`
+  - `tuple.get<N>()` → `std::get<N>(tuple)`
+  - `boost::make_tuple` → `std::make_tuple`
+  - Removed `using namespace boost;` where only used for tuples
+
+## Remaining Low-Hanging Fruit
 
 ### boost::variant → std::variant
 - **Files:** ~3 uses
