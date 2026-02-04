@@ -1579,7 +1579,7 @@ bool CWallet::CreateTransaction(const vector<pair<CScript, int64_t> >& vecSend, 
                     // coin control: send change to custom address
                     if (coinControl && coinControl->fReturnChange == true)
 						scriptChange.SetDestination(utxoAddress);
-                    else if (coinControl && !boost::get<CNoDestination>(&coinControl->destChange))
+                    else if (coinControl && !std::get_if<CNoDestination>(&coinControl->destChange))
 						scriptChange.SetDestination(coinControl->destChange);
 
                     // no coin control: send change to newly generated address
@@ -2255,10 +2255,10 @@ bool CWallet::FindStealthTransactions(const CTransaction& tx, mapValue_t& mapNar
             if (!ExtractDestination(txoutB.scriptPubKey, address))
                 continue;
             
-            if (address.type() != typeid(CKeyID))
+            if (!std::holds_alternative<CKeyID>(address))
                 continue;
-            
-            CKeyID ckidMatch = boost::get<CKeyID>(address);
+
+            CKeyID ckidMatch = std::get<CKeyID>(address);
             
             if (HaveKey(ckidMatch)) // no point checking if already have key
                 continue;

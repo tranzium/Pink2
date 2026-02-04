@@ -256,7 +256,7 @@ public:
  * The data vector contains RIPEMD160(SHA256(cscript)), where cscript is the serialized redemption script.
  */
 class CBitcoinAddress;
-class CBitcoinAddressVisitor : public boost::static_visitor<bool>
+class CBitcoinAddressVisitor
 {
 private:
     CBitcoinAddress *addr;
@@ -291,7 +291,7 @@ public:
 
     bool Set(const CTxDestination &dest)
     {
-        return boost::apply_visitor(CBitcoinAddressVisitor(this), dest);
+        return std::visit(CBitcoinAddressVisitor(this), dest);
     }
 
     bool IsValid() const

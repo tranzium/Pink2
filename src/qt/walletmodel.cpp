@@ -511,9 +511,9 @@ static void NotifyKeyStoreStatusChanged(WalletModel *walletmodel, CCryptoKeyStor
 
 static void NotifyAddressBookChanged(WalletModel *walletmodel, CWallet *wallet, const CTxDestination &address, const std::string &label, bool isMine, ChangeType status)
 {
-    if (address.type() == typeid(CStealthAddress))
+    if (std::holds_alternative<CStealthAddress>(address))
     {
-        CStealthAddress sxAddr = boost::get<CStealthAddress>(address);
+        CStealthAddress sxAddr = std::get<CStealthAddress>(address);
         std::string enc = sxAddr.Encoded();
         OutputDebugStringF("NotifyAddressBookChanged %s %s isMine=%i status=%i\n", enc.c_str(), label.c_str(), isMine, status);
         QMetaObject::invokeMethod(walletmodel, "updateAddressBook", Qt::QueuedConnection,

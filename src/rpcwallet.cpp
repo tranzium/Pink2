@@ -11,7 +11,6 @@
 #include "base58.h"
 #include "stealth.h"
 #include "smessage.h"
-#include <boost/lexical_cast.hpp>
 
 using namespace json_spirit;
 using namespace std;
@@ -1562,7 +1561,7 @@ Value encryptwallet(const Array& params, bool fHelp)
     return "wallet encrypted; Pinkcoin server stopping, restart to run with encrypted wallet.  The keypool has been flushed, you need to make a new backup.";
 }
 
-class DescribeAddressVisitor : public boost::static_visitor<Object>
+class DescribeAddressVisitor
 {
 public:
     Object operator()(const CNoDestination &dest) const { return Object(); }
@@ -1596,7 +1595,7 @@ public:
             obj.push_back(Pair("sigsrequired", nRequired));
         return obj;
     }
-    
+
     Object operator()(const CStealthAddress &stxAddr) const {
         Object obj;
         obj.push_back(Pair("todo", true));
@@ -1624,7 +1623,7 @@ Value validateaddress(const Array& params, bool fHelp)
         bool fMine = IsMine(*pwalletMain, dest);
         ret.push_back(Pair("ismine", fMine));
         if (fMine) {
-            Object detail = boost::apply_visitor(DescribeAddressVisitor(), dest);
+            Object detail = std::visit(DescribeAddressVisitor(), dest);
             ret.insert(ret.end(), detail.begin(), detail.end());
         }
         if (pwalletMain->mapAddressBook.count(dest))
@@ -1661,7 +1660,7 @@ Value validatepubkey(const Array& params, bool fHelp)
         ret.push_back(Pair("ismine", fMine));
         ret.push_back(Pair("iscompressed", isCompressed));
         if (fMine) {
-            Object detail = boost::apply_visitor(DescribeAddressVisitor(), dest);
+            Object detail = std::visit(DescribeAddressVisitor(), dest);
             ret.insert(ret.end(), detail.begin(), detail.end());
         }
         if (pwalletMain->mapAddressBook.count(dest))

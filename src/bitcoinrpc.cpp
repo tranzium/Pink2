@@ -18,9 +18,7 @@
 #include <boost/iostreams/concepts.hpp>
 #include <boost/iostreams/stream.hpp>
 #include <boost/algorithm/string.hpp>
-#include <boost/lexical_cast.hpp>
 #include <boost/asio/ssl.hpp>
-#include <boost/shared_ptr.hpp>
 #include <memory>
 #include <list>
 

@@ -43,7 +43,6 @@ Notes:
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
 
-#include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 
 
@@ -626,7 +625,7 @@ void ThreadSecureMsg(void* parg)
                 {
                     if (fDebugSmsg)
                         printf("Removing bucket %" PRId64 " \n", it->first);
-                    std::string fileName = boost::lexical_cast<std::string>(it->first) + "_01.dat";
+                    std::string fileName = std::to_string(it->first) + "_01.dat";
                     fs::path fullPath = GetDataDir() / "smsgStore" / fileName;
                     if (fs::exists(fullPath))
                     {
@@ -640,7 +639,7 @@ void ThreadSecureMsg(void* parg)
                         printf("Path %s does not exist \n", fullPath.string().c_str());
                     
                     // -- look for a wl file, it stores incoming messages when wallet is locked
-                    fileName = boost::lexical_cast<std::string>(it->first) + "_01_wl.dat";
+                    fileName = std::to_string(it->first) + "_01_wl.dat";
                     fullPath = GetDataDir() / "smsgStore" / fileName;
                     if (fs::exists(fullPath))
                     {
@@ -867,7 +866,7 @@ int SecureMsgBuildBucketSet()
         
         std::string stime = fileName.substr(0, sep);
         
-        int64_t fileTime = boost::lexical_cast<int64_t>(stime);
+        int64_t fileTime = std::stoll(stime);
         
         if (fileTime < now - SMSG_RETENTION)
         {
@@ -2219,7 +2218,7 @@ bool SecureMsgScanBuckets()
         
         std::string stime = fileName.substr(0, sep);
         
-        int64_t fileTime = boost::lexical_cast<int64_t>(stime);
+        int64_t fileTime = std::stoll(stime);
         
         if (fileTime < now - SMSG_RETENTION)
         {
@@ -2373,7 +2372,7 @@ int SecureMsgWalletUnlocked()
         
         std::string stime = fileName.substr(0, sep);
         
-        int64_t fileTime = boost::lexical_cast<int64_t>(stime);
+        int64_t fileTime = std::stoll(stime);
         
         if (fileTime < now - SMSG_RETENTION)
         {
@@ -2764,7 +2763,7 @@ int SecureMsgRetrieve(SecMsgToken &token, std::vector<unsigned char>& vchData)
     
     //printf("token.offset %d.\n", token.offset); // DEBUG
     int64_t bucket = token.timestamp - (token.timestamp % SMSG_BUCKET_LEN);
-    std::string fileName = boost::lexical_cast<std::string>(bucket) + "_01.dat";
+    std::string fileName = std::to_string(bucket) + "_01.dat";
     fs::path fullpath = pathSmsgDir / fileName;
     
     //printf("bucket %d.\n", bucket);
@@ -2967,7 +2966,7 @@ int SecureMsgStoreUnscanned(unsigned char *pHeader, unsigned char *pPayload, uin
     
     int64_t bucket = psmsg->timestamp - (psmsg->timestamp % SMSG_BUCKET_LEN);
 
-    std::string fileName = boost::lexical_cast<std::string>(bucket) + "_01_wl.dat";
+    std::string fileName = std::to_string(bucket) + "_01_wl.dat";
     fs::path fullpath = pathSmsgDir / fileName;
     
     FILE *fp;
@@ -3068,7 +3067,7 @@ int SecureMsgStore(unsigned char *pHeader, unsigned char *pPayload, uint32_t nPa
             return 1;
         };
         
-        std::string fileName = boost::lexical_cast<std::string>(bucket) + "_01.dat";
+        std::string fileName = std::to_string(bucket) + "_01.dat";
         fs::path fullpath = pathSmsgDir / fileName;
         
         FILE *fp;

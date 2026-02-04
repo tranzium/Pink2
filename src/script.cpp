@@ -1538,7 +1538,7 @@ unsigned int HaveKeys(const vector<valtype>& pubkeys, const CKeyStore& keystore)
 }
 
 
-class CKeyStoreIsMineVisitor : public boost::static_visitor<bool>
+class CKeyStoreIsMineVisitor
 {
 private:
     const CKeyStore *keystore;
@@ -1555,7 +1555,7 @@ public:
 
 bool IsMine(const CKeyStore &keystore, const CTxDestination &dest)
 {
-    return boost::apply_visitor(CKeyStoreIsMineVisitor(&keystore), dest);
+    return std::visit(CKeyStoreIsMineVisitor(&keystore), dest);
 }
 
 bool IsMine(const CKeyStore &keystore, const CScript& scriptPubKey)
@@ -1624,7 +1624,7 @@ bool ExtractDestination(const CScript& scriptPubKey, CTxDestination& addressRet)
     return false;
 }
 
-class CAffectedKeysVisitor : public boost::static_visitor<void> {
+class CAffectedKeysVisitor {
 private:
     const CKeyStore &keystore;
     std::vector<CKeyID> &vKeys;
@@ -1638,7 +1638,7 @@ public:
         int nRequired;
         if (ExtractDestinations(script, type, vDest, nRequired)) {
             for (const CTxDestination &dest : vDest)
-                boost::apply_visitor(*this, dest);
+                std::visit(*this, dest);
         }
     }
 
@@ -1652,10 +1652,10 @@ public:
         if (keystore.GetCScript(scriptId, script))
             Process(script);
     }
-    
+
     void operator()(const CStealthAddress &stxAddr) {
         CScript script;
-        
+
     }
 
     void operator()(const CNoDestination &none) {}
@@ -2004,7 +2004,7 @@ bool CScript::HasCanonicalPushes() const
     return true;
 }
 
-class CScriptVisitor : public boost::static_visitor<bool>
+class CScriptVisitor
 {
 private:
     CScript *script;
@@ -2027,7 +2027,7 @@ public:
         *script << OP_HASH160 << scriptID << OP_EQUAL;
         return true;
     }
-    
+
     bool operator()(const CStealthAddress &stxAddr) const {
         script->clear();
         //*script << OP_HASH160 << scriptID << OP_EQUAL;
@@ -2038,7 +2038,7 @@ public:
 
 void CScript::SetDestination(const CTxDestination& dest)
 {
-    boost::apply_visitor(CScriptVisitor(this), dest);
+    std::visit(CScriptVisitor(this), dest);
 }
 
 void CScript::SetMultisig(int nRequired, const std::vector<CKey>& keys)
