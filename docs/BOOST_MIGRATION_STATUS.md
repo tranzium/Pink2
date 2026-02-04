@@ -61,6 +61,16 @@
   - `boost::lexical_cast<int64_t>(s)` → `std::stoll(s)`
   - Removed unused includes from bitcoinrpc.cpp, rpcwallet.cpp
 
+### boost::array → std::array
+- **Files:** net.h, net.cpp
+- **Notes:** Direct replacement `boost::array<T, N>` → `std::array<T, N>`
+
+### boost::assign/list_of → initializer lists
+- **Files:** checkpoints.cpp, rpcrawtransaction.cpp, kernel.cpp (unused include removed)
+- **Notes:**
+  - `list_of(a)(b)(c)` → `{a, b, c}`
+  - `map_list_of("k1", v1)("k2", v2)` → `{{"k1", v1}, {"k2", v2}}`
+
 ## Remaining Low-Hanging Fruit
 
 ### boost::thread/* → std::thread/mutex
@@ -69,12 +79,6 @@
   - `boost::recursive_mutex` → `std::recursive_mutex`
   - `boost::thread` → `std::thread`
   - `boost::condition_variable` → `std::condition_variable`
-
-### boost::assign/list_of → initializer lists
-- **Notes:** Replace `boost::assign::list_of(a)(b)(c)` with `{a, b, c}`
-
-### boost::array → std::array
-- **Notes:** Direct replacement
 
 ## Must Keep (No Standard Replacement)
 
@@ -106,3 +110,23 @@
 
 ### boost::test
 - **Reason:** Unit test framework, would require migration to different framework (e.g., Google Test)
+
+## Behavioral Differences Review
+
+Key semantic differences between Boost and std equivalents that were evaluated:
+
+### std::variant vs boost::variant
+- **Exception type changed:** `std::bad_variant_access` vs `boost::bad_get`
+- **valueless_by_exception:** std::variant can enter this state if assignment throws (boost uses "never-empty" guarantee)
+- **Risk:** Low - no catch blocks for variant exceptions in codebase; only simple types used
+- **All std::get calls are guarded** by either `std::holds_alternative` checks or contextual guarantees (e.g., `IsPayToScriptHash()` implies `CScriptID`)
+- **Note:** rpcrawtransaction.cpp:212 uses implicit guard via `IsPayToScriptHash()` - intentionally kept as-is because crash on invariant violation is preferable to silent failure
+
+### std::stoll vs boost::lexical_cast<int64_t>
+- **Partial parse:** `std::stoll("123abc")` returns 123; `lexical_cast` would throw
+- **Whitespace:** `std::stoll(" 123")` succeeds; `lexical_cast` would throw
+- **Risk:** Low - only used on internally-generated timestamp filenames (format: `timestamp_01.dat`)
+
+### std::to_string vs boost::lexical_cast<string>
+- **Float precision:** May differ for floating-point types
+- **Risk:** N/A - only used on integers (bucket IDs, message counts, hashes)
