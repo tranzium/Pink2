@@ -71,16 +71,24 @@
   - `list_of(a)(b)(c)` → `{a, b, c}`
   - `map_list_of("k1", v1)("k2", v2)` → `{{"k1", v1}, {"k2", v2}}`
 
-## Remaining Low-Hanging Fruit
-
-### boost::thread/* → std::thread/mutex
+### boost::mutex/locks → std::mutex/locks (partial)
+- **Files:** sync.h, sync.cpp, allocators.h, util.cpp
 - **Notes:**
   - `boost::mutex` → `std::mutex`
   - `boost::recursive_mutex` → `std::recursive_mutex`
-  - `boost::thread` → `std::thread`
   - `boost::condition_variable` → `std::condition_variable`
+  - `boost::unique_lock` → `std::unique_lock`
+  - `boost::mutex::scoped_lock` → `std::lock_guard<std::mutex>`
+  - `boost::defer_lock` → `std::defer_lock`
+  - `boost::thread_specific_ptr` → `thread_local std::unique_ptr`
+- **Include fixes:** Added missing `<ios>` to serialize.h, `<algorithm>` to bignum.h, `<cassert>` to allocators.h (previously pulled in transitively by boost headers)
 
 ## Must Keep (No Standard Replacement)
+
+### boost::thread/thread_group
+- **Reason:** `boost::thread_group` has no std equivalent; `boost::thread_interrupted` exception mechanism not in std::thread
+- **Files:** init.cpp, util.cpp, util.h, alert.cpp, main.cpp, ntp.cpp, wallet.cpp
+- **Note:** Mutex/locks migrated to std, but thread creation/management remains boost
 
 ### boost::asio
 - **Reason:** No standard networking library until C++23 (and adoption is limited)
