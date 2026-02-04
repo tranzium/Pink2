@@ -19,7 +19,6 @@
   - boost::function → std::function
 
 ### boost::chrono → std::chrono
-- **Status:** Uncommitted (in working tree)
 - **Files:** ntp.cpp, rpcdump.cpp, util.h, CMakeLists.txt
 - **Notes:**
   - `boost::chrono::duration_cast` → `std::chrono::duration_cast`
@@ -36,7 +35,6 @@
 - **Notes:** C++11 range-based for loops
 
 ### boost::tuple → std::tuple
-- **Status:** Uncommitted (in working tree)
 - **Files:** miner.cpp, script.cpp, serialize.h, walletdb.cpp, test/multisig_tests.cpp
 - **Notes:**
   - `boost::tuple` → `std::tuple`
@@ -45,23 +43,27 @@
   - `boost::make_tuple` → `std::make_tuple`
   - Removed `using namespace boost;` where only used for tuples
 
+### boost::variant → std::variant
+- **Files:** script.h, script.cpp, base58.h, rpcwallet.cpp, wallet.cpp, qt/walletmodel.cpp, qt/coincontroldialog.cpp, rpcrawtransaction.cpp, test/base58_tests.cpp
+- **Notes:**
+  - `boost::variant<...>` → `std::variant<...>`
+  - `boost::static_visitor<T>` → removed (std::visit uses duck typing)
+  - `boost::apply_visitor(visitor, var)` → `std::visit(visitor, var)`
+  - `boost::get<T>(&var)` → `std::get_if<T>(&var)`
+  - `boost::get<T>(var)` → `std::get<T>(var)`
+  - `var.type() == typeid(T)` → `std::holds_alternative<T>(var)`
+  - **Exception:** json_spirit_value.h keeps boost::variant due to boost::recursive_wrapper dependency
+
+### boost::lexical_cast → std::to_string/stoll
+- **Files:** smessage.cpp, rpcsmessage.cpp
+- **Notes:**
+  - `boost::lexical_cast<std::string>(x)` → `std::to_string(x)`
+  - `boost::lexical_cast<int64_t>(s)` → `std::stoll(s)`
+  - Removed unused includes from bitcoinrpc.cpp, rpcwallet.cpp
+
 ## Remaining Low-Hanging Fruit
 
-### boost::variant → std::variant
-- **Files:** ~3 uses
-- **Effort:** Easy
-- **Notes:** std::variant available since C++17, slight API differences (std::get vs boost::get)
-
-### boost::lexical_cast → std::to_string/stoi/stoll
-- **Files:** ~4 uses
-- **Effort:** Easy
-- **Notes:**
-  - `boost::lexical_cast<string>(x)` → `std::to_string(x)`
-  - `boost::lexical_cast<int>(s)` → `std::stoi(s)`
-
 ### boost::thread/* → std::thread/mutex
-- **Files:** ~6 uses
-- **Effort:** Medium
 - **Notes:**
   - `boost::mutex` → `std::mutex`
   - `boost::recursive_mutex` → `std::recursive_mutex`
@@ -69,61 +71,38 @@
   - `boost::condition_variable` → `std::condition_variable`
 
 ### boost::assign/list_of → initializer lists
-- **Files:** ~7 uses
-- **Effort:** Easy
 - **Notes:** Replace `boost::assign::list_of(a)(b)(c)` with `{a, b, c}`
 
 ### boost::array → std::array
-- **Files:** 1 use
-- **Effort:** Easy
 - **Notes:** Direct replacement
 
 ## Must Keep (No Standard Replacement)
 
 ### boost::asio
-- **Files:** bitcoinrpc.cpp, net.cpp
 - **Reason:** No standard networking library until C++23 (and adoption is limited)
 - **Includes:** boost/asio.hpp, boost/asio/ssl.hpp, boost/asio/ip/v6_only.hpp, boost/iostreams/*
 
 ### boost::signals2
-- **Files:** keystore.h, ui_interface.h, and signal connections
 - **Reason:** No standard signal/slot mechanism
 - **Includes:** boost/signals2/signal.hpp, boost/signals2/connection.hpp, boost/signals2/last_value.hpp
 
 ### boost::spirit
-- **Files:** src/json/json_spirit_reader_template.h
 - **Reason:** Complex parsing library, would require replacing entire JSON implementation
 - **Includes:** Multiple boost/spirit/* headers
 
+### boost::variant (in json_spirit)
+- **Files:** src/json/json_spirit_value.h
+- **Reason:** Uses boost::recursive_wrapper for recursive type definition
+- **Note:** All other boost::variant usage has been migrated to std::variant
+
 ### boost::program_options
-- **Files:** util.cpp
 - **Reason:** No standard command-line parsing library
-- **Includes:** boost/program_options/parsers.hpp, boost/program_options/detail/config_file.hpp
 
 ### boost::interprocess
-- **Files:** init.cpp
 - **Reason:** No standard IPC/file locking primitives
-- **Includes:** boost/interprocess/sync/file_lock.hpp, boost/interprocess/ipc/message_queue.hpp
+
+### boost::algorithm/string
+- **Reason:** String algorithms (split, trim, to_lower, replace_all) - would need custom implementations
 
 ### boost::test
-- **Files:** All test files (24 includes)
 - **Reason:** Unit test framework, would require migration to different framework (e.g., Google Test)
-
-## Build Verification
-
-All targets build successfully on both platforms after migrations:
-
-### Linux (native)
-- test_pinkcoin: ✅
-- pink2d: ✅
-- Pinkcoin-Qt: ✅
-
-### Windows (MXE cross-compile)
-- pink2d.exe: ✅
-- Pinkcoin-Qt.exe: ✅
-
-## Test Status
-
-Unit tests have 155 pre-existing failures unrelated to Boost migrations:
-- **base58_tests** (153 failures): Test data uses Bitcoin address formats instead of Pinkcoin
-- **util_threadtrace** (2 failures): Race condition in timing-dependent tests
