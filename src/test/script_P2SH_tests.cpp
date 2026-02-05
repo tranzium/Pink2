@@ -1,9 +1,4 @@
-#include <boost/assert.hpp>
-#include <boost/assign/list_of.hpp>
-#include <boost/assign/list_inserter.hpp>
-#include <boost/assign/std/vector.hpp>
 #include <boost/test/unit_test.hpp>
-#include <boost/foreach.hpp>
 
 #include "main.h"
 #include "script.h"
@@ -225,7 +220,10 @@ BOOST_AUTO_TEST_CASE(is)
 
 BOOST_AUTO_TEST_CASE(switchover)
 {
-    // Test switch over code
+    // Test P2SH validation
+    // Note: Pinkcoin always validates P2SH scripts (no switchover mechanism)
+
+    // Create an inner script that will fail when executed (11 != 12)
     CScript notValid;
     notValid << OP_11 << OP_12 << OP_EQUALVERIFY;
     CScript scriptSig;
@@ -234,10 +232,9 @@ BOOST_AUTO_TEST_CASE(switchover)
     CScript fund;
     fund.SetDestination(notValid.GetID());
 
-
-    // Validation should succeed under old rules (hash is correct):
-    BOOST_CHECK(Verify(scriptSig, fund, false));
-    // Fail under new:
+    // Pinkcoin always enforces P2SH, so invalid inner scripts always fail
+    // (The fStrict parameter is not used in Verify() - always passes 0)
+    BOOST_CHECK(!Verify(scriptSig, fund, false));
     BOOST_CHECK(!Verify(scriptSig, fund, true));
 }
 

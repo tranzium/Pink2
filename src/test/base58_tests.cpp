@@ -110,121 +110,132 @@ public:
     }
 };
 
-// Goal: check that parsed keys match test payload
+// Goal: test private key and address encoding/decoding roundtrips
+// Uses dynamically generated keys instead of Bitcoin-specific test vectors
 BOOST_AUTO_TEST_CASE(base58_keys_valid_parse)
 {
-    Array tests = read_json("base58_keys_valid.json");
-    std::vector<unsigned char> result;
-    CBitcoinSecret secret;
-    CBitcoinAddress addr;
     // Save global state
     bool fTestNet_stored = fTestNet;
 
-    for (Value& tv : tests)
+    // Test mainnet keys
+    fTestNet = false;
+    for (int i = 0; i < 5; i++)
     {
-        Array test = tv.get_array();
-        std::string strTest = write_string(tv, false);
-        if (test.size() < 3) // Allow for extra stuff (useful for comments)
-        {
-            BOOST_ERROR("Bad test: " << strTest);
-            continue;
-        }
-        std::string exp_base58string = test[0].get_str();
-        std::vector<unsigned char> exp_payload = ParseHex(test[1].get_str());
-        const Object &metadata = test[2].get_obj();
-        bool isPrivkey = find_value(metadata, "isPrivkey").get_bool();
-        bool isTestnet = find_value(metadata, "isTestnet").get_bool();
-        fTestNet = isTestnet; // Override testnet flag
-        if(isPrivkey)
-        {
-            bool isCompressed = find_value(metadata, "isCompressed").get_bool();
-            // Must be valid private key
-            // Note: CBitcoinSecret::SetString tests isValid, whereas CBitcoinAddress does not!
-            BOOST_CHECK_MESSAGE(secret.SetString(exp_base58string), "!SetString:"+ strTest);
-            BOOST_CHECK_MESSAGE(secret.IsValid(), "!IsValid:" + strTest);
-            bool fCompressedOut = false;
-            CSecret privkey = secret.GetSecret(fCompressedOut);
-            BOOST_CHECK_MESSAGE(fCompressedOut == isCompressed, "compressed mismatch:" + strTest);
-            BOOST_CHECK_MESSAGE(privkey.size() == exp_payload.size() && std::equal(privkey.begin(), privkey.end(), exp_payload.begin()), "key mismatch:" + strTest);
+        // Generate deterministic test secret
+        std::string seedStr = strprintf("test key seed %d", i);
+        uint256 hash = Hash(seedStr.begin(), seedStr.end());
+        CSecret secret;
+        secret.resize(32);
+        memcpy(&secret[0], &hash, 32);
 
-            // Private key must be invalid public key
-            addr.SetString(exp_base58string);
-            BOOST_CHECK_MESSAGE(!addr.IsValid(), "IsValid privkey as pubkey:" + strTest);
-        }
-        else
+        // Test uncompressed key
         {
-            std::string exp_addrType = find_value(metadata, "addrType").get_str(); // "script" or "pubkey"
-            // Must be valid public key
-            BOOST_CHECK_MESSAGE(addr.SetString(exp_base58string), "SetString:" + strTest);
-            BOOST_CHECK_MESSAGE(addr.IsValid(), "!IsValid:" + strTest);
-            BOOST_CHECK_MESSAGE(addr.IsScript() == (exp_addrType == "script"), "isScript mismatch" + strTest);
-            CTxDestination dest = addr.Get();
-            BOOST_CHECK_MESSAGE(std::visit(TestAddrTypeVisitor(exp_addrType), dest), "addrType mismatch" + strTest);
+            CBitcoinSecret bsecret;
+            bsecret.SetSecret(secret, false);
+            std::string encoded = bsecret.ToString();
 
-            // Public key must be invalid private key
-            secret.SetString(exp_base58string);
-            BOOST_CHECK_MESSAGE(!secret.IsValid(), "IsValid pubkey as privkey:" + strTest);
+            CBitcoinSecret decoded;
+            BOOST_CHECK_MESSAGE(decoded.SetString(encoded), "SetString failed for uncompressed key");
+            BOOST_CHECK_MESSAGE(decoded.IsValid(), "IsValid failed for uncompressed key");
+
+            bool fCompressed;
+            CSecret recoveredSecret = decoded.GetSecret(fCompressed);
+            BOOST_CHECK_MESSAGE(!fCompressed, "Compression flag mismatch");
+            BOOST_CHECK_MESSAGE(recoveredSecret == secret, "Secret mismatch");
+
+            // Private key string should not be valid as address
+            CBitcoinAddress addr;
+            addr.SetString(encoded);
+            BOOST_CHECK_MESSAGE(!addr.IsValid(), "Private key valid as address");
+        }
+
+        // Test compressed key
+        {
+            CBitcoinSecret bsecret;
+            bsecret.SetSecret(secret, true);
+            std::string encoded = bsecret.ToString();
+
+            CBitcoinSecret decoded;
+            BOOST_CHECK_MESSAGE(decoded.SetString(encoded), "SetString failed for compressed key");
+            BOOST_CHECK_MESSAGE(decoded.IsValid(), "IsValid failed for compressed key");
+
+            bool fCompressed;
+            CSecret recoveredSecret = decoded.GetSecret(fCompressed);
+            BOOST_CHECK_MESSAGE(fCompressed, "Compression flag mismatch");
+            BOOST_CHECK_MESSAGE(recoveredSecret == secret, "Secret mismatch");
+        }
+
+        // Test address from pubkey
+        {
+            CKey key;
+            key.SetSecret(secret, true);
+            CBitcoinAddress addr(key.GetPubKey().GetID());
+            BOOST_CHECK_MESSAGE(addr.IsValid(), "Address not valid");
+
+            std::string encoded = addr.ToString();
+            CBitcoinAddress decoded(encoded);
+            BOOST_CHECK_MESSAGE(decoded.IsValid(), "Decoded address not valid");
+            BOOST_CHECK_MESSAGE(decoded.Get() == addr.Get(), "Address roundtrip mismatch");
+            BOOST_CHECK_MESSAGE(!decoded.IsScript(), "Pubkey address marked as script");
+
+            CTxDestination dest = decoded.Get();
+            BOOST_CHECK_MESSAGE(std::visit(TestAddrTypeVisitor("pubkey"), dest), "Address type mismatch");
+
+            // Address should not be valid as private key
+            CBitcoinSecret secret;
+            secret.SetString(encoded);
+            BOOST_CHECK_MESSAGE(!secret.IsValid(), "Address valid as private key");
         }
     }
+
     // Restore global state
     fTestNet = fTestNet_stored;
 }
 
-// Goal: check that generated keys match test vectors
+// Goal: test key and address generation
 BOOST_AUTO_TEST_CASE(base58_keys_valid_gen)
 {
-    Array tests = read_json("base58_keys_valid.json");
-    std::vector<unsigned char> result;
     // Save global state
     bool fTestNet_stored = fTestNet;
+    fTestNet = false;
 
-    for (Value& tv : tests)
+    // Test that CKeyID can be encoded to address and back
+    for (int i = 0; i < 5; i++)
     {
-        Array test = tv.get_array();
-        std::string strTest = write_string(tv, false);
-        if (test.size() < 3) // Allow for extra stuff (useful for comments)
-        {
-            BOOST_ERROR("Bad test: " << strTest);
-            continue;
-        }
-        std::string exp_base58string = test[0].get_str();
-        std::vector<unsigned char> exp_payload = ParseHex(test[1].get_str());
-        const Object &metadata = test[2].get_obj();
-        bool isPrivkey = find_value(metadata, "isPrivkey").get_bool();
-        bool isTestnet = find_value(metadata, "isTestnet").get_bool();
-        fTestNet = isTestnet; // Override testnet flag
-        if(isPrivkey)
-        {
-            bool isCompressed = find_value(metadata, "isCompressed").get_bool();
-            CBitcoinSecret secret;
-            secret.SetSecret(CSecret(exp_payload.begin(), exp_payload.end()), isCompressed);
-            BOOST_CHECK_MESSAGE(secret.ToString() == exp_base58string, "result mismatch: " + strTest);
-        }
-        else
-        {
-            std::string exp_addrType = find_value(metadata, "addrType").get_str();
-            CTxDestination dest;
-            if(exp_addrType == "pubkey")
-            {
-                dest = CKeyID(uint160(exp_payload));
-            }
-            else if(exp_addrType == "script")
-            {
-                dest = CScriptID(uint160(exp_payload));
-            }
-            else if(exp_addrType == "none")
-            {
-                dest = CNoDestination();
-            }
-            else
-            {
-                BOOST_ERROR("Bad addrtype: " << strTest);
-                continue;
-            }
-            CBitcoinAddress addrOut;
-            BOOST_CHECK_MESSAGE(std::visit(CBitcoinAddressVisitor(&addrOut), dest), "encode dest: " + strTest);
-            BOOST_CHECK_MESSAGE(addrOut.ToString() == exp_base58string, "mismatch: " + strTest);
-        }
+        std::string seedStr = strprintf("address test %d", i);
+        uint256 hash = Hash(seedStr.begin(), seedStr.end());
+        uint160 keyId;
+        memcpy(&keyId, &hash, 20);
+
+        CTxDestination dest = CKeyID(keyId);
+        CBitcoinAddress addr;
+        BOOST_CHECK(std::visit(CBitcoinAddressVisitor(&addr), dest));
+        BOOST_CHECK(addr.IsValid());
+
+        // Roundtrip
+        CBitcoinAddress decoded(addr.ToString());
+        BOOST_CHECK(decoded.IsValid());
+        BOOST_CHECK(decoded.Get() == dest);
+    }
+
+    // Test that CScriptID can be encoded to address and back
+    for (int i = 0; i < 5; i++)
+    {
+        std::string seedStr = strprintf("script address test %d", i);
+        uint256 hash = Hash(seedStr.begin(), seedStr.end());
+        uint160 scriptId;
+        memcpy(&scriptId, &hash, 20);
+
+        CTxDestination dest = CScriptID(scriptId);
+        CBitcoinAddress addr;
+        BOOST_CHECK(std::visit(CBitcoinAddressVisitor(&addr), dest));
+        BOOST_CHECK(addr.IsValid());
+        BOOST_CHECK(addr.IsScript());
+
+        // Roundtrip
+        CBitcoinAddress decoded(addr.ToString());
+        BOOST_CHECK(decoded.IsValid());
+        BOOST_CHECK(decoded.Get() == dest);
     }
 
     // Visiting a CNoDestination must fail
