@@ -17,8 +17,8 @@
 #include <filesystem>
 #include <boost/iostreams/concepts.hpp>
 #include <boost/iostreams/stream.hpp>
-#include <boost/algorithm/string.hpp>
 #include <boost/asio/ssl.hpp>
+#include "string_utils.h"
 #include <memory>
 #include <list>
 
@@ -458,8 +458,7 @@ bool ReadHTTPRequestLine(std::basic_istream<char>& stream, int &proto,
     getline(stream, str);
 
     // HTTP request line is space-delimited
-    vector<string> vWords;
-    boost::split(vWords, str, boost::is_any_of(" "));
+    vector<string> vWords = strutil::split(str, " ");
     if (vWords.size() < 2)
         return false;
 
@@ -490,8 +489,7 @@ int ReadHTTPStatus(std::basic_istream<char>& stream, int &proto)
 {
     string str;
     getline(stream, str);
-    vector<string> vWords;
-    boost::split(vWords, str, boost::is_any_of(" "));
+    vector<string> vWords = strutil::split(str, " ");
     if (vWords.size() < 2)
         return HTTP_INTERNAL_SERVER_ERROR;
     proto = 0;
@@ -514,10 +512,10 @@ int ReadHTTPHeaders(std::basic_istream<char>& stream, map<string, string>& mapHe
         if (nColon != string::npos)
         {
             string strHeader = str.substr(0, nColon);
-            boost::trim(strHeader);
-            boost::to_lower(strHeader);
+            strutil::trim(strHeader);
+            strutil::to_lower(strHeader);
             string strValue = str.substr(nColon+1);
-            boost::trim(strValue);
+            strutil::trim(strValue);
             mapHeadersRet[strHeader] = strValue;
             if (strHeader == "content-length")
                 nLen = atoi(strValue.c_str());
@@ -564,7 +562,7 @@ bool HTTPAuthorized(map<string, string>& mapHeaders)
     string strAuth = mapHeaders["authorization"];
     if (strAuth.substr(0,6) != "Basic ")
         return false;
-    string strUserPass64 = strAuth.substr(6); boost::trim(strUserPass64);
+    string strUserPass64 = strAuth.substr(6); strutil::trim(strUserPass64);
     string strUserPass = DecodeBase64(strUserPass64);
     return TimingResistantEqual(strUserPass, strRPCUserColonPass);
 }

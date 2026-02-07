@@ -14,12 +14,11 @@
 #include "kernel.h"
 #include "smessage.h"
 #include "time.h"
-#include <boost/algorithm/string/replace.hpp>
 #include <filesystem>
+#include "string_utils.h"
 
 
 using namespace std;
-using namespace boost;
 
 //
 // Global state
@@ -2042,7 +2041,7 @@ bool CBlock::SetBestChain(CTxDB& txdb, CBlockIndex* pindexNew)
 
     if (!fIsInitialDownload && !strCmd.empty())
     {
-        boost::replace_all(strCmd, "%s", hashBestChain.GetHex());
+        strutil::replace_all(strCmd, "%s", hashBestChain.GetHex());
         boost::thread t(runCommand, strCmd); // thread runs free
     }
 

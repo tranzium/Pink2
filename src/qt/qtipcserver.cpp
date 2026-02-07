@@ -13,8 +13,8 @@
 #include "ui_interface.h"
 #include "util.h"
 
-#include <boost/algorithm/string/predicate.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
+#include "string_utils.h"
 #include <boost/interprocess/ipc/message_queue.hpp>
 #include <boost/version.hpp>
 
@@ -42,7 +42,7 @@ static bool ipcScanCmd(int argc, char *argv[], bool fRelay)
     bool fSent = false;
     for (int i = 1; i < argc; i++)
     {
-        if (boost::algorithm::istarts_with(argv[i], "pinkcoin:"))
+        if (strutil::istarts_with(argv[i], "pinkcoin:"))
         {
             const char *strURI = argv[i];
             try {

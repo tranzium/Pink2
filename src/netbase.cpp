@@ -11,8 +11,7 @@
 #include <sys/fcntl.h>
 #endif
 
-#include <boost/algorithm/string/case_conv.hpp> // for to_lower()
-#include <boost/algorithm/string/predicate.hpp> // for startswith() and endswith()
+#include "string_utils.h"
 
 using namespace std;
 
@@ -26,7 +25,7 @@ bool fNameLookup = false;
 static const unsigned char pchIPv4[12] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff };
 
 enum Network ParseNetwork(std::string net) {
-    boost::to_lower(net);
+    strutil::to_lower(net);
     if (net == "ipv4") return NET_IPV4;
     if (net == "ipv6") return NET_IPV6;
     if (net == "tor")  return NET_TOR;
@@ -113,7 +112,7 @@ bool LookupHost(const char *pszName, std::vector<CNetAddr>& vIP, unsigned int nM
     std::string strHost = str;
     if (str.empty())
         return false;
-    if (boost::algorithm::starts_with(str, "[") && boost::algorithm::ends_with(str, "]"))
+    if (strutil::starts_with(str, "[") && strutil::ends_with(str, "]"))
     {
         strHost = str.substr(1, str.size() - 2);
     }

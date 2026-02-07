@@ -82,6 +82,30 @@
   - `boost::defer_lock` → `std::defer_lock`
   - `boost::thread_specific_ptr` → `thread_local std::unique_ptr`
 - **Include fixes:** Added missing `<ios>` to serialize.h, `<algorithm>` to bignum.h, `<cassert>` to allocators.h (previously pulled in transitively by boost headers)
+- **Bug fix:** Fixed `[[nodiscard]]` warning in sync.h `TryEnter()` - `try_lock()` return value was being ignored
+
+### boost::algorithm/string → strutil (custom header)
+- **Files:** bitcoinrpc.cpp, rpcdump.cpp, init.cpp, netbase.cpp, alert.cpp, main.cpp, wallet.cpp, smessage.cpp, util.cpp, qt/qtipcserver.cpp
+- **New file:** src/string_utils.h - header-only string utilities
+- **Notes:**
+  - `boost::split(v, s, boost::is_any_of(d))` → `v = strutil::split(s, d)`
+  - `boost::trim(s)` → `strutil::trim(s)`
+  - `boost::to_lower(s)` → `strutil::to_lower(s)`
+  - `boost::replace_all(s, from, to)` → `strutil::replace_all(s, from, to)`
+  - `boost::algorithm::starts_with(s, p)` → `strutil::starts_with(s, p)`
+  - `boost::algorithm::ends_with(s, p)` → `strutil::ends_with(s, p)`
+  - `boost::algorithm::istarts_with(s, p)` → `strutil::istarts_with(s, p)`
+  - `boost::algorithm::join(v, d)` → `strutil::join(v, d)`
+- **Tests:** 34 new test cases in test/string_utils_tests.cpp
+
+### boost::program_options → strutil::parse_config_file
+- **Files:** util.cpp
+- **Notes:**
+  - `boost::program_options::detail::config_file_iterator` replaced with `strutil::parse_config_file()` template
+  - Custom config parser handles key=value format with comments (#) and empty lines
+  - Removed `boost/program_options/detail/config_file.hpp` and `boost/program_options/parsers.hpp` includes
+  - Removed clang workaround namespace declaration for `boost::program_options::to_internal`
+- **Tests:** 5 new test cases for parse_config_file in test/string_utils_tests.cpp
 
 ## Must Keep (No Standard Replacement)
 
@@ -107,14 +131,8 @@
 - **Reason:** Uses boost::recursive_wrapper for recursive type definition
 - **Note:** All other boost::variant usage has been migrated to std::variant
 
-### boost::program_options
-- **Reason:** No standard command-line parsing library
-
 ### boost::interprocess
 - **Reason:** No standard IPC/file locking primitives
-
-### boost::algorithm/string
-- **Reason:** String algorithms (split, trim, to_lower, replace_all) - would need custom implementations
 
 ### boost::test
 - **Reason:** Unit test framework, would require migration to different framework (e.g., Google Test)
@@ -177,4 +195,4 @@ Tests were updated to use Pinkcoin-specific test data instead of Bitcoin test da
   - `LoopForever` template is unused in production code
 - Fixed `util_threadtrace1` and `util_threadtrace2` by resetting `nCounter` at start of each test
 
-**Result:** All 71 test cases pass
+**Result:** All 105 test cases pass (71 original + 34 new string_utils tests)

@@ -7,22 +7,7 @@
 #include "sync.h"
 #include "version.h"
 #include "ui_interface.h"
-#include <boost/algorithm/string/join.hpp>
-#include <boost/algorithm/string/case_conv.hpp> // for to_lower()
-#include <boost/algorithm/string/predicate.hpp> // for startswith() and endswith()
-
-// Work around clang compilation problem in Boost 1.46:
-// /usr/include/boost/program_options/detail/config_file.hpp:163:17: error: call to function 'to_internal' that is neither visible in the template definition nor found by argument-dependent lookup
-// See also: http://stackoverflow.com/questions/10020179/compilation-fail-in-boost-librairies-program-options
-//           http://clang.debian.net/status.php?version=3.0&key=CANNOT_FIND_FUNCTION
-namespace boost {
-    namespace program_options {
-        std::string to_internal(const std::string&);
-    }
-}
-
-#include <boost/program_options/detail/config_file.hpp>
-#include <boost/program_options/parsers.hpp>
+#include "string_utils.h"
 #include <filesystem>
 #include <fstream>
 #include <boost/thread.hpp>
@@ -518,8 +503,8 @@ void ParseParameters(int argc, const char* const argv[])
             str = str.substr(0, is_index);
         }
 #ifdef WIN32
-        boost::to_lower(str);
-        if (boost::algorithm::starts_with(str, "/"))
+        strutil::to_lower(str);
+        if (strutil::starts_with(str, "/"))
             str = "-" + str.substr(1);
 #endif
         if (str[0] != '-')
@@ -1069,23 +1054,19 @@ void ReadConfigFile(map<string, string>& mapSettingsRet,
 {
     std::ifstream streamConfig(GetConfigFile());
     if (!streamConfig.good())
-        return; // No bitcoin.conf file is OK
+        return; // No pinkcoin.conf file is OK
 
-    set<string> setOptions;
-    setOptions.insert("*");
-
-    for (boost::program_options::detail::config_file_iterator it(streamConfig, setOptions), end; it != end; ++it)
-    {
-        // Don't overwrite existing settings so command line settings override bitcoin.conf
-        string strKey = string("-") + it->string_key;
+    strutil::parse_config_file(streamConfig, [&](const std::string& key, const std::string& value) {
+        // Don't overwrite existing settings so command line settings override pinkcoin.conf
+        string strKey = string("-") + key;
         if (mapSettingsRet.count(strKey) == 0)
         {
-            mapSettingsRet[strKey] = it->value[0];
+            mapSettingsRet[strKey] = value;
             // interpret nofoo=1 as foo=0 (and nofoo=0 as foo=1) as long as foo not set)
             InterpretNegativeSetting(strKey, mapSettingsRet);
         }
-        mapMultiSettingsRet[strKey].push_back(it->value[0]);
-    }
+        mapMultiSettingsRet[strKey].push_back(value);
+    });
 }
 
 std::filesystem::path GetPidFile()
@@ -1321,7 +1302,7 @@ std::string FormatSubVersion(const std::string& name, int nClientVersion, const 
     ss << "/";
     ss << name << ":" << FormatVersion(nClientVersion);
     if (!comments.empty())
-        ss << "(" << boost::algorithm::join(comments, "; ") << ")";
+        ss << "(" << strutil::join(comments, "; ") << ")";
     ss << "/";
     return ss.str();
 }

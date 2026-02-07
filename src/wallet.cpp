@@ -13,7 +13,7 @@
 #include "base58.h"
 #include "kernel.h"
 #include "coincontrol.h"
-#include <boost/algorithm/string/replace.hpp>
+#include "string_utils.h"
 
 using namespace std;
 
@@ -612,7 +612,7 @@ bool CWallet::AddToWallet(const CWalletTx& wtxIn)
 
         if ( !strCmd.empty())
         {
-            boost::replace_all(strCmd, "%s", wtxIn.GetHash().GetHex());
+            strutil::replace_all(strCmd, "%s", wtxIn.GetHash().GetHex());
             boost::thread t(runCommand, strCmd); // thread runs free
         }
 

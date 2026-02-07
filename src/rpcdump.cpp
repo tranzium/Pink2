@@ -11,7 +11,7 @@
 #include "base58.h"
 
 #include <boost/variant/get.hpp>
-#include <boost/algorithm/string.hpp>
+#include "string_utils.h"
 
 #include <ctime>
 #include <iomanip>
@@ -174,8 +174,7 @@ Value importwallet(const Array& params, bool fHelp)
         if (line.empty() || line[0] == '#')
             continue;
 
-        std::vector<std::string> vstr;
-        boost::split(vstr, line, boost::is_any_of(" "));
+        std::vector<std::string> vstr = strutil::split(line, " ");
         if (vstr.size() < 2)
             continue;
         CBitcoinSecret vchSecret;
@@ -196,13 +195,13 @@ Value importwallet(const Array& params, bool fHelp)
         std::string strLabel;
         bool fLabel = true;
         for (unsigned int nStr = 2; nStr < vstr.size(); nStr++) {
-            if (boost::algorithm::starts_with(vstr[nStr], "#"))
+            if (strutil::starts_with(vstr[nStr], "#"))
                 break;
             if (vstr[nStr] == "change=1")
                 fLabel = false;
             if (vstr[nStr] == "reserve=1")
                 fLabel = false;
-            if (boost::algorithm::starts_with(vstr[nStr], "label=")) {
+            if (strutil::starts_with(vstr[nStr], "label=")) {
                 strLabel = DecodeDumpString(vstr[nStr].substr(6));
                 fLabel = true;
             }

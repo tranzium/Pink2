@@ -16,8 +16,8 @@
 
 #include <filesystem>
 #include <boost/interprocess/sync/file_lock.hpp>
-#include <boost/algorithm/string/predicate.hpp>
 #include <openssl/crypto.h>
+#include "string_utils.h"
 
 #ifndef WIN32
 #include <signal.h>
@@ -25,7 +25,6 @@
 
 
 using namespace std;
-using namespace boost;
 
 CWallet* pwalletMain;
 CWallet* pstakeDB;
@@ -181,7 +180,7 @@ bool AppInit(int argc, char* argv[])
 
         // Command-line RPC
         for (int i = 1; i < argc; i++)
-            if (!IsSwitchChar(argv[i][0]) && !boost::algorithm::istarts_with(argv[i], "pinkcoin:"))
+            if (!IsSwitchChar(argv[i][0]) && !strutil::istarts_with(argv[i], "pinkcoin:"))
                 fCommandLine = true;
 
         if (fCommandLine)

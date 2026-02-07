@@ -32,6 +32,7 @@ set(PINKCOIN_TEST_SOURCES
     uint256_tests.cpp
     util_tests.cpp
     wallet_tests.cpp
+    string_utils_tests.cpp
 )
 
 #-----------------------------------------

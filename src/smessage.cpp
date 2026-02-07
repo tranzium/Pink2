@@ -43,7 +43,7 @@ Notes:
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
 
-#include <boost/algorithm/string/predicate.hpp>
+#include "string_utils.h"
 
 
 #include "base58.h"
@@ -880,7 +880,7 @@ int SecureMsgBuildBucketSet()
             continue;
         };
         
-        if (boost::algorithm::ends_with(fileName, "_wl.dat"))
+        if (strutil::ends_with(fileName, "_wl.dat"))
         {
             if (fDebugSmsg)
                 printf("Skipping wallet locked file: %s.\n", fileName.c_str());
@@ -2232,7 +2232,7 @@ bool SecureMsgScanBuckets()
             continue;
         };
         
-        if (boost::algorithm::ends_with(fileName, "_wl.dat"))
+        if (strutil::ends_with(fileName, "_wl.dat"))
         {
             if (fDebugSmsg)
                 printf("Skipping wallet locked file: %s.\n", fileName.c_str());
@@ -2356,7 +2356,7 @@ int SecureMsgWalletUnlocked()
         
         std::string fileName = (*itd).path().filename().string();
         
-        if (!boost::algorithm::ends_with(fileName, "_wl.dat"))
+        if (!strutil::ends_with(fileName, "_wl.dat"))
             continue;
         
         if (fDebugSmsg)
