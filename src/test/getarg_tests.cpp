@@ -1,6 +1,6 @@
-#include <boost/algorithm/string.hpp>
 #include <boost/test/unit_test.hpp>
 
+#include "string_utils.h"
 #include "util.h"
 
 BOOST_AUTO_TEST_SUITE(getarg_tests)
@@ -8,8 +8,7 @@ BOOST_AUTO_TEST_SUITE(getarg_tests)
 static void
 ResetArgs(const std::string& strArg)
 {
-    std::vector<std::string> vecArg;
-    boost::split(vecArg, strArg, boost::is_space(), boost::token_compress_on);
+    std::vector<std::string> vecArg = strutil::split_compress(strArg, " \t\n\r");
 
     // Insert dummy executable name:
     vecArg.insert(vecArg.begin(), "testbitcoin");

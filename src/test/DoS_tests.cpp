@@ -2,10 +2,9 @@
 // Unit tests for denial-of-service detection/prevention code
 //
 #include <algorithm>
+#include <chrono>
 #include <set>
 
-#include <boost/assign/list_of.hpp> // for 'map_list_of()'
-#include <boost/date_time/posix_time/posix_time_types.hpp>
 #include <boost/test/unit_test.hpp>
 
 #include "main.h"
@@ -97,16 +96,15 @@ static bool CheckNBits(unsigned int nbits1, int64_t time1, unsigned int nbits2, 
 
 BOOST_AUTO_TEST_CASE(DoS_checknbits)
 {
-    using namespace boost::assign; // for 'map_list_of()'
-
     // Timestamps,nBits from the bitcoin blockchain.
     // These are the block-chain checkpoint blocks
     typedef std::map<int64_t, unsigned int> BlockData;
-    BlockData chainData =
-        map_list_of(1239852051,486604799)(1262749024,486594666)
-        (1279305360,469854461)(1280200847,469830746)(1281678674,469809688)
-        (1296207707,453179945)(1302624061,453036989)(1309640330,437004818)
-        (1313172719,436789733);
+    BlockData chainData = {
+        {1239852051, 486604799}, {1262749024, 486594666},
+        {1279305360, 469854461}, {1280200847, 469830746}, {1281678674, 469809688},
+        {1296207707, 453179945}, {1302624061, 453036989}, {1309640330, 437004818},
+        {1313172719, 436789733}
+    };
 
     // Make sure CheckNBits considers every combination of block-chain-lock-in-points
     // "sane":
@@ -252,25 +250,23 @@ BOOST_AUTO_TEST_CASE(DoS_checkSig)
         tx.vin[j].prevout.hash = orphans[j].GetHash();
     }
     // Creating signatures primes the cache:
-    boost::posix_time::ptime mst1 = boost::posix_time::microsec_clock::local_time();
+    auto mst1 = std::chrono::steady_clock::now();
     for (unsigned int j = 0; j < tx.vin.size(); j++)
         BOOST_CHECK(SignSignature(keystore, orphans[j], tx, j));
-    boost::posix_time::ptime mst2 = boost::posix_time::microsec_clock::local_time();
-    boost::posix_time::time_duration msdiff = mst2 - mst1;
-    long nOneValidate = msdiff.total_milliseconds();
+    auto mst2 = std::chrono::steady_clock::now();
+    long nOneValidate = std::chrono::duration_cast<std::chrono::milliseconds>(mst2 - mst1).count();
     if (fDebug) printf("DoS_Checksig sign: %ld\n", nOneValidate);
 
     // ... now validating repeatedly should be quick:
     // 2.8GHz machine, -g build: Sign takes ~760ms,
     // uncached Verify takes ~250ms, cached Verify takes ~50ms
     // (for 100 single-signature inputs)
-    mst1 = boost::posix_time::microsec_clock::local_time();
+    mst1 = std::chrono::steady_clock::now();
     for (unsigned int i = 0; i < 5; i++)
         for (unsigned int j = 0; j < tx.vin.size(); j++)
             BOOST_CHECK(VerifySignature(orphans[j], tx, j, SIGHASH_ALL));
-    mst2 = boost::posix_time::microsec_clock::local_time();
-    msdiff = mst2 - mst1;
-    long nManyValidate = msdiff.total_milliseconds();
+    mst2 = std::chrono::steady_clock::now();
+    long nManyValidate = std::chrono::duration_cast<std::chrono::milliseconds>(mst2 - mst1).count();
     if (fDebug) printf("DoS_Checksig five: %ld\n", nManyValidate);
 
     BOOST_CHECK_MESSAGE(nManyValidate < nOneValidate, "Signature cache timing failed");

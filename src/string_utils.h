@@ -91,6 +91,26 @@ inline std::vector<std::string> split(const std::string& s, char delimiter) {
 }
 
 /**
+ * Split a string by any character in delimiters, compressing consecutive delimiters
+ * (i.e., treating multiple consecutive delimiters as a single delimiter)
+ */
+inline std::vector<std::string> split_compress(const std::string& s, const std::string& delimiters) {
+    std::vector<std::string> result;
+    std::size_t start = s.find_first_not_of(delimiters);
+
+    while (start != std::string::npos) {
+        std::size_t end = s.find_first_of(delimiters, start);
+        if (end == std::string::npos) {
+            result.push_back(s.substr(start));
+            break;
+        }
+        result.push_back(s.substr(start, end - start));
+        start = s.find_first_not_of(delimiters, end);
+    }
+    return result;
+}
+
+/**
  * Replace all occurrences of 'from' with 'to' in string (in-place)
  */
 inline std::string& replace_all(std::string& s, const std::string& from, const std::string& to) {
@@ -99,6 +119,18 @@ inline std::string& replace_all(std::string& s, const std::string& from, const s
     while ((pos = s.find(from, pos)) != std::string::npos) {
         s.replace(pos, from.length(), to);
         pos += to.length();
+    }
+    return s;
+}
+
+/**
+ * Replace first occurrence of 'from' with 'to' in string (in-place)
+ */
+inline std::string& replace_first(std::string& s, const std::string& from, const std::string& to) {
+    if (from.empty()) return s;
+    std::size_t pos = s.find(from);
+    if (pos != std::string::npos) {
+        s.replace(pos, from.length(), to);
     }
     return s;
 }

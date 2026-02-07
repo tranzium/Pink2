@@ -194,5 +194,25 @@ Tests were updated to use Pinkcoin-specific test data instead of Bitcoin test da
   - These rely on `boost::thread_interrupted` which doesn't work with `std::this_thread::sleep_for`
   - `LoopForever` template is unused in production code
 - Fixed `util_threadtrace1` and `util_threadtrace2` by resetting `nCounter` at start of each test
+- Removed unused `boost/foreach.hpp` include
 
-**Result:** All 105 test cases pass (71 original + 34 new string_utils tests)
+### Test File Boost Cleanup
+
+Removed unnecessary boost dependencies from test files:
+
+- **DoS_tests.cpp**: `boost::assign/list_of` → initializer lists, `boost::posix_time` → `std::chrono`
+- **getarg_tests.cpp**: `boost::split` → `strutil::split_compress`
+- **multisig_tests.cpp**: `boost::assign +=` → explicit `push_back()` calls
+- **script_tests.cpp**: `boost::algorithm::*` → `strutil::*` functions
+- **sigopcount_tests.cpp**: Removed unused `boost/foreach.hpp`
+- **util_tests.cpp**: Removed unused `boost/foreach.hpp`
+
+**New strutil functions added:**
+- `strutil::split_compress()` - splits with consecutive delimiter compression
+- `strutil::replace_first()` - replaces first occurrence only
+
+**Remaining boost includes in tests:**
+- `boost/test/unit_test.hpp` (25 files) - Test framework, must keep
+- `boost/preprocessor/stringize.hpp` (1 file) - For TEST_DATA_DIR macro
+
+**Result:** All 114 test cases pass (71 original + 43 new string_utils tests)

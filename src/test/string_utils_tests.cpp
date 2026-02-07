@@ -287,6 +287,79 @@ BOOST_AUTO_TEST_CASE(join_with_empty_strings)
 }
 
 // ============================================================================
+// split_compress tests
+// ============================================================================
+
+BOOST_AUTO_TEST_CASE(split_compress_basic)
+{
+    std::vector<std::string> result = strutil::split_compress("a  b   c", " ");
+    BOOST_CHECK_EQUAL(result.size(), 3u);
+    BOOST_CHECK_EQUAL(result[0], "a");
+    BOOST_CHECK_EQUAL(result[1], "b");
+    BOOST_CHECK_EQUAL(result[2], "c");
+}
+
+BOOST_AUTO_TEST_CASE(split_compress_whitespace)
+{
+    std::vector<std::string> result = strutil::split_compress("  hello   world  ", " \t\n");
+    BOOST_CHECK_EQUAL(result.size(), 2u);
+    BOOST_CHECK_EQUAL(result[0], "hello");
+    BOOST_CHECK_EQUAL(result[1], "world");
+}
+
+BOOST_AUTO_TEST_CASE(split_compress_empty_string)
+{
+    std::vector<std::string> result = strutil::split_compress("", " ");
+    BOOST_CHECK(result.empty());
+}
+
+BOOST_AUTO_TEST_CASE(split_compress_only_delimiters)
+{
+    std::vector<std::string> result = strutil::split_compress("   ", " ");
+    BOOST_CHECK(result.empty());
+}
+
+BOOST_AUTO_TEST_CASE(split_compress_mixed_delimiters)
+{
+    std::vector<std::string> result = strutil::split_compress("a \t\n b", " \t\n");
+    BOOST_CHECK_EQUAL(result.size(), 2u);
+    BOOST_CHECK_EQUAL(result[0], "a");
+    BOOST_CHECK_EQUAL(result[1], "b");
+}
+
+// ============================================================================
+// replace_first tests
+// ============================================================================
+
+BOOST_AUTO_TEST_CASE(replace_first_basic)
+{
+    std::string s = "hello world world";
+    strutil::replace_first(s, "world", "there");
+    BOOST_CHECK_EQUAL(s, "hello there world");
+}
+
+BOOST_AUTO_TEST_CASE(replace_first_no_match)
+{
+    std::string s = "hello world";
+    strutil::replace_first(s, "foo", "bar");
+    BOOST_CHECK_EQUAL(s, "hello world");
+}
+
+BOOST_AUTO_TEST_CASE(replace_first_at_start)
+{
+    std::string s = "OP_ADD";
+    strutil::replace_first(s, "OP_", "");
+    BOOST_CHECK_EQUAL(s, "ADD");
+}
+
+BOOST_AUTO_TEST_CASE(replace_first_empty_from)
+{
+    std::string s = "hello";
+    strutil::replace_first(s, "", "x");
+    BOOST_CHECK_EQUAL(s, "hello");
+}
+
+// ============================================================================
 // parse_config_file tests
 // ============================================================================
 
