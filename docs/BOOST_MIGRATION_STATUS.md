@@ -211,8 +211,21 @@ Removed unnecessary boost dependencies from test files:
 - `strutil::split_compress()` - splits with consecutive delimiter compression
 - `strutil::replace_first()` - replaces first occurrence only
 
+**New test file:**
+- **rpc_tests.cpp** - 15 new test cases covering RPC infrastructure:
+  - `rpc_ValueFromAmount` / `rpc_AmountFromValue` - Amount conversion
+  - `rpc_ParseHashV` / `rpc_ParseHexV` - Hex parsing utilities
+  - `rpc_TypeCheck_array` / `rpc_TypeCheck_array_with_null` / `rpc_TypeCheck_object` - Type validation
+  - `rpc_HexBits` - nBits to hex conversion
+  - `rpc_JSONRPCError` - Error object structure
+  - `rpc_address_validation` / `rpc_invalid_addresses` - Address parsing
+  - `rpc_script_address` - P2SH address generation (prefix 'C')
+  - `rpc_sign_verify_message` - Message signing/verification
+  - `rpc_error_codes` - JSON-RPC error code constants
+  - `rpc_amount_precision` - Floating-point precision tests
+
 **Remaining boost includes in tests:**
-- `boost/test/unit_test.hpp` (25 files) - Test framework, must keep
+- `boost/test/unit_test.hpp` (26 files) - Test framework, must keep
 - `boost/preprocessor/stringize.hpp` (1 file) - For TEST_DATA_DIR macro
 
-**Result:** All 114 test cases pass (71 original + 43 new string_utils tests)
+**Result:** All 129 test cases pass (71 original + 43 string_utils + 15 RPC tests)

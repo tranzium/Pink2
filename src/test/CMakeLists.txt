@@ -33,6 +33,7 @@ set(PINKCOIN_TEST_SOURCES
     util_tests.cpp
     wallet_tests.cpp
     string_utils_tests.cpp
+    rpc_tests.cpp
 )
 
 #-----------------------------------------
