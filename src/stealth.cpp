@@ -194,11 +194,16 @@ int SecretToPublicKey(const ec_secret& secret, ec_point& out)
     } else
     {
         out.resize(ec_compressed_size);
-        if (BN_num_bytes(bnOut) != (int) ec_compressed_size
-            || BN_bn2bin(bnOut, &out[0]) != (int) ec_compressed_size)
+        int nBytes = BN_num_bytes(bnOut);
+        if (nBytes < 0 || nBytes > (int) ec_compressed_size)
         {
             printf("SecretToPublicKey(): bnOut incorrect length.\n");
             rv = 1;
+        }
+        else
+        {
+            memset(&out[0], 0, ec_compressed_size);
+            BN_bn2bin(bnOut, &out[ec_compressed_size - nBytes]);
         };
         
         BN_free(bnOut);
@@ -314,13 +319,17 @@ int StealthSecret(ec_secret& secret, ec_point& pubkey, const ec_point& pkSpend, 
     
     
     vchOutQ.resize(ec_compressed_size);
-    if (BN_num_bytes(bnOutQ) != (int) ec_compressed_size
-        || BN_bn2bin(bnOutQ, &vchOutQ[0]) != (int) ec_compressed_size)
     {
-        printf("StealthSecret(): bnOutQ incorrect length.\n");
-        rv = 1;
-        goto End;
-    };
+        int nBytes = BN_num_bytes(bnOutQ);
+        if (nBytes < 0 || nBytes > (int) ec_compressed_size)
+        {
+            printf("StealthSecret(): bnOutQ incorrect length.\n");
+            rv = 1;
+            goto End;
+        }
+        memset(&vchOutQ[0], 0, ec_compressed_size);
+        BN_bn2bin(bnOutQ, &vchOutQ[ec_compressed_size - nBytes]);
+    }
     
     SHA256(&vchOutQ[0], vchOutQ.size(), &sharedSOut.e[0]);
     
@@ -391,13 +400,17 @@ int StealthSecret(ec_secret& secret, ec_point& pubkey, const ec_point& pkSpend, 
     
     
     pkOut.resize(ec_compressed_size);
-    if (BN_num_bytes(bnOutR) != (int) ec_compressed_size
-        || BN_bn2bin(bnOutR, &pkOut[0]) != (int) ec_compressed_size)
     {
-        printf("StealthSecret(): pkOut incorrect length.\n");
-        rv = 1;
-        goto End;
-    };
+        int nBytes = BN_num_bytes(bnOutR);
+        if (nBytes < 0 || nBytes > (int) ec_compressed_size)
+        {
+            printf("StealthSecret(): pkOut incorrect length.\n");
+            rv = 1;
+            goto End;
+        }
+        memset(&pkOut[0], 0, ec_compressed_size);
+        BN_bn2bin(bnOutR, &pkOut[ec_compressed_size - nBytes]);
+    }
     
     End:
     if (bnOutR)     BN_free(bnOutR);
@@ -492,13 +505,17 @@ int StealthSecretSpend(ec_secret& scanSecret, ec_point& ephemPubkey, ec_secret& 
     
     
     vchOutP.resize(ec_compressed_size);
-    if (BN_num_bytes(bnOutP) != (int) ec_compressed_size
-        || BN_bn2bin(bnOutP, &vchOutP[0]) != (int) ec_compressed_size)
     {
-        printf("StealthSecretSpend(): bnOutP incorrect length.\n");
-        rv = 1;
-        goto End;
-    };
+        int nBytes = BN_num_bytes(bnOutP);
+        if (nBytes < 0 || nBytes > (int) ec_compressed_size)
+        {
+            printf("StealthSecretSpend(): bnOutP incorrect length.\n");
+            rv = 1;
+            goto End;
+        }
+        memset(&vchOutP[0], 0, ec_compressed_size);
+        BN_bn2bin(bnOutP, &vchOutP[ec_compressed_size - nBytes]);
+    }
     
     uint8_t hash1[32];
     SHA256(&vchOutP[0], vchOutP.size(), (uint8_t*)hash1);
@@ -542,14 +559,18 @@ int StealthSecretSpend(ec_secret& scanSecret, ec_point& ephemPubkey, ec_secret& 
         goto End;
     };
     
-    if (BN_num_bytes(bnSpend) != (int) ec_secret_size
-        || BN_bn2bin(bnSpend, &secretOut.e[0]) != (int) ec_secret_size)
     {
-        printf("StealthSecretSpend(): bnSpend incorrect length.\n");
-        rv = 1;
-        goto End;
-    };
-    
+        int nBytes = BN_num_bytes(bnSpend);
+        if (nBytes < 0 || nBytes > (int) ec_secret_size)
+        {
+            printf("StealthSecretSpend(): bnSpend incorrect length.\n");
+            rv = 1;
+            goto End;
+        }
+        memset(&secretOut.e[0], 0, ec_secret_size);
+        BN_bn2bin(bnSpend, &secretOut.e[ec_secret_size - nBytes]);
+    }
+
     End:
     if (bnSpend)        BN_free(bnSpend);
     if (bnOrder)        BN_free(bnOrder);
@@ -629,14 +650,18 @@ int StealthSharedToSecretSpend(ec_secret& sharedS, ec_secret& spendSecret, ec_se
         goto End;
     };
     
-    if (BN_num_bytes(bnSpend) != (int) ec_secret_size
-        || BN_bn2bin(bnSpend, &secretOut.e[0]) != (int) ec_secret_size)
     {
-        printf("StealthSecretSpend(): bnSpend incorrect length.\n");
-        rv = 1;
-        goto End;
-    };
-    
+        int nBytes = BN_num_bytes(bnSpend);
+        if (nBytes < 0 || nBytes > (int) ec_secret_size)
+        {
+            printf("StealthSecretSpend(): bnSpend incorrect length.\n");
+            rv = 1;
+            goto End;
+        }
+        memset(&secretOut.e[0], 0, ec_secret_size);
+        BN_bn2bin(bnSpend, &secretOut.e[ec_secret_size - nBytes]);
+    }
+
     End:
     if (bnSpend)        BN_free(bnSpend);
     if (bnOrder)        BN_free(bnOrder);

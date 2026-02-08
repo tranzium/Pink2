@@ -302,7 +302,7 @@ Removed unnecessary boost dependencies from test files:
   - `GenerateRandomSecret()` — succeeds, not all zeros, two calls produce unique results
   - `SecretToPublicKey()` — succeeds, compressed (33 bytes), 0x02/0x03 prefix, deterministic, different secrets → different pubkeys
   - `StealthSecret()` — sender/receiver derive same shared secret (ECDH roundtrip), different ephemeral keys → different secrets
-  - `StealthSecretSpend()` — derived private key produces matching public key (with retry for BN_num_bytes edge case)
+  - `StealthSecretSpend()` — derived private key produces matching public key
   - `CStealthAddress` — encode/decode roundtrip, invalid string rejection, IsStealthAddress detection
   - `AppendChecksum`/`VerifyChecksum` — checksum added (+4 bytes), verifies, tamper detection, short input rejection
   - `CStealthAddress` serialization — full round-trip (pubkeys, label, secrets)
@@ -314,6 +314,36 @@ Removed unnecessary boost dependencies from test files:
   - PoW hash — `GetHash()` == `GetPoWHash()` (scrypt-based)
   - Merkle tree — 2-tx manual verification, 3-tx with duplication (odd count)
 
-**Known issue documented:** `StealthSecretSpend()` can fail when `(f + c) mod n` has leading zero bytes, because `BN_num_bytes()` returns < 32. This is a latent production bug (~1/256 probability per call). Test retries with fresh keys. This should be fixed during OpenSSL 3.0 migration by padding output to 32 bytes.
+**P2 Result:** All 287 test cases pass across 33 test suites (248 from P0+P1 + 39 new P2: 12 hash + 15 stealth + 12 block)
 
-**Result:** All 287 test cases pass across 33 test suites (248 from P0+P1 + 39 new P2: 12 hash + 15 stealth + 12 block)
+**Bug fix: BN_num_bytes zero-padding in stealth.cpp**
+- Fixed 5 sites where `BN_num_bytes()` was compared with strict equality to expected size
+- `BN_num_bytes()` returns minimum bytes to represent a value — if result has leading zeros, it returns fewer bytes than expected, causing silent failure (~1/256 probability per stealth payment)
+- Fix: zero-fill output buffer, then write bignum right-justified at `out[expected_size - nBytes]`
+- Affected functions: `SecretToPublicKey()` (1 site), `StealthSecret()` (2 sites), `StealthSecretSpend()` (1 site), `StealthSharedToSecretSpend()` (1 site)
+- stealth_tests.cpp `stealth_secret_spend` test updated — retry loop removed since bug is fixed
+
+**New P3 additional test coverage (pre-OpenSSL migration):**
+- **netbase_tests.cpp** (expanded) — 22 new test cases added to existing 5:
+  - Protocol constants pinned — PROTOCOL_VERSION=60019, INIT_PROTO_VERSION=209, MIN_PEER_PROTO_VERSION=60018, CADDR_TIME_VERSION=31402, DATABASE_VERSION=70509
+  - Default ports — mainnet 9134, testnet 19134
+  - CNetAddr extended — IPv4-mapped, non-routable, multicast, address groups, ToString
+  - CService — construction, ToStringIPPort, comparison operators, serialization round-trip
+  - CAddress — Init defaults, SER_DISK serialization round-trip
+  - CInv — type constants (MSG_TX=1, MSG_BLOCK=2), string construction, invalid type throws, serialization round-trip, comparison ordering
+  - CMessageHeader — size constants (HEADER_SIZE=24), IsValid(), GetCommand()
+- **stakedb_tests.cpp** (new) — 10 test cases:
+  - `SDBErrors` enum pinned (SDB_LOAD_OK=0 through SDB_NEED_REWRITE=5)
+  - WriteStake/ReadStake round-trip, EraseStake, overwrite, multiple stakes, empty read fails
+  - `nStakeDBUpdated` counter increments on write and erase
+  - WriteMinVersion, erase nonexistent (no crash), empty string values
+- **smessage_tests.cpp** (new) — 15 test cases for secure messaging:
+  - Constants pinned — SMSG_HDR_LEN=104, SMSG_PL_HDR_LEN=90, SMSG_BUCKET_LEN=600, SMSG_RETENTION=172800, SMSG_MAX_MSG_BYTES=4096
+  - SecureMessage structure — default construction, packed header layout offsets verified
+  - SecMsgCrypter AES-256-CBC — SetKey, encrypt/decrypt round-trip, wrong key fails, different IV diverges, 4096-byte message
+  - SecMsgAddress serialization round-trip (address, receiveEnabled, receiveAnon)
+  - SecMsgStored serialization round-trip (all 6 fields)
+  - SecMsgToken ordering — timestamp-first, sample-bytes tiebreaker, std::set ordering
+  - SecMsgOptions/SecMsgBucket defaults
+
+**Final Result:** All 334 test cases pass across 35 test suites (287 from P0+P1+P2 + 47 new P3: 22 netbase/protocol + 10 stakedb + 15 smessage)

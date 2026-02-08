@@ -42,6 +42,8 @@ set(PINKCOIN_TEST_SOURCES
     hash_tests.cpp
     stealth_tests.cpp
     block_tests.cpp
+    stakedb_tests.cpp
+    smessage_tests.cpp
 )
 
 #-----------------------------------------

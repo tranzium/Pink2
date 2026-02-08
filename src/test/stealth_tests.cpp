@@ -179,38 +179,34 @@ BOOST_AUTO_TEST_CASE(stealth_secret_different_ephemeral_keys)
 
 BOOST_AUTO_TEST_CASE(stealth_secret_spend)
 {
-    // StealthSecretSpend can fail when (f+c mod n) has leading zero bytes
-    // due to BN_num_bytes returning < 32. Retry with fresh keys (prob ~1/256).
-    bool succeeded = false;
-    for (int attempt = 0; attempt < 8 && !succeeded; ++attempt)
-    {
-        ec_secret scanSecret, spendSecret;
-        if (GenerateRandomSecret(scanSecret) != 0) continue;
-        if (GenerateRandomSecret(spendSecret) != 0) continue;
+    // Generate scan and spend keypairs
+    ec_secret scanSecret, spendSecret;
+    BOOST_CHECK_EQUAL(GenerateRandomSecret(scanSecret), 0);
+    BOOST_CHECK_EQUAL(GenerateRandomSecret(spendSecret), 0);
 
-        ec_point scanPubkey, spendPubkey;
-        if (SecretToPublicKey(scanSecret, scanPubkey) != 0) continue;
-        if (SecretToPublicKey(spendSecret, spendPubkey) != 0) continue;
+    ec_point scanPubkey, spendPubkey;
+    BOOST_CHECK_EQUAL(SecretToPublicKey(scanSecret, scanPubkey), 0);
+    BOOST_CHECK_EQUAL(SecretToPublicKey(spendSecret, spendPubkey), 0);
 
-        ec_secret ephemSecret;
-        if (GenerateRandomSecret(ephemSecret) != 0) continue;
-        ec_point ephemPubkey;
-        if (SecretToPublicKey(ephemSecret, ephemPubkey) != 0) continue;
+    // Generate ephemeral keypair
+    ec_secret ephemSecret;
+    BOOST_CHECK_EQUAL(GenerateRandomSecret(ephemSecret), 0);
+    ec_point ephemPubkey;
+    BOOST_CHECK_EQUAL(SecretToPublicKey(ephemSecret, ephemPubkey), 0);
 
-        ec_secret sharedS;
-        ec_point pkOut;
-        if (StealthSecret(scanSecret, ephemPubkey, spendPubkey, sharedS, pkOut) != 0) continue;
+    // Receiver derives shared secret
+    ec_secret sharedS;
+    ec_point pkOut;
+    BOOST_CHECK_EQUAL(StealthSecret(scanSecret, ephemPubkey, spendPubkey, sharedS, pkOut), 0);
 
-        ec_secret secretOut;
-        int rv = StealthSecretSpend(scanSecret, ephemPubkey, spendSecret, secretOut);
-        if (rv != 0) continue;  // BN_num_bytes < 32 edge case, retry
+    // Derive the private spending key for this stealth payment
+    ec_secret secretOut;
+    BOOST_CHECK_EQUAL(StealthSecretSpend(scanSecret, ephemPubkey, spendSecret, secretOut), 0);
 
-        ec_point derivedPubkey;
-        BOOST_CHECK_EQUAL(SecretToPublicKey(secretOut, derivedPubkey), 0);
-        BOOST_CHECK(derivedPubkey == pkOut);
-        succeeded = true;
-    }
-    BOOST_CHECK_MESSAGE(succeeded, "StealthSecretSpend failed after 8 attempts");
+    // The derived secret should produce the same public key as pkOut
+    ec_point derivedPubkey;
+    BOOST_CHECK_EQUAL(SecretToPublicKey(secretOut, derivedPubkey), 0);
+    BOOST_CHECK(derivedPubkey == pkOut);
 }
 
 // ============================================================================
