@@ -37,6 +37,8 @@ set(PINKCOIN_TEST_SOURCES
     kernel_tests.cpp
     consensus_tests.cpp
     scrypt_tests.cpp
+    crypter_tests.cpp
+    walletdb_tests.cpp
 )
 
 #-----------------------------------------

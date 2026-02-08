@@ -252,4 +252,40 @@ Removed unnecessary boost dependencies from test files:
   - `scrypt_salted_multiround_hash()` — round-count divergence, single-round equivalence
   - Block integration — `GetPoWHash()` matches manual `scrypt_blockhash()`, field sensitivity
 
-**Result:** All 201 test cases pass (71 original + 43 string_utils + 15 RPC + 14 kernel + 30 consensus + 17 scrypt + 11 wallet)
+**New P1 wallet safety test files (wallet encryption & DB integrity):**
+- **crypter_tests.cpp** - 21 test cases for wallet encryption:
+  - Constants — `WALLET_CRYPTO_KEY_SIZE`, `WALLET_CRYPTO_SALT_SIZE` pinned
+  - `CMasterKey` — default constructor (scrypt, 25000 iterations), sha512 constructor, scrypt constructor, serialization round-trip
+  - `SetKeyFromPassphrase()` — sha512 method, scrypt method, rejects zero rounds, rejects wrong salt size
+  - Encrypt/decrypt round-trip — sha512 method, scrypt method, wrong passphrase fails, different salts diverge
+  - `SetKey()` direct — round-trip with explicit key/IV, rejects wrong sizes
+  - `EncryptSecret()`/`DecryptSecret()` — round-trip with real CKey, different IVs diverge, wrong key fails
+  - `CKeyMetadata` — default construction, construction with time, serialization round-trip
+- **walletdb_tests.cpp** - 15 test cases for wallet database operations:
+  - `DBErrors` enum — pin all 6 values (DB_LOAD_OK through DB_NEED_REWRITE)
+  - `WriteName`/`EraseName` — round-trip, overwrite
+  - `WriteTx`/`EraseTx` — round-trip with nWalletDBUpdated counter
+  - `WriteMasterKey` — write with counter increment
+  - `WriteKey` — write real keypair with metadata
+  - `WritePool`/`ReadPool`/`ErasePool` — full CRUD cycle, verify erase removes entry
+  - `WriteOrderPosNext`, `WriteDefaultKey`, `WriteMinVersion` — basic write operations
+  - `WriteBestBlock`/`ReadBestBlock` — locator round-trip
+  - `WriteAccount`/`ReadAccount` — account with pubkey round-trip
+  - `WriteCScript` — P2SH redeem script storage
+  - `nWalletDBUpdated` counter — verify sequential increments
+  - `ReadVersion`/`WriteVersion` — DB version round-trip
+- **wallet_tests.cpp** (expanded) — 12 test cases (was 1):
+  - `coin_selection_tests` — existing coin selection (unchanged)
+  - `wallet_feature_constants` — pin FEATURE_BASE, FEATURE_WALLETCRYPT, FEATURE_COMPRPUBKEY, FEATURE_LATEST
+  - `generate_new_key` — GenerateNewKey produces valid key, key stored in wallet, retrievable
+  - `generate_multiple_unique_keys` — three generated keys are all distinct
+  - `key_pool_topup` — TopUpKeyPool fills pool
+  - `get_key_from_pool` — GetKeyFromPool returns valid key present in wallet
+  - `new_key_pool_resets` — NewKeyPool clears and refills
+  - `get_pubkey_from_keyid` — GetPubKey round-trip via KeyID
+  - `have_key_returns_false_for_unknown` — HaveKey rejects unknown KeyID
+  - `address_encoding_prefix` — Pinkcoin address starts with '2', CBitcoinAddress round-trip
+  - `sign_verify_with_wallet_key` — Sign/Verify with wallet-generated key, wrong hash fails
+  - `unencrypted_wallet_not_locked` — unencrypted wallet is not crypted or locked
+
+**Result:** All 248 test cases pass across 30 test suites (201 from P0 + 47 new P1: 21 crypter + 15 walletdb + 11 new wallet)

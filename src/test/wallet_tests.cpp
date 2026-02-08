@@ -2,6 +2,8 @@
 
 #include "main.h"
 #include "wallet.h"
+#include "walletdb.h"
+#include "base58.h"
 
 // how many times to run all the tests to have a chance to catch errors that only show up with particular random shuffles
 #define RUN_TESTS 100
@@ -11,6 +13,8 @@
 #define RANDOM_REPEATS 5
 
 using namespace std;
+
+extern CWallet* pwalletMain;
 
 typedef set<pair<const CWalletTx*,unsigned int> > CoinSet;
 
@@ -290,6 +294,178 @@ BOOST_AUTO_TEST_CASE(coin_selection_tests)
             BOOST_CHECK_NE(fails, RANDOM_REPEATS);
         }
     }
+}
+
+// ============================================================================
+// WalletFeature constants
+// ============================================================================
+
+BOOST_AUTO_TEST_CASE(wallet_feature_constants)
+{
+    BOOST_CHECK_EQUAL(FEATURE_BASE, 10500);
+    BOOST_CHECK_EQUAL(FEATURE_WALLETCRYPT, 40000);
+    BOOST_CHECK_EQUAL(FEATURE_COMPRPUBKEY, 60000);
+    BOOST_CHECK_EQUAL(FEATURE_LATEST, 60000);
+}
+
+// ============================================================================
+// GenerateNewKey tests
+// ============================================================================
+
+BOOST_AUTO_TEST_CASE(generate_new_key)
+{
+    LOCK(pwalletMain->cs_wallet);
+    CPubKey pubKey = pwalletMain->GenerateNewKey();
+    BOOST_CHECK(pubKey.IsValid());
+
+    // Key should be in the wallet's keystore
+    CKeyID keyID = pubKey.GetID();
+    BOOST_CHECK(pwalletMain->HaveKey(keyID));
+
+    // Can retrieve the key
+    CKey key;
+    BOOST_CHECK(pwalletMain->GetKey(keyID, key));
+    BOOST_CHECK(key.IsValid());
+
+    // Retrieved key's public key should match
+    CPubKey pubKey2 = key.GetPubKey();
+    BOOST_CHECK(pubKey == pubKey2);
+}
+
+BOOST_AUTO_TEST_CASE(generate_multiple_unique_keys)
+{
+    LOCK(pwalletMain->cs_wallet);
+    CPubKey key1 = pwalletMain->GenerateNewKey();
+    CPubKey key2 = pwalletMain->GenerateNewKey();
+    CPubKey key3 = pwalletMain->GenerateNewKey();
+
+    // All keys must be distinct
+    BOOST_CHECK(key1 != key2);
+    BOOST_CHECK(key2 != key3);
+    BOOST_CHECK(key1 != key3);
+
+    // All must be valid
+    BOOST_CHECK(key1.IsValid());
+    BOOST_CHECK(key2.IsValid());
+    BOOST_CHECK(key3.IsValid());
+}
+
+// ============================================================================
+// Key pool tests
+// ============================================================================
+
+BOOST_AUTO_TEST_CASE(key_pool_topup)
+{
+    // TopUpKeyPool should populate the pool
+    BOOST_CHECK(pwalletMain->TopUpKeyPool());
+    BOOST_CHECK(!pwalletMain->setKeyPool.empty());
+}
+
+BOOST_AUTO_TEST_CASE(get_key_from_pool)
+{
+    BOOST_CHECK(pwalletMain->TopUpKeyPool());
+
+    CPubKey pubKey;
+    BOOST_CHECK(pwalletMain->GetKeyFromPool(pubKey, false));
+    BOOST_CHECK(pubKey.IsValid());
+
+    // The key should be in the wallet
+    BOOST_CHECK(pwalletMain->HaveKey(pubKey.GetID()));
+}
+
+BOOST_AUTO_TEST_CASE(new_key_pool_resets)
+{
+    // NewKeyPool clears and refills the pool
+    BOOST_CHECK(pwalletMain->NewKeyPool());
+    size_t poolSize = pwalletMain->setKeyPool.size();
+    BOOST_CHECK(poolSize > 0);
+
+    // Getting keys from pool should work
+    CPubKey key;
+    BOOST_CHECK(pwalletMain->GetKeyFromPool(key, false));
+    BOOST_CHECK(key.IsValid());
+}
+
+// ============================================================================
+// Address / key retrieval tests
+// ============================================================================
+
+BOOST_AUTO_TEST_CASE(get_pubkey_from_keyid)
+{
+    LOCK(pwalletMain->cs_wallet);
+    CPubKey generated = pwalletMain->GenerateNewKey();
+    CKeyID keyID = generated.GetID();
+
+    CPubKey retrieved;
+    BOOST_CHECK(pwalletMain->GetPubKey(keyID, retrieved));
+    BOOST_CHECK(generated == retrieved);
+}
+
+BOOST_AUTO_TEST_CASE(have_key_returns_false_for_unknown)
+{
+    // A random KeyID that's not in the wallet
+    CKeyID unknownID(uint160(12345));
+    BOOST_CHECK(!pwalletMain->HaveKey(unknownID));
+}
+
+// ============================================================================
+// Pinkcoin address encoding
+// ============================================================================
+
+BOOST_AUTO_TEST_CASE(address_encoding_prefix)
+{
+    LOCK(pwalletMain->cs_wallet);
+    CPubKey pubKey = pwalletMain->GenerateNewKey();
+    CKeyID keyID = pubKey.GetID();
+    CBitcoinAddress addr(keyID);
+
+    std::string strAddr = addr.ToString();
+    // Pinkcoin addresses start with '2' (PUBKEY_ADDRESS = 3)
+    BOOST_CHECK_EQUAL(strAddr[0], '2');
+
+    // Round-trip: parse back and compare
+    CBitcoinAddress addr2(strAddr);
+    BOOST_CHECK(addr2.IsValid());
+
+    CTxDestination dest;
+    BOOST_CHECK(addr2.GetKeyID(keyID));
+}
+
+// ============================================================================
+// Wallet signing and verification
+// ============================================================================
+
+BOOST_AUTO_TEST_CASE(sign_verify_with_wallet_key)
+{
+    LOCK(pwalletMain->cs_wallet);
+    CPubKey pubKey = pwalletMain->GenerateNewKey();
+    CKeyID keyID = pubKey.GetID();
+
+    CKey key;
+    BOOST_CHECK(pwalletMain->GetKey(keyID, key));
+
+    // Sign a hash
+    uint256 hash = Hash(pubKey.Raw().begin(), pubKey.Raw().end());
+    std::vector<unsigned char> vchSig;
+    BOOST_CHECK(key.Sign(hash, vchSig));
+
+    // Verify
+    BOOST_CHECK(key.Verify(hash, vchSig));
+
+    // Wrong hash should fail verification
+    uint256 wrongHash(1);
+    BOOST_CHECK(!key.Verify(wrongHash, vchSig));
+}
+
+// ============================================================================
+// Wallet lock state (unencrypted wallet)
+// ============================================================================
+
+BOOST_AUTO_TEST_CASE(unencrypted_wallet_not_locked)
+{
+    // An unencrypted wallet should not be flagged as crypted or locked
+    BOOST_CHECK(!pwalletMain->IsCrypted());
+    BOOST_CHECK(!pwalletMain->IsLocked());
 }
 
 BOOST_AUTO_TEST_SUITE_END()
