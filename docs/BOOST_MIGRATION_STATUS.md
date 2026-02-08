@@ -288,4 +288,32 @@ Removed unnecessary boost dependencies from test files:
   - `sign_verify_with_wallet_key` — Sign/Verify with wallet-generated key, wrong hash fails
   - `unencrypted_wallet_not_locked` — unencrypted wallet is not crypted or locked
 
-**Result:** All 248 test cases pass across 30 test suites (201 from P0 + 47 new P1: 21 crypter + 15 walletdb + 11 new wallet)
+**P1 Result:** All 248 test cases pass across 30 test suites (201 from P0 + 47 new P1: 21 crypter + 15 walletdb + 11 new wallet)
+
+**New P2 migration safety net test files (OpenSSL migration prep):**
+- **hash_tests.cpp** - 12 test cases for SHA256d and SHA256+RIPEMD160 wrappers:
+  - `Hash()` pinned regression vectors — SHA256d("") = `0x5694...5d`, SHA256d(0x00) = `0x9a53...14`, SHA256d("Pinkcoin") = `0x8db3...2f`
+  - `Hash()` behavioral — different inputs diverge, two-part, three-part concatenation equivalence
+  - `Hash160()` pinned regression — Hash160(33x0x02) = `0x3147...51`, determinism, real pubkey matches GetID()
+  - `SerializeHash()` — determinism, field sensitivity (nTime change → different hash)
+  - `CHashWriter` — produces same result as Hash() for identical input
+- **stealth_tests.cpp** - 15 test cases for stealth crypto primitives (heaviest deprecated OpenSSL surface):
+  - Constants — `ec_secret_size`, `ec_compressed_size`, `ec_uncompressed_size` pinned
+  - `GenerateRandomSecret()` — succeeds, not all zeros, two calls produce unique results
+  - `SecretToPublicKey()` — succeeds, compressed (33 bytes), 0x02/0x03 prefix, deterministic, different secrets → different pubkeys
+  - `StealthSecret()` — sender/receiver derive same shared secret (ECDH roundtrip), different ephemeral keys → different secrets
+  - `StealthSecretSpend()` — derived private key produces matching public key (with retry for BN_num_bytes edge case)
+  - `CStealthAddress` — encode/decode roundtrip, invalid string rejection, IsStealthAddress detection
+  - `AppendChecksum`/`VerifyChecksum` — checksum added (+4 bytes), verifies, tamper detection, short input rejection
+  - `CStealthAddress` serialization — full round-trip (pubkeys, label, secrets)
+- **block_tests.cpp** - 12 test cases for genesis block and serialization:
+  - Genesis reconstruction — hash pinned (`0x00000f79...cc89`), merkle root pinned (`0x96f872...d891`), all header fields, coinbase tx
+  - `CBlock` serialization — disk round-trip, network round-trip, header-only (80 bytes, no vtx)
+  - `CTransaction` serialization — multi-input/output round-trip with field verification
+  - Genesis serialized size — header-only must be exactly 80 bytes
+  - PoW hash — `GetHash()` == `GetPoWHash()` (scrypt-based)
+  - Merkle tree — 2-tx manual verification, 3-tx with duplication (odd count)
+
+**Known issue documented:** `StealthSecretSpend()` can fail when `(f + c) mod n` has leading zero bytes, because `BN_num_bytes()` returns < 32. This is a latent production bug (~1/256 probability per call). Test retries with fresh keys. This should be fixed during OpenSSL 3.0 migration by padding output to 32 bytes.
+
+**Result:** All 287 test cases pass across 33 test suites (248 from P0+P1 + 39 new P2: 12 hash + 15 stealth + 12 block)
