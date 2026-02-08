@@ -63,18 +63,20 @@ This downloads, patches, cross-compiles, and installs BDB 4.8.30 to `/opt/mxe-bd
 
 All builds use CMake presets. Run commands from the project root.
 
+**Note:** The `-j` flag for parallel jobs is optional. Omitting it uses single-threaded compilation, which is recommended for systems with limited resources or when running multiple tasks.
+
 ### Linux Daemon (headless)
 
 ```bash
 cmake --preset linux-daemon-only
-cmake --build build/linux-daemon-only --parallel $(nproc)
+cmake --build build/linux-daemon-only
 ```
 
 **Output:** `build/linux-daemon-only/src/pink2d`
 
 ### Linux GUI Wallet
 
-QT5 translation dependencies
+QT5 translation dependencies:
 
 ```bash
 sudo apt-get install qttools5-dev-tools qttools5-dev
@@ -82,7 +84,7 @@ sudo apt-get install qttools5-dev-tools qttools5-dev
 
 ```bash
 cmake --preset linux-release
-cmake --build build/linux-release --parallel $(nproc)
+cmake --build build/linux-release
 ```
 
 **Output:** `build/linux-release/src/qt/Pinkcoin-Qt`
@@ -95,7 +97,7 @@ Requires MXE setup (see Prerequisites above).
 
 ```bash
 cmake --preset windows-mxe-daemon
-cmake --build build/windows-mxe-daemon --parallel $(nproc)
+cmake --build build/windows-mxe-daemon
 ```
 
 **Output:** `build/windows-mxe-daemon/src/pink2d.exe`
@@ -106,12 +108,71 @@ Requires MXE setup with Qt5 (see Prerequisites above).
 
 ```bash
 cmake --preset windows-mxe
-cmake --build build/windows-mxe --parallel $(nproc)
+cmake --build build/windows-mxe
 ```
 
 **Output:** `build/windows-mxe/src/qt/Pinkcoin-Qt.exe`
 
 The daemon is also built: `build/windows-mxe/src/pink2d.exe`
+
+---
+
+## Running Tests (Linux only)
+
+Unit tests are built with the `linux-release` preset.
+
+```bash
+cmake --preset linux-release
+cmake --build build/linux-release
+cd build/linux-release
+ctest --output-on-failure
+```
+
+Or run the test binary directly:
+
+```bash
+./build/linux-release/src/test/test_pinkcoin --log_level=test_suite
+```
+
+---
+
+## Clean Rebuild
+
+**IMPORTANT:** The `--clean-first` flag is not always reliable. For a guaranteed clean rebuild, manually delete the build directory contents:
+
+### Linux Clean Rebuild
+
+```bash
+cd build/linux-release
+rm -rf *
+cmake --preset linux-release ../..
+cmake --build .
+```
+
+### Windows Clean Rebuild
+
+```bash
+cd build/windows-mxe
+rm -rf *
+cmake --preset windows-mxe ../..
+cmake --build .
+```
+
+### Verify Build Freshness
+
+Always check timestamps after a rebuild to confirm executables were actually rebuilt:
+
+```bash
+# Linux
+ls -la build/linux-release/src/qt/Pinkcoin-Qt
+ls -la build/linux-release/src/pink2d
+
+# Windows
+ls -la build/windows-mxe/src/qt/Pinkcoin-Qt.exe
+ls -la build/windows-mxe/src/pink2d.exe
+```
+
+Compare timestamps to the current time (`date`) to verify the build is fresh.
 
 ---
 
@@ -138,3 +199,4 @@ strip build/linux-daemon-only/src/pink2d
 - **WSL2 users:** Build on the Linux native filesystem (`~/`) rather than `/mnt/` to avoid permission errors during CMake configuration.
 - **macOS:** See `CMAKE_MIGRATION_PLAN.md` for macOS-specific instructions (requires macOS hardware).
 - **ARM64 / Raspberry Pi:** Build natively on the device using the `linux-daemon-only` preset with the same Linux dependencies.
+- **Parallel builds:** Use `-j N` where N is the number of parallel jobs (e.g., `-j 2`). Omit for single-threaded builds on resource-constrained systems.
