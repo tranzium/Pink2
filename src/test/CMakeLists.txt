@@ -34,6 +34,9 @@ set(PINKCOIN_TEST_SOURCES
     wallet_tests.cpp
     string_utils_tests.cpp
     rpc_tests.cpp
+    kernel_tests.cpp
+    consensus_tests.cpp
+    scrypt_tests.cpp
 )
 
 #-----------------------------------------

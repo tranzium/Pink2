@@ -228,4 +228,28 @@ Removed unnecessary boost dependencies from test files:
 - `boost/test/unit_test.hpp` (26 files) - Test framework, must keep
 - `boost/preprocessor/stringize.hpp` (1 file) - For TEST_DATA_DIR macro
 
-**Result:** All 129 test cases pass (71 original + 43 string_utils + 15 RPC tests)
+**New P0 consensus test files (fork-prevention):**
+- **kernel_tests.cpp** - 14 test cases for PoS consensus:
+  - `GetWeight()` — stake weight calculation with min/max age caps, flash vs regular, boundary conditions
+  - `CheckCoinStakeTimestamp()` — block/tx timestamp must match exactly
+  - Modifier constants — `MODIFIER_INTERVAL_RATIO`, `nModifierInterval` pinned
+  - Block/tx type identification — `IsProofOfWork()`, `IsProofOfStake()`, `IsCoinBase()`, `IsCoinStake()`
+- **consensus_tests.cpp** - 30 test cases for block validation:
+  - Chain constant regression — `MAX_BLOCK_SIZE`, `COIN`, `MAX_MONEY`, `nCoinbaseMaturity`, timing constants
+  - Genesis hash pinning — mainnet and testnet hashes locked
+  - Version timestamps — `nTimeV221`, `nTimeV231` locked
+  - `CheckProofOfWork()` — zero/max hash, target boundary, invalid target
+  - `GetProofOfWorkReward()` — block 1 premine (364.8M), pre-start, halving at 846800
+  - `GetProofOfStakeReward()` — pre-start, halving, fee inclusion
+  - `IsFlashStake()` — exactly 4 flash hours (1, 6, 15, 20 UTC) confirmed
+  - `CheckTransaction()` — empty vin/vout, negative output, overflow, duplicates, coinbase limits
+  - `CBlockIndex` flags — PoS flag, entropy bit, stake modifier flag
+  - Merkle tree — single tx identity, deterministic rebuild
+- **scrypt_tests.cpp** - 17 test cases for PoW hashing:
+  - `scrypt_hash()` — determinism, collision resistance, single-bit avalanche
+  - `scrypt_blockhash()` — determinism, pinned regression hash (`0x694b3a55...`), nonce/header sensitivity
+  - `scrypt_salted_hash()` — determinism, salt independence, equivalence with unsalted
+  - `scrypt_salted_multiround_hash()` — round-count divergence, single-round equivalence
+  - Block integration — `GetPoWHash()` matches manual `scrypt_blockhash()`, field sensitivity
+
+**Result:** All 201 test cases pass (71 original + 43 string_utils + 15 RPC + 14 kernel + 30 consensus + 17 scrypt + 11 wallet)
