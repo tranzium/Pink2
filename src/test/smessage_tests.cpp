@@ -44,8 +44,8 @@ BOOST_AUTO_TEST_CASE(smsg_default_construct)
 BOOST_AUTO_TEST_CASE(smsg_header_layout)
 {
     // Verify packed struct has expected layout
-    // hash[4] + version[2] + flags[1] + timestamp[8] + iv[16] + cpkR[33] + mac[32] + nonse[4] = 100
-    // + nPayload[4] + pPayload[ptr] — but we only care about the header portion
+    // hash[4] + version[2] + flags[1] + timestamp[8] + iv[16] + cpkR[33] + mac[32] + nonse[4] = 100 wire bytes
+    // + nPayload[4] = 104 = SMSG_HDR_LEN
     SecureMessage msg;
     unsigned char* base = reinterpret_cast<unsigned char*>(&msg);
 

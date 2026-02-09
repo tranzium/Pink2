@@ -102,13 +102,11 @@ BOOST_AUTO_TEST_CASE(util_HexStr)
 
 BOOST_AUTO_TEST_CASE(util_DateTimeStrFormat)
 {
-/*These are platform-dependant and thus removed to avoid useless test failures
-    BOOST_CHECK_EQUAL(DateTimeStrFormat("%x %H:%M:%S", 0), "01/01/70 00:00:00");
-    BOOST_CHECK_EQUAL(DateTimeStrFormat("%x %H:%M:%S", 0x7FFFFFFF), "01/19/38 03:14:07");
-    // Formats used within Bitcoin
-    BOOST_CHECK_EQUAL(DateTimeStrFormat("%x %H:%M:%S", 1317425777), "09/30/11 23:36:17");
-    BOOST_CHECK_EQUAL(DateTimeStrFormat("%x %H:%M", 1317425777), "09/30/11 23:36");
-*/
+    // Use locale-independent format specifiers (%Y-%m-%d) instead of %x
+    BOOST_CHECK_EQUAL(DateTimeStrFormat("%Y-%m-%d %H:%M:%S", 0), "1970-01-01 00:00:00");
+    BOOST_CHECK_EQUAL(DateTimeStrFormat("%Y-%m-%d %H:%M:%S", 0x7FFFFFFF), "2038-01-19 03:14:07");
+    BOOST_CHECK_EQUAL(DateTimeStrFormat("%Y-%m-%d %H:%M:%S", 1317425777), "2011-09-30 23:36:17");
+    BOOST_CHECK_EQUAL(DateTimeStrFormat("%Y-%m-%d %H:%M", 1317425777), "2011-09-30 23:36");
 }
 
 BOOST_AUTO_TEST_CASE(util_ParseParameters)
@@ -133,6 +131,10 @@ BOOST_AUTO_TEST_CASE(util_ParseParameters)
 
     BOOST_CHECK(mapArgs["-a"] == "" && mapArgs["-ccc"] == "multiple");
     BOOST_CHECK(mapMultiArgs["-ccc"].size() == 2);
+
+    // Cleanup global state
+    mapArgs.clear();
+    mapMultiArgs.clear();
 }
 
 BOOST_AUTO_TEST_CASE(util_GetArg)
@@ -157,6 +159,9 @@ BOOST_AUTO_TEST_CASE(util_GetArg)
     BOOST_CHECK_EQUAL(GetBoolArg("booltest2", false), false);
     BOOST_CHECK_EQUAL(GetBoolArg("booltest3", false), false);
     BOOST_CHECK_EQUAL(GetBoolArg("booltest4", false), true);
+
+    // Cleanup global state
+    mapArgs.clear();
 }
 
 BOOST_AUTO_TEST_CASE(util_WildcardMatch)

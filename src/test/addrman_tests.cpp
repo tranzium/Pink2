@@ -190,7 +190,7 @@ BOOST_AUTO_TEST_CASE(addrman_add_and_size)
     LookupNumeric("5.6.7.8", source);
 
     addrman.Add(addr, source);
-    BOOST_CHECK(addrman.size() >= 1);
+    BOOST_CHECK_EQUAL(addrman.size(), 1);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

@@ -206,17 +206,12 @@ BOOST_AUTO_TEST_CASE(pos_reward_before_start)
 BOOST_AUTO_TEST_CASE(pos_reward_regular_pre_v231)
 {
     // After height 16240, before v2.3.1 time, regular PoS = 100 COIN
-    // (fDisablePOW is false since nTime < nTimeV231)
-    // We need pindexBest->nTime < nTimeV231 for this to work.
-    // The test fixture sets up pindexBest, so we test the formula.
+    // pindexBest->nTime is genesis time (1371387277) which is < nTimeV231,
+    // so fDisablePOW = false.
     // nHalving = 16240 / 2 / 423400 = 0
-    // Regular: 100 COIN >> 0 = 100 COIN
-    // Note: we cannot easily control pindexBest->nTime in unit tests
-    // so we test the math at a known state.
-
-    // At minimum, verify non-flash stake at height 16240 returns nonzero
+    // nSubsidy = (100 * COIN) >> 0 = 100 * COIN
     int64_t reward = GetProofOfStakeReward(1, 0, 16240, nTimeV231 - 1);
-    BOOST_CHECK(reward > 0);
+    BOOST_CHECK_EQUAL(reward, 100 * COIN);
 }
 
 BOOST_AUTO_TEST_CASE(pos_reward_includes_fees)
@@ -230,12 +225,14 @@ BOOST_AUTO_TEST_CASE(pos_reward_includes_fees)
 BOOST_AUTO_TEST_CASE(pos_reward_halving)
 {
     // PoS reward should halve at the same interval as PoW
-    // First halving: nHeight = 846800
+    // pindexBest->nTime is genesis (< nTimeV231), so fDisablePOW = false.
+    // Before: nHalving = 846799 / 2 / 423400 = 0 → (100 * COIN) >> 0 = 100 COIN
+    // After:  nHalving = 846800 / 2 / 423400 = 1 → (100 * COIN) >> 1 = 50 COIN
     int64_t rewardBefore = GetProofOfStakeReward(1, 0, 846799, nTimeV231 - 1);
     int64_t rewardAfter = GetProofOfStakeReward(1, 0, 846800, nTimeV231 - 1);
 
-    // After halving, reward should be half of before (approximately)
-    BOOST_CHECK(rewardAfter < rewardBefore);
+    BOOST_CHECK_EQUAL(rewardBefore, 100 * COIN);
+    BOOST_CHECK_EQUAL(rewardAfter, 50 * COIN);
 }
 
 // ============================================================================
@@ -562,21 +559,19 @@ BOOST_AUTO_TEST_CASE(merkle_tree_deterministic)
 
 BOOST_AUTO_TEST_CASE(compute_min_work_zero_time)
 {
-    // With zero elapsed time, the result should be close to nBase
+    // With zero elapsed time: bnResult = nBase * 2, loop doesn't execute
+    // (nTime=0 fails the while condition), then capped at bnProofOfWorkLimit.
+    // Since nBase is already at limit, nBase*2 > limit → capped to limit.
     unsigned int nBase = bnProofOfWorkLimit.GetCompact();
     unsigned int result = ComputeMinWork(nBase, 0);
-    // With nTime=0, loop doesn't execute much, result ≈ nBase * 2
-    // (initial bnResult *= 2 then loop check with nTime <= 0)
-    BOOST_CHECK(result != 0);
+    BOOST_CHECK_EQUAL(result, bnProofOfWorkLimit.GetCompact());
 }
 
 BOOST_AUTO_TEST_CASE(compute_min_work_one_day)
 {
-    // With one day elapsed, target relaxes
+    // With one day elapsed, target relaxes further but still capped at limit
     unsigned int nBase = bnProofOfWorkLimit.GetCompact();
     unsigned int result = ComputeMinWork(nBase, 86400);
-    // Result should still be valid and capped at limit
-    BOOST_CHECK(result != 0);
     BOOST_CHECK_EQUAL(result, bnProofOfWorkLimit.GetCompact());
 }
 
@@ -777,13 +772,13 @@ BOOST_AUTO_TEST_CASE(tx_is_final_height_passed)
     tx.vout.resize(1);
     tx.vout[0].nValue = COIN;
 
-    // Block height 200 > nLockTime 100 → final
+    // Block height 200 > nLockTime 100 → final (early return)
     BOOST_CHECK(tx.IsFinal(200, 0));
-    // Block height 50 < nLockTime 100 — but all inputs final (max sequence) → still final
-    // Actually, the check is: nLockTime < nBlockHeight → true at 200
-    // At height 50: nLockTime (100) >= nBlockHeight (50), so check sequence
-    // Default nSequence is max → all IsFinal() → return true
-    BOOST_CHECK(tx.IsFinal(200, 0));
+
+    // Block height 50 < nLockTime 100 → nLockTime >= nBlockHeight, so
+    // falls through to check sequence. Default nSequence is UINT_MAX
+    // (all inputs final) → still returns true via sequence path.
+    BOOST_CHECK(tx.IsFinal(50, 0));
 }
 
 BOOST_AUTO_TEST_CASE(tx_not_final_future_locktime)

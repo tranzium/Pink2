@@ -377,15 +377,19 @@ BOOST_AUTO_TEST_CASE(protocol_message_header_getcommand)
 
 BOOST_AUTO_TEST_CASE(receive_flood_size_default)
 {
-    // Default: 5000 * 1000 = 5,000,000
+    // Ensure clean state for both buffer args
     mapArgs.erase("-maxreceivebuffer");
+    mapArgs.erase("-maxsendbuffer");
+    // Default: 5000 * 1000 = 5,000,000
     BOOST_CHECK_EQUAL(ReceiveFloodSize(), 5000u * 1000u);
 }
 
 BOOST_AUTO_TEST_CASE(send_buffer_size_default)
 {
-    // Default: 1000 * 1000 = 1,000,000
+    // Ensure clean state for both buffer args
+    mapArgs.erase("-maxreceivebuffer");
     mapArgs.erase("-maxsendbuffer");
+    // Default: 1000 * 1000 = 1,000,000
     BOOST_CHECK_EQUAL(SendBufferSize(), 1000u * 1000u);
 }
 
