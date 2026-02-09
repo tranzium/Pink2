@@ -46,6 +46,10 @@ set(PINKCOIN_TEST_SOURCES
     smessage_tests.cpp
     pbkdf2_tests.cpp
     mainnet_block_tests.cpp
+    keystore_tests.cpp
+    alert_tests.cpp
+    addrman_tests.cpp
+    rpcdump_tests.cpp
 )
 
 #-----------------------------------------

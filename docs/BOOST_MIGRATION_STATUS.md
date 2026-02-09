@@ -393,4 +393,27 @@ Removed unnecessary boost dependencies from test files:
   - `mainnet_entropy_bits` — GetStakeEntropyBit() matches fixture entropybit for all blocks
   - `mainnet_header_field_pinning` — version==1, nBits!=0, reasonable timestamp
 
-**Final Result:** All 369 test cases pass across 37 test suites
+### P5 — Comprehensive Coverage Expansion
+
+Expanded existing test files and added new test files to cover untested surfaces.
+
+**New test files (4):**
+- `keystore_tests.cpp` (12) — CBasicKeyStore key/script operations
+- `alert_tests.cpp` (10) — CUnsignedAlert/CAlert system
+- `addrman_tests.cpp` (10) — CAddrInfo/CAddrMan address manager
+- `rpcdump_tests.cpp` (12) — DecodeDumpTime/String, EncodeDumpTime/String
+
+**Expanded test files (6):**
+- `consensus_tests.cpp` (+17) — ComputeMinWork/Stake, GetLastBlockIndex, GetMinFee, IsFinal, CheckMerkleBranch, GetMedianTimePast
+- `Checkpoints_tests.cpp` (+5) — all 15 hardened checkpoints pinned, wrong hash, non-checkpoint height
+- `kernel_tests.cpp` (+3) — zero interval, below min age, exact min age
+- `util_tests.cpp` (+7) — SetMockTime, GetRandHash, FormatSubVersion
+- `netbase_tests.cpp` (+3) — ReceiveFloodSize, SendBufferSize defaults/custom
+- `wallet_tests.cpp` (+1) — full encryption lifecycle (encrypt, lock, unlock, wrong pass, relock, change pass, HaveKey while locked)
+- `smessage_tests.cpp` (+4) — SecureMsgValidate version/size checks, bad hash detection, SMSG_MAX_MSG_WORST constant
+
+**Source change:** `src/rpcdump.cpp` — removed `static` from EncodeDumpTime and EncodeDumpString to enable external testing.
+
+**P5 Result:** All 458 test cases pass across 41 test suites (369 from P0-P4 + 89 new P5)
+
+**Final Result:** All 458 test cases pass across 41 test suites

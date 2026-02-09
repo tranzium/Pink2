@@ -54,11 +54,11 @@ int64_t DecodeDumpTime(const std::string& s)
     return 0;
 }
 
-std::string static EncodeDumpTime(int64_t nTime) {
+std::string EncodeDumpTime(int64_t nTime) {
     return DateTimeStrFormat("%Y-%m-%dT%H:%M:%SZ", nTime);
 }
 
-std::string static EncodeDumpString(const std::string &str) {
+std::string EncodeDumpString(const std::string &str) {
     std::stringstream ret;
     for (unsigned char c : str) {
         if (c <= 32 || c >= 128 || c == '%') {

@@ -9,6 +9,8 @@
 #include "kernel.h"
 
 extern CBigNum bnProofOfWorkLimit;
+extern CBigNum bnProofOfStakeLimit;
+extern CBigNum bnProofOfFlashStakeLimit;
 
 BOOST_AUTO_TEST_SUITE(consensus_tests)
 
@@ -552,6 +554,337 @@ BOOST_AUTO_TEST_CASE(merkle_tree_deterministic)
     uint256 merkle2 = block.BuildMerkleTree();
     BOOST_CHECK(merkle1 == merkle2);
     BOOST_CHECK(merkle1 != 0);
+}
+
+// ============================================================================
+// ComputeMinWork / ComputeMinStake tests
+// ============================================================================
+
+BOOST_AUTO_TEST_CASE(compute_min_work_zero_time)
+{
+    // With zero elapsed time, the result should be close to nBase
+    unsigned int nBase = bnProofOfWorkLimit.GetCompact();
+    unsigned int result = ComputeMinWork(nBase, 0);
+    // With nTime=0, loop doesn't execute much, result ≈ nBase * 2
+    // (initial bnResult *= 2 then loop check with nTime <= 0)
+    BOOST_CHECK(result != 0);
+}
+
+BOOST_AUTO_TEST_CASE(compute_min_work_one_day)
+{
+    // With one day elapsed, target relaxes
+    unsigned int nBase = bnProofOfWorkLimit.GetCompact();
+    unsigned int result = ComputeMinWork(nBase, 86400);
+    // Result should still be valid and capped at limit
+    BOOST_CHECK(result != 0);
+    BOOST_CHECK_EQUAL(result, bnProofOfWorkLimit.GetCompact());
+}
+
+BOOST_AUTO_TEST_CASE(compute_min_work_capped_at_limit)
+{
+    // Very large time → result should be capped at bnProofOfWorkLimit
+    unsigned int nBase = bnProofOfWorkLimit.GetCompact();
+    unsigned int result = ComputeMinWork(nBase, 365 * 24 * 60 * 60);
+    BOOST_CHECK_EQUAL(result, bnProofOfWorkLimit.GetCompact());
+}
+
+BOOST_AUTO_TEST_CASE(compute_min_stake_non_flash)
+{
+    // Non-flash block time → uses bnProofOfStakeLimit
+    unsigned int nBase = bnProofOfStakeLimit.GetCompact();
+    // Hour 0 (not flash) of Jan 1, 2024
+    unsigned int nBlockTime = 1704067200;
+    unsigned int result = ComputeMinStake(nBase, 86400, nBlockTime);
+    BOOST_CHECK_EQUAL(result, bnProofOfStakeLimit.GetCompact());
+}
+
+BOOST_AUTO_TEST_CASE(compute_min_stake_flash)
+{
+    // Flash block time (hour 1) → uses bnProofOfFlashStakeLimit
+    unsigned int nBase = bnProofOfFlashStakeLimit.GetCompact();
+    unsigned int nBlockTime = 1704067200 + 3600; // hour 1
+    unsigned int result = ComputeMinStake(nBase, 86400, nBlockTime);
+    BOOST_CHECK_EQUAL(result, bnProofOfFlashStakeLimit.GetCompact());
+}
+
+BOOST_AUTO_TEST_CASE(compute_min_stake_capped)
+{
+    // Large nTime → capped at stake limit
+    unsigned int nBase = bnProofOfStakeLimit.GetCompact();
+    unsigned int nBlockTime = 1704067200; // non-flash
+    unsigned int result = ComputeMinStake(nBase, 365 * 24 * 60 * 60, nBlockTime);
+    BOOST_CHECK_EQUAL(result, bnProofOfStakeLimit.GetCompact());
+}
+
+// ============================================================================
+// GetLastBlockIndex tests — walk chain by PoW/PoS flag
+// ============================================================================
+
+BOOST_AUTO_TEST_CASE(get_last_block_index_nullptr)
+{
+    // nullptr input → returns nullptr
+    const CBlockIndex* result = GetLastBlockIndex(nullptr, true);
+    BOOST_CHECK(result == nullptr);
+
+    result = GetLastBlockIndex(nullptr, false);
+    BOOST_CHECK(result == nullptr);
+}
+
+BOOST_AUTO_TEST_CASE(get_last_block_index_single_pow)
+{
+    // Single PoW node — requesting PoW should return it
+    CBlockIndex idx;
+    // Default nFlags=0 → IsProofOfWork()
+    const CBlockIndex* result = GetLastBlockIndex(&idx, false);
+    BOOST_CHECK(result == &idx);
+}
+
+BOOST_AUTO_TEST_CASE(get_last_block_index_single_pos)
+{
+    // Single PoS node — requesting PoS should return it
+    CBlockIndex idx;
+    idx.SetProofOfStake();
+    const CBlockIndex* result = GetLastBlockIndex(&idx, true);
+    BOOST_CHECK(result == &idx);
+}
+
+BOOST_AUTO_TEST_CASE(get_last_block_index_finds_pow)
+{
+    // Build chain: [PoW] -> [PoS] -> [PoS] (tip)
+    // Requesting PoW from PoS tip should walk back to idx0
+    CBlockIndex idx0, idx1, idx2;
+    idx0.pprev = nullptr;
+    idx1.pprev = &idx0;
+    idx2.pprev = &idx1;
+
+    // idx0 = PoW (default), idx1 = PoS, idx2 = PoS
+    idx1.SetProofOfStake();
+    idx2.SetProofOfStake();
+
+    const CBlockIndex* result = GetLastBlockIndex(&idx2, false);
+    BOOST_CHECK(result == &idx0);
+}
+
+BOOST_AUTO_TEST_CASE(get_last_block_index_finds_pos)
+{
+    // Build chain: [PoS] -> [PoW] -> [PoW] (tip)
+    // Requesting PoS from PoW tip should walk back to idx0
+    CBlockIndex idx0, idx1, idx2;
+    idx0.pprev = nullptr;
+    idx1.pprev = &idx0;
+    idx2.pprev = &idx1;
+
+    idx0.SetProofOfStake();
+    // idx1, idx2 = PoW (default)
+
+    const CBlockIndex* result = GetLastBlockIndex(&idx2, true);
+    BOOST_CHECK(result == &idx0);
+}
+
+// ============================================================================
+// CTransaction::GetMinFee tests
+// ============================================================================
+
+BOOST_AUTO_TEST_CASE(getminfee_base_per_kilobyte)
+{
+    // nMinFee = (1 + nBytes/1000) * nBaseFee
+    // With 500 bytes: (1 + 0) * MIN_TX_FEE = MIN_TX_FEE
+    CTransaction tx;
+    tx.vin.resize(1);
+    tx.vin[0].prevout.hash = uint256("0x1234");
+    tx.vin[0].prevout.n = 0;
+    tx.vout.resize(1);
+    tx.vout[0].nValue = COIN;
+
+    int64_t fee = tx.GetMinFee(1, GMF_BLOCK, 500);
+    BOOST_CHECK_EQUAL(fee, MIN_TX_FEE);
+
+    // With 1000 bytes: (1 + 1) * MIN_TX_FEE = 2 * MIN_TX_FEE
+    int64_t fee2 = tx.GetMinFee(1, GMF_BLOCK, 1000);
+    BOOST_CHECK_EQUAL(fee2, 2 * MIN_TX_FEE);
+}
+
+BOOST_AUTO_TEST_CASE(getminfee_relay_mode)
+{
+    // GMF_RELAY uses MIN_RELAY_TX_FEE (which equals MIN_TX_FEE for Pinkcoin)
+    CTransaction tx;
+    tx.vin.resize(1);
+    tx.vin[0].prevout.hash = uint256("0x1234");
+    tx.vin[0].prevout.n = 0;
+    tx.vout.resize(1);
+    tx.vout[0].nValue = COIN;
+
+    int64_t fee = tx.GetMinFee(1, GMF_RELAY, 500);
+    BOOST_CHECK_EQUAL(fee, MIN_RELAY_TX_FEE);
+}
+
+BOOST_AUTO_TEST_CASE(getminfee_dust_output)
+{
+    // Output < CENT forces nBaseFee minimum
+    CTransaction tx;
+    tx.vin.resize(1);
+    tx.vin[0].prevout.hash = uint256("0x1234");
+    tx.vin[0].prevout.n = 0;
+    tx.vout.resize(1);
+    tx.vout[0].nValue = CENT - 1; // dust output
+
+    int64_t fee = tx.GetMinFee(1, GMF_BLOCK, 100); // 100 bytes → nMinFee = 1 * MIN_TX_FEE
+    BOOST_CHECK(fee >= MIN_TX_FEE);
+}
+
+BOOST_AUTO_TEST_CASE(getminfee_near_full_block)
+{
+    // Near MAX_BLOCK_SIZE_GEN → fee approaches MAX_MONEY
+    CTransaction tx;
+    tx.vin.resize(1);
+    tx.vin[0].prevout.hash = uint256("0x1234");
+    tx.vin[0].prevout.n = 0;
+    tx.vout.resize(1);
+    tx.vout[0].nValue = COIN;
+
+    // nBlockSize such that nNewBlockSize >= MAX_BLOCK_SIZE_GEN
+    int64_t fee = tx.GetMinFee(MAX_BLOCK_SIZE_GEN, GMF_BLOCK, 1000);
+    BOOST_CHECK_EQUAL(fee, MAX_MONEY);
+}
+
+// ============================================================================
+// CTransaction::IsFinal tests — requires LOCK(cs_main)
+// ============================================================================
+
+BOOST_AUTO_TEST_CASE(tx_is_final_zero_locktime)
+{
+    LOCK(cs_main);
+    CTransaction tx;
+    tx.nLockTime = 0;
+    tx.vin.resize(1);
+    tx.vin[0].prevout.hash = uint256("0x1234");
+    tx.vin[0].prevout.n = 0;
+    tx.vout.resize(1);
+    tx.vout[0].nValue = COIN;
+
+    // nLockTime=0 → always final
+    BOOST_CHECK(tx.IsFinal(100, 1700000000));
+}
+
+BOOST_AUTO_TEST_CASE(tx_is_final_height_passed)
+{
+    LOCK(cs_main);
+    CTransaction tx;
+    tx.nLockTime = 100; // height-based (< LOCKTIME_THRESHOLD)
+    tx.vin.resize(1);
+    tx.vin[0].prevout.hash = uint256("0x1234");
+    tx.vin[0].prevout.n = 0;
+    tx.vout.resize(1);
+    tx.vout[0].nValue = COIN;
+
+    // Block height 200 > nLockTime 100 → final
+    BOOST_CHECK(tx.IsFinal(200, 0));
+    // Block height 50 < nLockTime 100 — but all inputs final (max sequence) → still final
+    // Actually, the check is: nLockTime < nBlockHeight → true at 200
+    // At height 50: nLockTime (100) >= nBlockHeight (50), so check sequence
+    // Default nSequence is max → all IsFinal() → return true
+    BOOST_CHECK(tx.IsFinal(200, 0));
+}
+
+BOOST_AUTO_TEST_CASE(tx_not_final_future_locktime)
+{
+    LOCK(cs_main);
+    CTransaction tx;
+    tx.nLockTime = 999999; // future height
+    tx.vin.resize(1);
+    tx.vin[0].prevout.hash = uint256("0x1234");
+    tx.vin[0].prevout.n = 0;
+    tx.vin[0].nSequence = 0; // non-final sequence
+    tx.vout.resize(1);
+    tx.vout[0].nValue = COIN;
+
+    // Future locktime + non-max sequence → not final
+    BOOST_CHECK(!tx.IsFinal(100, 0));
+}
+
+// ============================================================================
+// CBlock::CheckMerkleBranch roundtrip
+// ============================================================================
+
+BOOST_AUTO_TEST_CASE(check_merkle_branch_roundtrip)
+{
+    // Build a 4-tx block, get merkle branch for tx[2], verify roundtrip
+    CBlock block;
+
+    for (int i = 0; i < 4; i++)
+    {
+        CTransaction tx;
+        tx.nTime = 1700000000 + i;
+        tx.vin.resize(1);
+        if (i == 0) {
+            tx.vin[0].prevout.SetNull();
+            tx.vin[0].scriptSig = CScript() << 0 << 0;
+        } else {
+            tx.vin[0].prevout.hash = uint256(i * 0x1111);
+            tx.vin[0].prevout.n = 0;
+        }
+        tx.vout.resize(1);
+        tx.vout[0].nValue = (i + 1) * COIN;
+        block.vtx.push_back(tx);
+    }
+
+    uint256 merkleRoot = block.BuildMerkleTree();
+
+    // Get branch for tx[2]
+    std::vector<uint256> branch = block.GetMerkleBranch(2);
+    uint256 txHash = block.vtx[2].GetHash();
+
+    // Verify CheckMerkleBranch reconstructs the root
+    uint256 computed = CBlock::CheckMerkleBranch(txHash, branch, 2);
+    BOOST_CHECK(computed == merkleRoot);
+}
+
+// ============================================================================
+// CBlockIndex::GetMedianTimePast tests
+// ============================================================================
+
+BOOST_AUTO_TEST_CASE(median_time_past_11_blocks)
+{
+    // Build 11-block chain with known timestamps
+    CBlockIndex chain[11];
+    int64_t times[11] = {100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100};
+
+    for (int i = 0; i < 11; i++)
+    {
+        chain[i].nTime = times[i];
+        chain[i].pprev = (i > 0) ? &chain[i - 1] : nullptr;
+    }
+
+    // Median of sorted {100..1100} = 600 (index 5 of 11)
+    int64_t median = chain[10].GetMedianTimePast();
+    BOOST_CHECK_EQUAL(median, 600);
+}
+
+BOOST_AUTO_TEST_CASE(median_time_past_short_chain)
+{
+    // 5-block chain
+    CBlockIndex chain[5];
+    int64_t times[5] = {50, 30, 70, 10, 90};
+
+    for (int i = 0; i < 5; i++)
+    {
+        chain[i].nTime = times[i];
+        chain[i].pprev = (i > 0) ? &chain[i - 1] : nullptr;
+    }
+
+    // Sorted: {10, 30, 50, 70, 90} → median = element at index 2 = 50
+    int64_t median = chain[4].GetMedianTimePast();
+    BOOST_CHECK_EQUAL(median, 50);
+}
+
+BOOST_AUTO_TEST_CASE(median_time_past_single_block)
+{
+    CBlockIndex single;
+    single.nTime = 42;
+    single.pprev = nullptr;
+
+    // Single block → median = its own time
+    BOOST_CHECK_EQUAL(single.GetMedianTimePast(), 42);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

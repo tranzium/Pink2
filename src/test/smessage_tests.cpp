@@ -297,4 +297,61 @@ BOOST_AUTO_TEST_CASE(smsg_bucket_defaults)
     BOOST_CHECK(bucket.setTokens.empty());
 }
 
+// ============================================================================
+// SecureMsgValidate tests — input validation
+// ============================================================================
+
+BOOST_AUTO_TEST_CASE(smsg_validate_invalid_version)
+{
+    // Create a header with invalid version (0 instead of 1)
+    unsigned char header[SMSG_HDR_LEN];
+    memset(header, 0, sizeof(header));
+    // version is at offset 4, 2 bytes — set to {0, 0}
+    header[4] = 0;
+    header[5] = 0;
+
+    unsigned char payload[16];
+    memset(payload, 0, sizeof(payload));
+
+    int rv = SecureMsgValidate(header, payload, 16);
+    BOOST_CHECK_EQUAL(rv, 4); // 4 = invalid version
+}
+
+BOOST_AUTO_TEST_CASE(smsg_validate_oversized_payload)
+{
+    // Create a header with valid version (1)
+    unsigned char header[SMSG_HDR_LEN];
+    memset(header, 0, sizeof(header));
+    header[4] = 1; // version[0] = 1
+
+    unsigned char payload[16];
+    memset(payload, 0, sizeof(payload));
+
+    // Pass a nPayload larger than SMSG_MAX_MSG_WORST
+    uint32_t oversized = SMSG_MAX_MSG_WORST + 1;
+    int rv = SecureMsgValidate(header, payload, oversized);
+    BOOST_CHECK_EQUAL(rv, 5); // 5 = payload too large
+}
+
+BOOST_AUTO_TEST_CASE(smsg_validate_valid_version_but_bad_hash)
+{
+    // Valid version, normal payload size, but hash won't match → returns 2 or 3
+    unsigned char header[SMSG_HDR_LEN];
+    memset(header, 0, sizeof(header));
+    header[4] = 1; // version[0] = 1
+
+    unsigned char payload[64];
+    memset(payload, 0x42, sizeof(payload));
+
+    int rv = SecureMsgValidate(header, payload, 64);
+    // Should be 2 (invalid hash) or 3 (checksum mismatch), NOT 0
+    BOOST_CHECK(rv == 2 || rv == 3);
+}
+
+BOOST_AUTO_TEST_CASE(smsg_max_msg_worst_larger_than_max)
+{
+    // SMSG_MAX_MSG_WORST should be >= SMSG_MAX_MSG_BYTES (compression bound)
+    BOOST_CHECK(SMSG_MAX_MSG_WORST >= SMSG_MAX_MSG_BYTES);
+}
+
 BOOST_AUTO_TEST_SUITE_END()

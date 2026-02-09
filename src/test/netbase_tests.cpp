@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "netbase.h"
+#include "net.h"
 #include "protocol.h"
 #include "version.h"
 #include "serialize.h"
@@ -368,6 +369,31 @@ BOOST_AUTO_TEST_CASE(protocol_message_header_getcommand)
 
     CMessageHeader hdr3("ping", 0);
     BOOST_CHECK_EQUAL(hdr3.GetCommand(), "ping");
+}
+
+// ============================================================================
+// ReceiveFloodSize / SendBufferSize tests
+// ============================================================================
+
+BOOST_AUTO_TEST_CASE(receive_flood_size_default)
+{
+    // Default: 5000 * 1000 = 5,000,000
+    mapArgs.erase("-maxreceivebuffer");
+    BOOST_CHECK_EQUAL(ReceiveFloodSize(), 5000u * 1000u);
+}
+
+BOOST_AUTO_TEST_CASE(send_buffer_size_default)
+{
+    // Default: 1000 * 1000 = 1,000,000
+    mapArgs.erase("-maxsendbuffer");
+    BOOST_CHECK_EQUAL(SendBufferSize(), 1000u * 1000u);
+}
+
+BOOST_AUTO_TEST_CASE(receive_flood_size_custom)
+{
+    mapArgs["-maxreceivebuffer"] = "10000";
+    BOOST_CHECK_EQUAL(ReceiveFloodSize(), 10000u * 1000u);
+    mapArgs.erase("-maxreceivebuffer"); // cleanup
 }
 
 BOOST_AUTO_TEST_SUITE_END()

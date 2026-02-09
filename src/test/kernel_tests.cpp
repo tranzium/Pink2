@@ -13,6 +13,34 @@ BOOST_AUTO_TEST_SUITE(kernel_tests)
 // GetWeight() tests — core PoS weight calculation
 // ============================================================================
 
+BOOST_AUTO_TEST_CASE(getweight_zero_interval)
+{
+    // Zero interval (same time) → negative weight (interval - nStakeMinAge = -3600)
+    // GetWeight does NOT clamp to 0; negative means "too young to stake"
+    int64_t t = 1700000000;
+    BOOST_CHECK(GetWeight(t, t, false) < 0);
+    BOOST_CHECK(GetWeight(t, t, true) < 0);
+    BOOST_CHECK_EQUAL(GetWeight(t, t, false), -(int64_t)nStakeMinAge);
+}
+
+BOOST_AUTO_TEST_CASE(getweight_below_min_age)
+{
+    // Interval < nStakeMinAge → negative weight
+    int64_t nNow = 1700000000;
+    int64_t nHalfHourAgo = nNow - 1800; // 30 min < 1 hour min age
+
+    BOOST_CHECK(GetWeight(nHalfHourAgo, nNow, false) < 0);
+    BOOST_CHECK_EQUAL(GetWeight(nHalfHourAgo, nNow, false), 1800 - (int64_t)nStakeMinAge);
+}
+
+BOOST_AUTO_TEST_CASE(getweight_exact_min_age)
+{
+    // Interval == nStakeMinAge → weight 0 (interval - minAge = 0)
+    int64_t nNow = 1700000000;
+    int64_t nExactMinAge = nNow - nStakeMinAge;
+    BOOST_CHECK_EQUAL(GetWeight(nExactMinAge, nNow, false), 0);
+}
+
 BOOST_AUTO_TEST_CASE(getweight_basic)
 {
     // GetWeight returns: min(interval - nStakeMinAge, nStakeMaxAge)

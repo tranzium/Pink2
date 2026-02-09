@@ -391,4 +391,76 @@ BOOST_AUTO_TEST_CASE(util_threadtrace2)
     nCounter = 0;
 }
 
+// ============================================================================
+// SetMockTime / GetTime / GetAdjustedTime tests
+// ============================================================================
+
+BOOST_AUTO_TEST_CASE(set_mock_time_overrides)
+{
+    int64_t mockTime = 1700000000;
+    SetMockTime(mockTime);
+    BOOST_CHECK_EQUAL(GetTime(), mockTime);
+    SetMockTime(0); // cleanup
+}
+
+BOOST_AUTO_TEST_CASE(set_mock_time_zero_restores)
+{
+    SetMockTime(1700000000);
+    BOOST_CHECK_EQUAL(GetTime(), 1700000000);
+
+    SetMockTime(0);
+    // After reset, GetTime() should return real time (> 2024)
+    BOOST_CHECK(GetTime() > 1700000000);
+}
+
+BOOST_AUTO_TEST_CASE(get_adjusted_time_with_mock)
+{
+    int64_t mockTime = 1700000000;
+    SetMockTime(mockTime);
+    // GetAdjustedTime uses GetTime() + nTimeOffset
+    // With mock time set, it should be close to mockTime
+    int64_t adjusted = GetAdjustedTime();
+    BOOST_CHECK(adjusted >= mockTime - 3600 && adjusted <= mockTime + 3600);
+    SetMockTime(0);
+}
+
+// ============================================================================
+// GetRandHash tests
+// ============================================================================
+
+BOOST_AUTO_TEST_CASE(get_rand_hash_nonzero)
+{
+    uint256 h = GetRandHash();
+    BOOST_CHECK(h != 0);
+}
+
+BOOST_AUTO_TEST_CASE(get_rand_hash_unique)
+{
+    uint256 h1 = GetRandHash();
+    uint256 h2 = GetRandHash();
+    BOOST_CHECK(h1 != h2);
+}
+
+// ============================================================================
+// FormatSubVersion tests
+// ============================================================================
+
+BOOST_AUTO_TEST_CASE(format_sub_version_basic)
+{
+    string result = FormatSubVersion("Satoshi", 70002, vector<string>());
+    BOOST_CHECK(!result.empty());
+    BOOST_CHECK(result.find("Satoshi") != string::npos);
+    // Should be wrapped in /.../ format
+    BOOST_CHECK(result[0] == '/');
+    BOOST_CHECK(result[result.size()-1] == '/');
+}
+
+BOOST_AUTO_TEST_CASE(format_sub_version_with_comments)
+{
+    vector<string> comments;
+    comments.push_back("Linux");
+    string result = FormatSubVersion("Test", 10000, comments);
+    BOOST_CHECK(result.find("Linux") != string::npos);
+}
+
 BOOST_AUTO_TEST_SUITE_END()

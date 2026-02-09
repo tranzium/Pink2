@@ -468,4 +468,68 @@ BOOST_AUTO_TEST_CASE(unencrypted_wallet_not_locked)
     BOOST_CHECK(!pwalletMain->IsLocked());
 }
 
+// ============================================================================
+// Wallet encryption tests — uses separate CWallet to avoid destroying main
+// All encryption ops on a single wallet since mock BDB is shared
+// ============================================================================
+
+BOOST_AUTO_TEST_CASE(wallet_encryption_lifecycle)
+{
+    CWallet testWallet("test_encrypt.dat");
+    {
+        bool fFirstRun;
+        testWallet.LoadWallet(fFirstRun);
+    }
+
+    // 1. Unencrypted wallet is not locked or crypted
+    BOOST_CHECK(!testWallet.IsCrypted());
+    BOOST_CHECK(!testWallet.IsLocked());
+
+    // 2. Generate a key before encryption
+    CPubKey pubKey = testWallet.GenerateNewKey();
+    CKeyID keyID = pubKey.GetID();
+    BOOST_CHECK(testWallet.HaveKey(keyID));
+
+    // 3. Encrypt the wallet
+    SecureString passphrase;
+    passphrase.reserve(32);
+    passphrase = "testpassword123";
+    BOOST_CHECK(testWallet.EncryptWallet(passphrase));
+    BOOST_CHECK(testWallet.IsCrypted());
+
+    // 4. After encryption, wallet should be locked
+    BOOST_CHECK(testWallet.IsLocked());
+
+    // 5. HaveKey should still return true even when locked
+    BOOST_CHECK(testWallet.HaveKey(keyID));
+
+    // 6. Wrong passphrase should fail unlock
+    SecureString wrong;
+    wrong.reserve(32);
+    wrong = "wrong_password";
+    BOOST_CHECK(!testWallet.Unlock(wrong));
+    BOOST_CHECK(testWallet.IsLocked());
+
+    // 7. Correct passphrase should unlock
+    BOOST_CHECK(testWallet.Unlock(passphrase));
+    BOOST_CHECK(!testWallet.IsLocked());
+
+    // 8. Lock after unlock
+    BOOST_CHECK(testWallet.Lock());
+    BOOST_CHECK(testWallet.IsLocked());
+
+    // 9. Change passphrase
+    SecureString newPass;
+    newPass.reserve(32);
+    newPass = "new_password_456";
+    BOOST_CHECK(testWallet.ChangeWalletPassphrase(passphrase, newPass));
+
+    // 10. Old passphrase should no longer work
+    BOOST_CHECK(!testWallet.Unlock(passphrase));
+
+    // 11. New passphrase should work
+    BOOST_CHECK(testWallet.Unlock(newPass));
+    BOOST_CHECK(!testWallet.IsLocked());
+}
+
 BOOST_AUTO_TEST_SUITE_END()
