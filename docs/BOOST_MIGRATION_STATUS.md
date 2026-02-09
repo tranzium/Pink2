@@ -346,4 +346,51 @@ Removed unnecessary boost dependencies from test files:
   - SecMsgToken ordering — timestamp-first, sample-bytes tiebreaker, std::set ordering
   - SecMsgOptions/SecMsgBucket defaults
 
-**Final Result:** All 334 test cases pass across 35 test suites (287 from P0+P1+P2 + 47 new P3: 22 netbase/protocol + 10 stakedb + 15 smessage)
+**P3 Result:** All 334 test cases pass across 35 test suites (287 from P0+P1+P2 + 47 new P3: 22 netbase/protocol + 10 stakedb + 15 smessage)
+
+**New P4 OpenSSL regression tests (EC key generation + PBKDF2 pinning):**
+- **key_tests.cpp** (expanded) — 13 new test cases added to existing 1:
+  - EC_KEY_regenerate_key determinism — same secret always produces identical pubkey
+  - EC_KEY_regenerate_key roundtrip — SetSecret→GetSecret returns original bytes (compressed + uncompressed)
+  - Pubkey format — uncompressed 65 bytes (0x04 prefix), compressed 33 bytes (0x02/0x03), x-coordinates match
+  - ECDSA_SIG_recover_key_GFp compressed — SignCompact+SetCompactSignature recovery, header byte 31-34
+  - ECDSA_SIG_recover_key_GFp uncompressed — recovery, header byte 27-30
+  - Recovery wrong message — VerifyCompact fails when message differs
+  - VerifyCompact roundtrip — 8 messages signed and verified via compact signatures
+  - secp256k1 constants pinned — vchMaxModOrder (n-1), vchMaxModHalfOrder ((n-1)/2), boundary checks via CheckSignatureElement
+  - CKey copy constructor — pubkey preserved across copy
+  - CKey assignment operator — pubkey preserved across assignment
+  - MakeNewKey — compressed/uncompressed both valid, different keys differ
+  - IsNull — true before set, false after MakeNewKey
+  - ECC_InitSanityCheck — returns true
+- **pbkdf2_tests.cpp** (new) — 13 test cases for HMAC-SHA256 and PBKDF2-SHA256:
+  - HMAC-SHA256 RFC 4231 pinned vectors — Case 1 (0x0b key/"Hi There"), Case 2 ("Jefe"), Case 3 (0xaa/0xdd), Case 6 (131-byte key, triggers SHA256(K) path)
+  - HMAC-SHA256 determinism — same inputs always same output
+  - HMAC-SHA256 different keys — different keys diverge
+  - PBKDF2-SHA256 pinned — "passwd"/"salt"/c=1/dkLen=64 (verified against Python hashlib)
+  - PBKDF2-SHA256 pinned — "Password"/"NaCl"/c=80000/dkLen=64 (RFC 7914 vector)
+  - PBKDF2-SHA256 determinism, different salt, different iterations diverge
+  - PBKDF2-SHA256 partial output — dkLen=16 matches first 16 bytes of dkLen=32
+  - PBKDF2-SHA256 empty password — deterministic, differs from non-empty
+
+**P4 Result:** All 360 test cases pass across 36 test suites (334 from P0-P3 + 26 new P4: 13 key + 13 pbkdf2)
+
+**Mainnet block golden reference tests (P2 item 7):**
+- **mainnet_block_tests.cpp** (new) — 9 test cases using real mainnet block data:
+  - Source of truth: https://chainz.cryptoid.info/pink/
+  - **JSON fixture**: `data/mainnet_blocks.json` — 4 real blocks:
+    - Block 1: PoW premine (364.8M PINK), nonce=3071608064
+    - Block 50000: PoW checkpoint, nonce=4045912857
+    - Block 2864480: Regular PoS (hour 22 UTC, non-flash), nonce=0
+    - Block 2864550: Flash PoS (hour 1 UTC, flash stake), nonce=0
+  - `mainnet_block_header_hashes` — reconstruct headers from fixture, verify scrypt hash matches for all 4 blocks
+  - `mainnet_merkle_roots` — compute merkle root from tx hashes, verify against fixture
+  - `mainnet_pow_block_identification` — PoW blocks have nonzero nonce and single coinbase tx
+  - `mainnet_pos_block_identification` — PoS blocks have zero nonce and 2+ txs
+  - `mainnet_flash_pos_identification` — IsFlashStake(nTime) for FPoS vs regular PoS
+  - `mainnet_checkpoint_block_50000` — Checkpoints::CheckHardened(50000, hash) passes
+  - `mainnet_block_1_genesis_link` — block 1 prevhash == genesis hash, single tx, merkle==txhash
+  - `mainnet_entropy_bits` — GetStakeEntropyBit() matches fixture entropybit for all blocks
+  - `mainnet_header_field_pinning` — version==1, nBits!=0, reasonable timestamp
+
+**Final Result:** All 369 test cases pass across 37 test suites

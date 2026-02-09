@@ -1,0 +1,64 @@
+[
+  {
+    "description": "Block 1 - PoW premine (364.8M PINK)",
+    "height": 1,
+    "hash": "000002e98d02515a0d328d3afc12f1cd12f28d4762228505412f68d4504e97b0",
+    "version": 1,
+    "previousblockhash": "00000f79b700e6444665c4d090c9b8833664c4e2597c7087a6ba6391b956cc89",
+    "merkleroot": "a30a62cf38c5396b12d082ca96cf99b927d21f2348a98332fc6a5576100f0446",
+    "time": 1488940223,
+    "bits": "1e0fffff",
+    "nonce": 3071608064,
+    "flags": "proof-of-work",
+    "entropybit": 0,
+    "tx": ["a30a62cf38c5396b12d082ca96cf99b927d21f2348a98332fc6a5576100f0446"]
+  },
+  {
+    "description": "Block 50000 - PoW checkpoint",
+    "height": 50000,
+    "hash": "000000000f794eac0e68cbd44f803cf6efb5eb31ce88444f9dd5b9f183c71b47",
+    "version": 1,
+    "previousblockhash": "000000002a160b7793d41a042265350dc8beeb583c632148efc82d2b86b0b162",
+    "merkleroot": "dec86c859c1e2019b2d2ba1d73a6d439444c0cbcfdb5578e164d600ff32e9efd",
+    "time": 1493226685,
+    "bits": "1c50b73e",
+    "nonce": 4045912857,
+    "flags": "proof-of-work stake-modifier",
+    "entropybit": 1,
+    "tx": ["dec86c859c1e2019b2d2ba1d73a6d439444c0cbcfdb5578e164d600ff32e9efd"]
+  },
+  {
+    "description": "Block 2864480 - Regular PoS (hour 22 UTC, non-flash)",
+    "height": 2864480,
+    "hash": "533582103fb2342d8a951090d617de611627c168e3871ab7ef45362a2ea64066",
+    "version": 1,
+    "previousblockhash": "6c78cd5d6b1c1454c0ec901f363737f83d187ef8de8a60adf26dffc0e24cdebf",
+    "merkleroot": "1ce87f195bbcf434d0d121f80d93cbaf813556ebde63cf9f255e54a64d0c18ca",
+    "time": 1770590160,
+    "bits": "1c6dcf97",
+    "nonce": 0,
+    "flags": "proof-of-stake",
+    "entropybit": 0,
+    "tx": [
+      "9fbed054b2f71ac40529e43e75d0db218b4798de72f94c34f03232fa24129d5d",
+      "cd8e955e7e38de8194ae9cb8df11bfed1214e6899791e7ff77ad46eea11ce73e"
+    ]
+  },
+  {
+    "description": "Block 2864550 - Flash PoS (hour 1 UTC, flash stake)",
+    "height": 2864550,
+    "hash": "4d092a13725ce8befa20df5a38696d4b98e7aea3d3e610673d4936ca8a05688b",
+    "version": 1,
+    "previousblockhash": "3173d0eda140753accce21448acb803025787c2c872b585fee46efa41bcb710a",
+    "merkleroot": "076be665acc203cef68501a75701c105ca3472bbac7e9b755615b56d472f2cca",
+    "time": 1770599428,
+    "bits": "1f3fffff",
+    "nonce": 0,
+    "flags": "proof-of-stake stake-modifier",
+    "entropybit": 1,
+    "tx": [
+      "d89f849698f540ed64d2944e8df9ca6c264e02d5e18f530f8be15d653dc630cc",
+      "84d5234336a1314192e7482ea34bba53acf14c2e52f54095088fd7cf1d8d546a"
+    ]
+  }
+]

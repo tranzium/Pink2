@@ -44,6 +44,8 @@ set(PINKCOIN_TEST_SOURCES
     block_tests.cpp
     stakedb_tests.cpp
     smessage_tests.cpp
+    pbkdf2_tests.cpp
+    mainnet_block_tests.cpp
 )
 
 #-----------------------------------------
@@ -57,6 +59,7 @@ set(PINKCOIN_TEST_DATA
     data/script_valid.json
     data/tx_invalid.json
     data/tx_valid.json
+    data/mainnet_blocks.json
 )
 
 #-----------------------------------------
