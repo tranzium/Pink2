@@ -50,6 +50,7 @@ set(PINKCOIN_TEST_SOURCES
     alert_tests.cpp
     addrman_tests.cpp
     rpcdump_tests.cpp
+    checkblock_tests.cpp
 )
 
 #-----------------------------------------
