@@ -416,4 +416,38 @@ Expanded existing test files and added new test files to cover untested surfaces
 
 **P5 Result:** All 458 test cases pass across 41 test suites (369 from P0-P4 + 89 new P5)
 
-**Final Result:** All 458 test cases pass across 41 test suites
+### P6 — Audit Fix Pass
+
+Strengthened weak assertions and fixed test correctness issues found during audit review.
+
+**Fixes applied:**
+- `consensus_tests.cpp`: Pinned exact PoS rewards (`BOOST_CHECK_EQUAL(reward, 100 * COIN)` instead of `reward > 0`), fixed `pos_reward_halving` to check both before/after values, fixed `tx_is_final_height_passed` to properly test height < locktime case, pinned `compute_min_work_zero_time` to exact PoW limit compact value
+- `util_tests.cpp`: Added `mapArgs.clear(); mapMultiArgs.clear()` cleanup at end of `util_ParseParameters` and `util_GetArg`; re-enabled `util_DateTimeStrFormat` with locale-independent `%Y-%m-%d %H:%M:%S` format
+- `addrman_tests.cpp`: Changed `size() >= 1` to `BOOST_CHECK_EQUAL(size(), 1)` for exact assertion
+- `netbase_tests.cpp`: Both `receive_flood_size_default` and `send_buffer_size_default` now clean both `-maxreceivebuffer` and `-maxsendbuffer` keys upfront to prevent cross-test contamination
+- `smessage_tests.cpp`: Fixed comment to correctly state "= 100 wire bytes" and "nPayload[4] = 104 = SMSG_HDR_LEN"
+
+**P6 Result:** All 458 test cases pass across 41 test suites (no new tests, strengthened existing)
+
+### P7 — Block Validation & Consensus Path Coverage
+
+Created `src/test/checkblock_tests.cpp` with 65 new test cases covering the previously untested consensus validation paths in main.cpp. These are all context-independent tests (no DB/disk state required).
+
+**Test categories (65 tests):**
+- **CheckBlock() validation (16)**: Empty block, valid PoW/PoS construction, coinbase rules (missing, second coinbase, scriptsig size), coinstake rules (first-position banned), timestamps (future limit, zero), duplicate transactions, merkle root mismatch, sigop limits, block size limits, PoS-like block with non-coinstake vtx[1] treated as PoW (documents dead code)
+- **CheckBlockSignature (2)**: PoW requires empty signature, PoW with non-empty signature fails
+- **CBlock/CBlockIndex properties (11)**: IsNull, SetNull, IsProofOfStake/IsProofOfWork, GetProofOfStake hash, GetBlockTime, hash caching, CBlockIndex construction from CBlock, IsFPOS, CheckIndex, GetPastTimeLimit
+- **CTransaction classification (9)**: IsCoinBase (empty vin, prevout null), IsCoinStake (first empty + second non-empty), IsNull, IsNewerThan (sequence comparison), GetValueOut (sum, overflow detection), IsStandard (pubkeyhash, non-standard output)
+- **GetLegacySigOpCount (3)**: Simple tx, OP_CHECKSIG counting, OP_CHECKMULTISIG counting (×20)
+- **GetNextTargetRequired (7)**: Genesis returns PoW limit, single block, PoS/FPoS target limits, V1 adjustment with real spacing, V1 fast blocks, V1→V2 fork boundary at height 817990
+- **CTxMemPool (2)**: addUnchecked/exists/lookup, remove
+- **Data structures (11)**: CDiskTxPos construction/null, CInPoint, COutPoint construction/comparison/less-than, CTxOut construction, CTxIndex construction/null, CBlockLocator set/null
+- **CTxIn::IsFinal (1)**: UINT_MAX sequence
+
+**Dead code finding:** main.cpp:2240 — The "second transaction in PoS block is not coinstake" check is unreachable. `IsProofOfStake()` already requires `vtx[1].IsCoinStake()` to be true, so if vtx[1] is not a coinstake, `IsProofOfStake()` returns false and the block is treated as PoW instead. The check can never trigger.
+
+**P7 Result:** All 523 test cases pass across 42 test suites (458 from P0-P6 + 65 new P7)
+
+---
+
+**Final Result:** All 523 test cases pass across 42 test suites, zero failures

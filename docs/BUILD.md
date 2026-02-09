@@ -199,4 +199,4 @@ strip build/linux-daemon-only/src/pink2d
 - **WSL2 users:** Build on the Linux native filesystem (`~/`) rather than `/mnt/` to avoid permission errors during CMake configuration.
 - **macOS:** See `CMAKE_MIGRATION_PLAN.md` for macOS-specific instructions (requires macOS hardware).
 - **ARM64 / Raspberry Pi:** Build natively on the device using the `linux-daemon-only` preset with the same Linux dependencies.
-- **Parallel builds:** Use `-j N` where N is the number of parallel jobs (e.g., `-j 2`). Omit for single-threaded builds on resource-constrained systems.
+- **Parallel builds:** The `-j` flag is deliberately omitted from all build commands. If you choose to add it, use a conservative value (e.g., `-j2`). Never use `-j$(nproc)` — it saturates all cores and can freeze or crash lesser hardware.

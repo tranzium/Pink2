@@ -139,7 +139,7 @@ echo "Configuring BerkeleyDB for MinGW cross-compilation..."
 
 echo ""
 echo "Building BerkeleyDB (this may take a few minutes)..."
-make -j$(nproc)
+make
 
 echo ""
 echo "Installing BerkeleyDB to ${INSTALL_PREFIX}..."
