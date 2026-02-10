@@ -6,6 +6,8 @@
 #include "wallet.h"
 #include "checkpoints.h"
 
+#include <filesystem>
+
 CWallet* pwalletMain;
 CClientUIInterface uiInterface;
 
@@ -25,6 +27,20 @@ struct TestingSetup {
     TestingSetup() {
         fPrintToDebugger = true; // don't want to write to debug.log file
         noui_connect();
+
+        // Remove stale block data from previous test runs.
+        // LevelDB (txleveldb/) and block files (blk*.dat) persist on disk
+        // at GetDataDir() and would corrupt integration test chain state.
+        {
+            std::filesystem::path dataDir = GetDataDir();
+            std::filesystem::remove_all(dataDir / "txleveldb");
+            for (unsigned int nFile = 1; ; ++nFile) {
+                auto blkPath = dataDir / strprintf("blk%04u.dat", nFile);
+                if (!std::filesystem::exists(blkPath)) break;
+                std::filesystem::remove(blkPath);
+            }
+        }
+
         bitdb.MakeMock();
         LoadBlockIndex(true);
         bool fFirstRun;

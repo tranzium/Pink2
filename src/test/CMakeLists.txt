@@ -51,6 +51,8 @@ set(PINKCOIN_TEST_SOURCES
     addrman_tests.cpp
     rpcdump_tests.cpp
     checkblock_tests.cpp
+    test_framework.cpp
+    integration_tests.cpp
 )
 
 #-----------------------------------------

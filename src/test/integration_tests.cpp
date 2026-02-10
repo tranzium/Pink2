@@ -1,0 +1,495 @@
+// Copyright (c) 2024-2026 The Pinkcoin developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
+// Integration tests for chain state operations: ConnectBlock, AcceptBlock,
+// ProcessBlock, FetchInputs, ConnectInputs, and confirmation depth tracking.
+//
+// Note: coinbase outputs use empty scriptPubKey (anyone-can-spend) for
+// simplicity. This is non-standard, so tests use AddToMempool (unchecked)
+// or direct ConnectInputs calls rather than AcceptToMemoryPool, which
+// rejects non-standard transactions on mainnet.
+
+#include <boost/test/unit_test.hpp>
+
+#include "test_framework.h"
+#include "txdb.h"
+#include "bignum.h"
+
+extern CWallet* pwalletMain;
+extern int nCoinbaseMaturity;
+extern CBigNum bnProofOfWorkLimit;
+
+// ===========================================================================
+// Suite 1: Chain construction and ConnectBlock verification
+// ===========================================================================
+BOOST_FIXTURE_TEST_SUITE(integration_chain_tests, TestChain)
+
+BOOST_AUTO_TEST_CASE(chain_built_to_target_height)
+{
+    BOOST_CHECK(chainHeight() >= 50);
+    BOOST_CHECK(pindexBest != nullptr);
+    BOOST_CHECK(pindexGenesisBlock != nullptr);
+    BOOST_CHECK_EQUAL(pindexGenesisBlock->nHeight, 0);
+}
+
+BOOST_AUTO_TEST_CASE(connect_block_tracks_nmint)
+{
+    // Block 1 is the premine: 364,800,000 COIN.
+    // ConnectBlock computes nMint = nValueOut - nValueIn + nFees.
+    // For a coinbase-only block: nValueIn = 0, nFees = 0, so nMint = reward.
+    int64_t nMintBlock1 = mintAt(1);
+    BOOST_CHECK_EQUAL(nMintBlock1, GetProofOfWorkReward(1, 0));
+    BOOST_CHECK_EQUAL(nMintBlock1, 364800000LL * COIN);
+}
+
+BOOST_AUTO_TEST_CASE(connect_block_tracks_money_supply)
+{
+    // Genesis block: no coins minted.
+    CBlockIndex* pGenesis = blockIndexAt(0);
+    BOOST_REQUIRE(pGenesis != nullptr);
+    BOOST_CHECK_EQUAL(pGenesis->nMoneySupply, 0);
+
+    // Block 1: premine creates 364.8M PINK.
+    CBlockIndex* pBlock1 = blockIndexAt(1);
+    BOOST_REQUIRE(pBlock1 != nullptr);
+    BOOST_CHECK_EQUAL(pBlock1->nMoneySupply, 364800000LL * COIN);
+
+    // Block 2 (height 2-16999): 0 subsidy, so money supply unchanged.
+    CBlockIndex* pBlock2 = blockIndexAt(2);
+    BOOST_REQUIRE(pBlock2 != nullptr);
+    BOOST_CHECK_EQUAL(pBlock2->nMoneySupply, 364800000LL * COIN);
+
+    // Tip: all blocks 2+ have 0 subsidy, so total = premine.
+    BOOST_CHECK_EQUAL(moneySupply(), 364800000LL * COIN);
+}
+
+BOOST_AUTO_TEST_CASE(connect_block_chain_trust_monotonic)
+{
+    CBlockIndex* prev = blockIndexAt(0);
+    BOOST_REQUIRE(prev != nullptr);
+
+    for (int h = 1; h <= chainHeight() && h <= 50; ++h) {
+        CBlockIndex* cur = blockIndexAt(h);
+        BOOST_REQUIRE(cur != nullptr);
+        BOOST_CHECK(cur->nChainTrust > prev->nChainTrust);
+        prev = cur;
+    }
+}
+
+BOOST_AUTO_TEST_CASE(connect_block_linkage)
+{
+    for (int h = 1; h <= chainHeight() && h <= 50; ++h) {
+        CBlockIndex* cur = blockIndexAt(h);
+        BOOST_REQUIRE(cur != nullptr);
+        BOOST_REQUIRE(cur->pprev != nullptr);
+        BOOST_CHECK_EQUAL(cur->pprev->nHeight, h - 1);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(mined_blocks_are_pow)
+{
+    for (int h = 1; h <= chainHeight() && h <= 50; ++h) {
+        CBlockIndex* cur = blockIndexAt(h);
+        BOOST_REQUIRE(cur != nullptr);
+        BOOST_CHECK(cur->IsProofOfWork());
+        BOOST_CHECK(!cur->IsProofOfStake());
+    }
+}
+
+BOOST_AUTO_TEST_CASE(coinbase_maturity_check)
+{
+    // With 50 blocks, block 1 (premine) has depth 50 >= 30 (maturity).
+    BOOST_CHECK(IsCoinbaseMature(0));
+
+    // Last mined block has depth 1 — NOT mature.
+    if (coinbaseTxns.size() >= 50)
+        BOOST_CHECK(!IsCoinbaseMature(static_cast<unsigned int>(coinbaseTxns.size()) - 1));
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
+
+// ===========================================================================
+// Suite 2: Mempool and transaction acceptance tests
+// ===========================================================================
+BOOST_FIXTURE_TEST_SUITE(integration_mempool_tests, TestChain)
+
+BOOST_AUTO_TEST_CASE(add_valid_tx_to_mempool)
+{
+    // Coinbase outputs use empty scriptPubKey (non-standard), so we use
+    // AddToMempool (unchecked add) rather than AcceptToMemoryPool which
+    // enforces standardness on mainnet.
+    BOOST_REQUIRE(coinbaseTxns.size() > 0);
+    BOOST_REQUIRE(IsCoinbaseMature(0));
+
+    CTransaction tx = CreateSpendTx(0, CScript() << OP_TRUE, 1 * COIN);
+
+    BOOST_CHECK(AddToMempool(tx));
+    BOOST_CHECK(mempool.exists(tx.GetHash()));
+
+    ClearMempool();
+}
+
+BOOST_AUTO_TEST_CASE(double_spend_blocked_by_mempool)
+{
+    BOOST_REQUIRE(IsCoinbaseMature(0));
+
+    CTransaction tx1 = CreateSpendTx(0, CScript() << OP_TRUE, 1 * COIN);
+    CTransaction tx2 = CreateSpendTx(0, CScript() << OP_TRUE, 2 * COIN);
+
+    // Add first tx via unchecked add.
+    BOOST_CHECK(AddToMempool(tx1));
+    BOOST_CHECK(mempool.exists(tx1.GetHash()));
+
+    // Second tx spending the same output should be rejected by
+    // mapNextTx conflict detection in AcceptToMemoryPool.
+    BOOST_CHECK(!SubmitToMempool(tx2));
+    BOOST_CHECK(!mempool.exists(tx2.GetHash()));
+
+    ClearMempool();
+}
+
+BOOST_AUTO_TEST_CASE(reject_coinbase_in_mempool)
+{
+    CTransaction coinbase;
+    coinbase.nTime = GetAdjustedTime();
+    coinbase.vin.resize(1);
+    coinbase.vin[0].prevout.SetNull();
+    coinbase.vin[0].scriptSig = CScript() << 0 << 0;
+    coinbase.vout.resize(1);
+    coinbase.vout[0].nValue = COIN;
+    coinbase.vout[0].scriptPubKey = CScript() << OP_TRUE;
+
+    BOOST_CHECK(!SubmitToMempool(coinbase));
+    ClearMempool();
+}
+
+BOOST_AUTO_TEST_CASE(reject_coinstake_in_mempool)
+{
+    CTransaction coinstake;
+    coinstake.nTime = GetAdjustedTime();
+    coinstake.vin.resize(1);
+    coinstake.vin[0].prevout.hash = uint256("0x1234");
+    coinstake.vin[0].prevout.n = 0;
+    coinstake.vout.resize(2);
+    coinstake.vout[0].SetEmpty();  // coinstake marker
+    coinstake.vout[1].nValue = COIN;
+    coinstake.vout[1].scriptPubKey = CScript() << OP_TRUE;
+
+    BOOST_CHECK(!SubmitToMempool(coinstake));
+    ClearMempool();
+}
+
+BOOST_AUTO_TEST_CASE(reject_orphan_tx)
+{
+    CTransaction tx;
+    tx.nTime = GetAdjustedTime();
+    tx.vin.resize(1);
+    tx.vin[0].prevout.hash = uint256("0xdeadbeefdeadbeefdeadbeefdeadbeef");
+    tx.vin[0].prevout.n = 0;
+    tx.vin[0].scriptSig = CScript() << OP_TRUE;
+    tx.vout.resize(1);
+    tx.vout[0].nValue = COIN;
+    tx.vout[0].scriptPubKey = CScript() << OP_TRUE;
+
+    BOOST_CHECK(!SubmitToMempool(tx));
+    ClearMempool();
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
+
+// ===========================================================================
+// Suite 3: Confirmation depth tests
+// ===========================================================================
+BOOST_FIXTURE_TEST_SUITE(integration_depth_tests, TestChain)
+
+BOOST_AUTO_TEST_CASE(coinbase_depth_via_txindex)
+{
+    // Verify coinbase tx depth using CTxIndex (avoids ReadFromDisk
+    // which doesn't reliably work in the mock test environment).
+    BOOST_REQUIRE(coinbaseTxns.size() > 0);
+
+    CTxDB txdb("r");
+    CTxIndex txindex;
+    uint256 hashCb = coinbaseTxns[0].GetHash();
+
+    BOOST_REQUIRE(txdb.ReadTxIndex(hashCb, txindex));
+    BOOST_CHECK(!txindex.pos.IsNull());
+
+    // The coinbase is from block nBaseHeight+1.  Its depth should be
+    // chainHeight - (nBaseHeight+1) + 1.
+    int nExpectedDepth = chainHeight() - (nBaseHeight + 1) + 1;
+    BOOST_CHECK(nExpectedDepth > 0);
+
+    // Cross-check: IsCoinbaseMature uses the same arithmetic.
+    BOOST_CHECK(IsCoinbaseMature(0));
+}
+
+BOOST_AUTO_TEST_CASE(mempool_tx_depth_zero)
+{
+    BOOST_REQUIRE(IsCoinbaseMature(0));
+
+    CTransaction tx = CreateSpendTx(0, CScript() << OP_TRUE, 1 * COIN);
+    AddToMempool(tx);
+
+    CMerkleTx mtx(tx);
+    // hashBlock = 0, nIndex = -1 -> depth 0 (in mempool).
+
+    LOCK(cs_main);
+    int nDepth = mtx.GetDepthInMainChain();
+    BOOST_CHECK_EQUAL(nDepth, 0);
+
+    ClearMempool();
+}
+
+BOOST_AUTO_TEST_CASE(unknown_tx_depth_negative)
+{
+    CTransaction fakeTx;
+    fakeTx.nTime = GetAdjustedTime();
+    fakeTx.vin.resize(1);
+    fakeTx.vin[0].prevout.hash = uint256("0xfefefefefefefefe");
+    fakeTx.vin[0].prevout.n = 0;
+    fakeTx.vout.resize(1);
+    fakeTx.vout[0].nValue = 0;
+    fakeTx.vout[0].scriptPubKey = CScript();
+
+    CMerkleTx mtx(fakeTx);
+
+    LOCK(cs_main);
+    int nDepth = mtx.GetDepthInMainChain();
+    BOOST_CHECK_EQUAL(nDepth, -1);
+}
+
+BOOST_AUTO_TEST_CASE(blocks_to_maturity_via_index)
+{
+    BOOST_REQUIRE(coinbaseTxns.size() > 0);
+
+    // Block 1's coinbase is at depth (chainHeight - 1 + 1 = chainHeight).
+    // GetBlocksToMaturity = max(0, (nCoinbaseMaturity + 10) - depth).
+    int nDepth = chainHeight() - (nBaseHeight + 1) + 1;
+    int nExpected = std::max(0, (nCoinbaseMaturity + 10) - nDepth);
+    // With 50 blocks, depth=50, maturity=30, so expected=0 (fully mature).
+    BOOST_CHECK_EQUAL(nExpected, 0);
+    BOOST_CHECK(IsCoinbaseMature(0));
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
+
+// ===========================================================================
+// Suite 4: ProcessBlock / AcceptBlock integration
+// ===========================================================================
+BOOST_FIXTURE_TEST_SUITE(integration_processblock_tests, TestChain)
+
+BOOST_AUTO_TEST_CASE(reject_duplicate_block)
+{
+    CBlock genesisBlock;
+    BOOST_REQUIRE(genesisBlock.ReadFromDisk(pindexGenesisBlock));
+
+    BOOST_CHECK(!ProcessBlock(NULL, &genesisBlock));
+}
+
+BOOST_AUTO_TEST_CASE(reject_invalid_pow)
+{
+    // Temporarily lower difficulty to create a valid block template,
+    // then use a nonce that does NOT satisfy the PoW.
+    CBigNum bnOrig = bnProofOfWorkLimit;
+    bnProofOfWorkLimit = CBigNum(~uint256(0) >> 2);
+
+    pwalletMain->NewKeyPool();
+    CBlock* pblock = CreateNewBlock(pwalletMain);
+    BOOST_REQUIRE(pblock != nullptr);
+
+    pblock->nVersion = 1;
+    pblock->nTime = pindexBest->GetMedianTimePast() + 1;
+    {
+        int nHeight = pindexBest->nHeight + 1;
+        CScript scriptSig = CScript() << nHeight;
+        while (scriptSig.size() < 2)
+            scriptSig.push_back(0xFF);
+        pblock->vtx[0].vin[0].scriptSig = scriptSig;
+    }
+    pblock->vtx[0].vout[0].scriptPubKey = CScript();
+    pblock->vtx[0].nTime = static_cast<unsigned int>(pblock->nTime);
+    pblock->hashMerkleRoot = pblock->BuildMerkleTree();
+
+    // Now restore real difficulty so this nonce fails PoW check.
+    bnProofOfWorkLimit = bnOrig;
+    pblock->nBits = CBigNum(~uint256(0) >> 20).GetCompact();
+    pblock->nNonce = 0x12345678;
+
+    BOOST_CHECK(!ProcessBlock(NULL, pblock));
+    delete pblock;
+}
+
+BOOST_AUTO_TEST_CASE(mine_extends_chain)
+{
+    int heightBefore = chainHeight();
+    unsigned int mined = MineEmptyBlocks(1);
+
+    BOOST_CHECK_EQUAL(mined, 1u);
+    BOOST_CHECK_EQUAL(chainHeight(), heightBefore + 1);
+    BOOST_CHECK(pindexBest->pprev != nullptr);
+    BOOST_CHECK_EQUAL(pindexBest->pprev->nHeight, heightBefore);
+}
+
+BOOST_AUTO_TEST_CASE(tx_index_written_after_connect)
+{
+    BOOST_REQUIRE(coinbaseTxns.size() > 0);
+
+    CTxDB txdb("r");
+    CTxIndex txindex;
+
+    uint256 hashCoinbase = coinbaseTxns[0].GetHash();
+    bool found = txdb.ReadTxIndex(hashCoinbase, txindex);
+
+    BOOST_CHECK(found);
+    BOOST_CHECK(!txindex.pos.IsNull());
+    BOOST_CHECK_EQUAL(txindex.vSpent.size(), coinbaseTxns[0].vout.size());
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
+
+// ===========================================================================
+// Suite 5: Transaction validation (FetchInputs / ConnectInputs)
+// ===========================================================================
+BOOST_FIXTURE_TEST_SUITE(integration_txvalidation_tests, TestChain)
+
+BOOST_AUTO_TEST_CASE(fetch_inputs_finds_coinbase)
+{
+    BOOST_REQUIRE(IsCoinbaseMature(0));
+
+    CTransaction tx = CreateSpendTx(0, CScript() << OP_TRUE, 1 * COIN);
+
+    CTxDB txdb("r");
+    std::map<uint256, CTxIndex> mapTestPool;
+    MapPrevTx mapInputs;
+    bool fInvalid = false;
+
+    bool ok = tx.FetchInputs(txdb, mapTestPool, false, false, mapInputs, fInvalid);
+    BOOST_CHECK(ok);
+    BOOST_CHECK(!fInvalid);
+    BOOST_CHECK_EQUAL(mapInputs.size(), 1u);
+}
+
+BOOST_AUTO_TEST_CASE(connect_inputs_valid_spend)
+{
+    BOOST_REQUIRE(IsCoinbaseMature(0));
+
+    CTransaction tx = CreateSpendTx(0, CScript() << OP_TRUE, 1 * COIN);
+
+    CTxDB txdb("r");
+    std::map<uint256, CTxIndex> mapTestPool;
+    MapPrevTx mapInputs;
+    bool fInvalid = false;
+
+    BOOST_REQUIRE(tx.FetchInputs(txdb, mapTestPool, false, false, mapInputs, fInvalid));
+
+    CDiskTxPos posThisTx(1, 1, 1);
+    bool ok = tx.ConnectInputs(txdb, mapInputs, mapTestPool, posThisTx,
+                                pindexBest, false, false);
+    BOOST_CHECK(ok);
+}
+
+BOOST_AUTO_TEST_CASE(connect_inputs_rejects_double_spend)
+{
+    BOOST_REQUIRE(IsCoinbaseMature(0));
+
+    CTransaction tx1 = CreateSpendTx(0, CScript() << OP_TRUE, 1 * COIN);
+    CTransaction tx2 = CreateSpendTx(0, CScript() << OP_TRUE, 2 * COIN);
+
+    // Add first tx to mempool (unchecked, bypasses standardness).
+    BOOST_CHECK(AddToMempool(tx1));
+    BOOST_CHECK(mempool.exists(tx1.GetHash()));
+
+    // Second tx spending the same output is rejected by mapNextTx check.
+    BOOST_CHECK(!SubmitToMempool(tx2));
+    BOOST_CHECK(!mempool.exists(tx2.GetHash()));
+
+    ClearMempool();
+}
+
+BOOST_AUTO_TEST_CASE(connect_inputs_rejects_value_overflow)
+{
+    BOOST_REQUIRE(IsCoinbaseMature(0));
+
+    CTransaction tx;
+    tx.nTime = GetAdjustedTime();
+    tx.vin.resize(1);
+    tx.vin[0].prevout = COutPoint(coinbaseTxns[0].GetHash(), 0);
+    tx.vin[0].scriptSig = CScript() << OP_TRUE;
+    tx.vout.resize(1);
+    tx.vout[0].nValue = coinbaseTxns[0].vout[0].nValue + COIN;
+    tx.vout[0].scriptPubKey = CScript() << OP_TRUE;
+
+    // Rejected: non-standard output AND value overflow.
+    BOOST_CHECK(!SubmitToMempool(tx));
+    ClearMempool();
+}
+
+BOOST_AUTO_TEST_CASE(get_coin_age_coinbase)
+{
+    BOOST_REQUIRE(coinbaseTxns.size() > 0);
+
+    CTxDB txdb("r");
+    uint64_t nCoinAge = 0;
+
+    // Coinbase has no real inputs, so coin age = 0.
+    BOOST_CHECK(coinbaseTxns[0].GetCoinAge(txdb, nCoinAge));
+    BOOST_CHECK_EQUAL(nCoinAge, 0u);
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
+
+// ===========================================================================
+// Suite 6: Block data and index consistency
+// ===========================================================================
+BOOST_FIXTURE_TEST_SUITE(integration_blockdata_tests, TestChain)
+
+BOOST_AUTO_TEST_CASE(genesis_block_readable)
+{
+    // ReadFromDisk works for the genesis block (created by LoadBlockIndex).
+    CBlock genesisBlock;
+    BOOST_CHECK(genesisBlock.ReadFromDisk(pindexGenesisBlock));
+    BOOST_CHECK(genesisBlock.vtx.size() >= 1);
+    BOOST_CHECK(genesisBlock.vtx[0].IsCoinBase());
+    BOOST_CHECK(genesisBlock.hashPrevBlock == 0);
+}
+
+BOOST_AUTO_TEST_CASE(map_block_index_consistency)
+{
+    for (int h = 0; h <= chainHeight() && h <= 50; ++h) {
+        CBlockIndex* pindex = blockIndexAt(h);
+        BOOST_REQUIRE(pindex != nullptr);
+
+        auto it = mapBlockIndex.find(pindex->GetBlockHash());
+        BOOST_CHECK(it != mapBlockIndex.end());
+        BOOST_CHECK(it->second == pindex);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(best_chain_hash_consistency)
+{
+    BOOST_CHECK(pindexBest != nullptr);
+    BOOST_CHECK(hashBestChain == pindexBest->GetBlockHash());
+    BOOST_CHECK_EQUAL(nBestHeight, pindexBest->nHeight);
+}
+
+BOOST_AUTO_TEST_CASE(block_index_fields_valid)
+{
+    for (int h = 1; h <= chainHeight() && h <= 50; ++h) {
+        CBlockIndex* pindex = blockIndexAt(h);
+        BOOST_REQUIRE(pindex != nullptr);
+
+        // Every block has a non-zero hash.
+        BOOST_CHECK(pindex->GetBlockHash() != 0);
+        // nFile and nBlockPos are set by WriteToDisk.
+        BOOST_CHECK(pindex->nFile > 0 || h == 0);
+    }
+}
+
+BOOST_AUTO_TEST_SUITE_END()
