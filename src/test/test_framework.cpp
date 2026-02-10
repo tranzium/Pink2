@@ -97,8 +97,11 @@ TestChain::TestChain(unsigned int nBlocks)
     // Lower PoW difficulty so we can find valid nonces quickly.
     EasyPoW guard;
 
-    // Reset the key pool — other test suites may have left stale entries
-    // whose private keys are no longer in the wallet's in-memory store.
+    // Reset the key pool — other test suites may have left stale entries.
+    // In particular, wallet_encryption_lifecycle's EncryptWallet call on a
+    // separate CWallet contaminates the shared mock BDB memory pool,
+    // causing pwalletMain's pool reads to return compressed keys from the
+    // test wallet even though pwalletMain only generates uncompressed keys.
     pwalletMain->NewKeyPool();
 
     for (unsigned int i = 0; i < nToMine; ++i)
@@ -189,7 +192,10 @@ unsigned int TestChain::MineEmptyBlocks(unsigned int nCount)
 
     EasyPoW guard;
 
-    // Reset the key pool — other test suites may have left stale entries.
+    // Reset the key pool — BDB 4.8 mock mode (DB_MPOOL_NOFILE) allows
+    // cross-contamination between anonymous in-memory databases when
+    // wallet_encryption_lifecycle's EncryptWallet writes compressed keys
+    // to test_encrypt.dat, corrupting pwalletMain's pool reads.
     pwalletMain->NewKeyPool();
 
     unsigned int nMined = 0;

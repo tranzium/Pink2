@@ -354,6 +354,13 @@ bool CDBEnv::RemoveDb(const string& strFile)
 
 bool CDB::Rewrite(const string& strFile, const char* pszSkip)
 {
+    // In mock mode, databases are anonymous in-memory (DB_MPOOL_NOFILE).
+    // Rewrite's remove/rename operations use real filenames that don't
+    // correspond to anonymous databases, corrupting the BDB environment.
+    // Since there's no disk slack to clean up, skip entirely.
+    if (bitdb.IsMock())
+        return true;
+
     while (!fShutdown)
     {
         {
