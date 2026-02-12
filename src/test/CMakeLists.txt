@@ -53,6 +53,9 @@ set(PINKCOIN_TEST_SOURCES
     checkblock_tests.cpp
     test_framework.cpp
     integration_tests.cpp
+    pos_tests.cpp
+    wallet_ops_tests.cpp
+    init_tests.cpp
 )
 
 #-----------------------------------------
