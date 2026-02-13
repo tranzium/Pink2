@@ -64,11 +64,8 @@ set(PINKCOIN_TEST_SOURCES
 set(PINKCOIN_TEST_DATA
     data/base58_encode_decode.json
     data/base58_keys_invalid.json
-    data/base58_keys_valid.json
     data/script_invalid.json
     data/script_valid.json
-    data/tx_invalid.json
-    data/tx_valid.json
     data/mainnet_blocks.json
 )
 
