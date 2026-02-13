@@ -2,104 +2,97 @@
 
 ## Overview
 
-The unit tests contain Bitcoin-specific test data that needs to be updated to Pinkcoin values.
+The original unit tests contained Bitcoin-specific test data inherited from the Bitcoin Core ~0.8.x fork.
+All critical migration tasks (Tier A and B) have been completed. Tests now use Pinkcoin-native
+values or dynamically generated keys, eliminating dependence on hardcoded Bitcoin data.
 
 ## Pinkcoin Version Bytes (from `src/base58.h`)
 
 | Type | Pinkcoin | Bitcoin | Address Prefix |
 |------|----------|---------|----------------|
 | PUBKEY_ADDRESS | 3 | 0 | "2" vs "1" |
-| SCRIPT_ADDRESS | 28 | 5 | "A" vs "3" |
+| SCRIPT_ADDRESS | 28 | 5 | "C" vs "3" |
 | PUBKEY_ADDRESS_TEST | 55 | 111 | |
 | SCRIPT_ADDRESS_TEST | 196 | 196 | |
 | SECRET_KEY (WIF) | 131 | 128 | |
 
-## Tasks
+## Migration Status
 
-### EASY - Update hardcoded values
+### Tier A — EASY (hardcoded values) — ALL DONE
 
-- [ ] **`src/test/Checkpoints_tests.cpp`**
-  - Replace Bitcoin block hashes with Pinkcoin checkpoints
-  - Use blocks from `src/checkpoints.cpp` (e.g., 50000, 150000)
-  - Lines 17-18: update hash values
-  - Lines 19-20, 24-25, 28-29, 31: update block numbers
+- [x] **`src/test/Checkpoints_tests.cpp`**
+  - All 15 hardened Pinkcoin checkpoints pinned (heights 0 through 728000)
+  - Tests: `sanity`, `checkpoint_genesis`, `checkpoint_all_hardened`, `checkpoint_wrong_hash`,
+    `checkpoint_non_checkpoint_height`, `total_blocks_estimate`
+  - No Bitcoin data remains
 
-- [ ] **`src/test/key_tests.cpp`**
-  - Lines 13-20: Replace Bitcoin WIF keys and addresses
-  - Need 2 keypairs (4 variants: compressed/uncompressed)
-  - Generate using: `./pink2d getnewaddress` then `./pink2d dumpprivkey <addr>`
+- [x] **`src/test/key_tests.cpp`**
+  - Replaced hardcoded Bitcoin WIF keys/addresses with deterministic key generation
+    via `Hash("test secret N")` → `CKey::SetSecret()`
+  - Added: EC_KEY_regenerate_key roundtrip, compact signature recovery (compressed/uncompressed),
+    secp256k1 constant pinning, CheckSignatureElement bounds, key utilities
+  - Tests use Pinkcoin address encoding natively (version byte 3 / prefix "2")
+  - No Bitcoin data remains
 
-### MEDIUM - Regenerate JSON files
+### Tier B — MEDIUM (JSON test data) — ALL DONE
 
-- [ ] **`src/test/data/base58_keys_valid.json`**
-  - Format: `[address, hex_pubkeyhash, {addrType, isPrivkey, isTestnet}]`
-  - Generate 10-20 Pinkcoin addresses/keys
-  - Can use wallet RPC to generate valid addresses
+- [x] **`src/test/data/base58_keys_valid.json`** — **ORPHANED**
+  - `base58_tests.cpp` no longer loads this file
+  - `base58_keys_valid_parse` and `base58_keys_valid_gen` tests were rewritten to use
+    dynamically generated Pinkcoin keys (deterministic seeds, CBitcoinSecret/CBitcoinAddress roundtrips)
+  - The JSON file can be deleted
 
-- [ ] **`src/test/data/base58_keys_invalid.json`**
-  - Review and update if needed
-  - Most invalid cases should remain invalid for Pinkcoin
+- [x] **`src/test/data/base58_keys_invalid.json`** — No changes needed
+  - Still used by `base58_tests.cpp:base58_keys_invalid` test
+  - Contains intentionally corrupted base58 strings — coin-agnostic negative test cases
 
-### COMPLEX - Can defer
+- [x] **`src/test/data/base58_encode_decode.json`** — No changes needed
+  - Used by `base58_tests.cpp:base58_EncodeBase58` and `base58_DecodeBase58`
+  - Generic hex↔base58 encoding — not coin-specific
 
-- [ ] **`src/test/data/script_valid.json`**
-  - Contains Bitcoin transaction scripts
-  - Options: regenerate with Pinkcoin txs, or keep (tests parsing logic)
+### Tier C — COMPLEX (script/transaction JSON) — RESOLVED
 
-- [ ] **`src/test/data/script_invalid.json`**
-  - Same as above
+- [x] **`src/test/data/script_valid.json`** — No changes needed
+  - Used by `script_tests.cpp:script_valid` — tests opcode/script parsing logic
+  - Data is coin-agnostic (raw scriptSig/scriptPubKey pairs with `VerifyScript()`)
+  - No addresses or transaction serialization involved
 
-- [ ] **`src/test/data/tx_valid.json`**
-  - Complete Bitcoin transactions in hex
-  - Would need Pinkcoin equivalents
+- [x] **`src/test/data/script_invalid.json`** — No changes needed
+  - Used by `script_tests.cpp:script_invalid` — same coin-agnostic script parsing
 
-- [ ] **`src/test/data/tx_invalid.json`**
-  - Same as above
+- [x] **`src/test/data/tx_valid.json`** — **ORPHANED**
+  - `transaction_tests.cpp` no longer loads this file
+  - Tests were rewritten to use programmatic Pinkcoin transactions (with `nTime` field)
+  - Bitcoin hex transaction data is incompatible (missing Pinkcoin's `nTime` field)
+  - The JSON file can be deleted
 
-## How to Generate Test Data
+- [x] **`src/test/data/tx_invalid.json`** — **ORPHANED**
+  - Same as `tx_valid.json` — no longer referenced
+  - The JSON file can be deleted
 
-### Using the wallet RPC
+### Pinkcoin-native test data (added)
 
-```bash
-# Start daemon
-./pink2d -daemon
+- [x] **`src/test/data/mainnet_blocks.json`**
+  - Real Pinkcoin mainnet block data: headers, hashes, merkle roots
+  - Used by `mainnet_block_tests.cpp` (9 tests): scrypt hash verification,
+    PoW/PoS/FPoS block identification, checkpoint validation, entropy bits
 
-# Generate new address
-./pink2d getnewaddress
+## Orphaned JSON Files
 
-# Get private key (WIF format)
-./pink2d dumpprivkey <address>
+The following files in `src/test/data/` are no longer referenced by any test and can be removed:
 
-# Get address info
-./pink2d validateaddress <address>
-```
+| File | Reason |
+|------|--------|
+| `base58_keys_valid.json` | Replaced by dynamic key generation in `base58_tests.cpp` |
+| `tx_valid.json` | Replaced by programmatic Pinkcoin transactions in `transaction_tests.cpp` |
+| `tx_invalid.json` | Same — Bitcoin tx hex incompatible with Pinkcoin's `nTime` field |
 
-### Key test format needed
+## JSON Files Still In Use
 
-```cpp
-// key_tests.cpp format
-static const string strSecret1     ("WIF_UNCOMPRESSED_KEY");
-static const string strSecret1C    ("WIF_COMPRESSED_KEY");
-static const CBitcoinAddress addr1 ("2xxxxxxxxxxxxxxxxxxxxxxxxxx");
-static const CBitcoinAddress addr1C("2xxxxxxxxxxxxxxxxxxxxxxxxxx");
-```
-
-### JSON format for base58_keys_valid.json
-
-```json
-[
-    "2PinkcoinAddress...",
-    "hex_of_pubkey_hash_20_bytes",
-    {
-        "addrType": "pubkey",
-        "isPrivkey": false,
-        "isTestnet": false
-    }
-]
-```
-
-## Notes
-
-- The `base58_encode_decode.json` file is generic and works for any coin
-- Script/transaction tests exercise parsing logic that's identical between coins
-- Consider removing tests that are truly Bitcoin-specific and not applicable
+| File | Used By | Status |
+|------|---------|--------|
+| `base58_encode_decode.json` | `base58_tests.cpp` | Coin-agnostic, no changes needed |
+| `base58_keys_invalid.json` | `base58_tests.cpp` | Coin-agnostic negative tests |
+| `script_valid.json` | `script_tests.cpp` | Coin-agnostic opcode tests |
+| `script_invalid.json` | `script_tests.cpp` | Coin-agnostic opcode tests |
+| `mainnet_blocks.json` | `mainnet_block_tests.cpp` | Pinkcoin-native data |
