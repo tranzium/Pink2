@@ -204,29 +204,31 @@ If cross-compilation becomes needed, options include:
 
 The `arm64-cross` preset exists but requires manual sysroot setup.
 
-## Unit Test Notes
+## Unit Test Status
 
-Tests run with: `HOME=/tmp/empty_home ctest --output-on-failure`
+Tests run with: `ctest --output-on-failure` (from `build/linux-release/`)
 
-### Passing Tests (core functionality)
-- accounting, allocator, base32, base64, bignum
-- DoS protection, getarg, mruset, netbase
-- serialize, uint160, uint256, wallet coin selection
-- Most util_tests
+### Current Status: ALL 684 TESTS PASSING
 
-### Failing Tests (pre-existing issues)
-These fail because test data was never updated from Bitcoin to Pinkcoin:
-- **base58_tests**: JSON files contain Bitcoin addresses/WIF keys
-- **Checkpoints_tests**: Hardcoded Bitcoin block hashes
-- **key_tests**: Bitcoin key prefixes (0x80 vs Pinkcoin's)
-- **script_tests**: Bitcoin transaction scripts in JSON
-- **transaction_tests**: Bitcoin transaction test vectors
-- **multisig_tests, sigopcount_tests, miner_tests**: Bitcoin-specific values
+All Bitcoin-specific test data issues have been resolved:
+- **base58_tests**: Rewritten with dynamic Pinkcoin key generation
+- **Checkpoints_tests**: All 15 Pinkcoin checkpoints pinned
+- **key_tests**: Deterministic key generation, secp256k1 constants pinned
+- **transaction_tests**: Programmatic Pinkcoin transactions (with nTime)
+- **script_tests**: Coin-agnostic (no changes needed)
 
-### Race Condition Failures
-- util_loop_forever1/2: Timing-sensitive, may pass/fail randomly
+### Test Coverage (684 tests across 62 suites)
+- P0: Consensus-critical (kernel, consensus, scrypt) — 61 tests
+- P1: Wallet safety (wallet, crypter, walletdb) — 47 tests
+- P2: Migration safety (hash, stealth, block) — 39 tests
+- P3: Additional coverage (netbase, stakedb, smessage) — 47 tests
+- P4: OpenSSL regression (key, pbkdf2) — 26 tests
+- P5: Coverage expansion (4 new files, 7 expanded) — 89 tests
+- P6: Audit fixes (strengthened assertions) — 0 new tests
+- P7: Block validation (checkblock) — 65 tests
+- P8: Integration tests (chain state operations) — 29 tests
+- P9: PoS/wallet/init — 68 tests
+- Tier C: RPC testing (framework + commands) — 64 tests
+- Legacy tests (base58, script, serialize, etc.) — 149 tests
 
-### To Fix (Phase 2)
-- Update `src/test/data/*.json` with Pinkcoin test vectors
-- Update hardcoded checkpoint/key values in test files
-- Consider removing Bitcoin-specific tests not applicable to Pinkcoin
+See `docs/BOOST_MIGRATION_STATUS.md` for detailed test tier documentation.

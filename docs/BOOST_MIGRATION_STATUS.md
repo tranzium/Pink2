@@ -448,6 +448,76 @@ Created `src/test/checkblock_tests.cpp` with 65 new test cases covering the prev
 
 **P7 Result:** All 523 test cases pass across 42 test suites (458 from P0-P6 + 65 new P7)
 
+### P8 — Integration Tests (Chain State Operations)
+
+Created `src/test/test_framework.h`/`.cpp` and `src/test/integration_tests.cpp` — the first tests to exercise production chain-state code paths (ConnectBlock, AcceptBlock, ProcessBlock, FetchInputs, ConnectInputs).
+
+**Test framework:**
+- `TestChain` fixture: mines a PoW chain via `ProcessBlock()` with `EasyPoW` (`bnProofOfWorkLimit >> 2`)
+- Empty `scriptPubKey` coinbases (anyone-can-spend); uses `AddToMempool()` (unchecked) since non-standard
+- `test_bitcoin.cpp`: stale LevelDB/blk*.dat cleanup added to `TestingSetup`
+- Key fix: `NewKeyPool()` before mining to reset stale BDB pool entries from other test suites (see Mock BDB bug below)
+
+**Test categories (29 tests across 6 suites):**
+- **Chain construction (7)**: Mine PoW blocks, verify height, chain trust, money supply, nMint, PoW identification, tip hash
+- **Mempool (5)**: AcceptToMemoryPool rejects coinbase/coinstake/orphan/double-spend, accepts valid spend
+- **Depth (4)**: GetDepthInMainChain for confirmed tx, mempool tx (depth=0), unknown tx (depth=-1), coinbase maturity
+- **ProcessBlock (4)**: Reject duplicate block, reject invalid PoW, valid block extends chain, multiple blocks
+- **Transaction validation (5)**: FetchInputs finds coinbase UTXO, ConnectInputs valid spend, rejects double-spend, rejects value overflow, GetCoinAge returns 0 for coinbase
+- **Block data (4)**: CTxDB::ReadTxIndex after ConnectBlock, tx index written, block file existence, block data retrievable
+
+**Bug fixed:** CDB::Rewrite() mock guard — prevents BDB memory pool corruption when mock mode databases attempt file-based Rewrite operations. See Mock BDB Cross-Contamination Bug notes.
+
+**P8 Result:** All 556 test cases pass across 48 test suites (523 from P0-P7 + 29 new P8 + 4 empty placeholder suites)
+
+### P9 — PoS Consensus, Wallet Operations, Init/Shutdown
+
+Three new test files covering PoS consensus internals, wallet balance operations, and initialization parameter handling.
+
+**pos_tests.cpp (15 tests across 3 suites):**
+- **ComputeNextStakeModifier (5)**: Genesis modifier=0, chain modifier progression, entropy bits, modifier flag tracking
+- **CheckStakeKernelHash (5)**: Timestamp boundary, stake age validation, FlashPoS 2.0 minimum (100,000 PINK), hash computation edge cases
+- **Kernel integration (5)**: Entropy bit extraction, GetCoinAge for coinbase=0, stake modifier chain continuity
+
+**wallet_ops_tests.cpp (21 tests across 2 suites):**
+- **Balance unit tests (9)**: Empty wallet GetBalance/GetUnconfirmedBalance/GetImmatureBalance/GetAvailableBalance/GetStake/SelectCoinsMinConf/GetAvailableCredit/IsChange/IsMine all return 0/false
+- **Integration tests (12)**: pwalletMain with mined chain: GetBalance, GetAvailableBalance, SelectCoinsMinConf selects UTXOs, GenerateNewKey stored in wallet, GetPubKey roundtrip, HaveKey, IsFromMe, GetDebit, GetCredit, SetBestChain
+
+**init_tests.cpp (32 tests across 8 suites):**
+- **Param interactions (8)**: -nolisten disables UPnP/DNSSEED, -bind forces listen, -whitebind forces listen, -connect disables DNSSEED/listen, -proxy sets default ports, -tor implies proxy, interaction flags
+- **Param flags (6)**: -daemon, -testnet, -printtoconsole, -shrinkdebugfile, -debug, -logtimestamps defaults
+- **Filename validation (5)**: SanitizeString path traversal, special characters, empty string, max length, Unicode
+- **Checkpoint modes (5)**: CheckpointsMode enum values pinned, -checkpointsenforce, strict/advisory modes
+- **ECC sanity (1)**: ECC_InitSanityCheck passes
+- **Global defaults (4)**: nTransactionFee=0, nMinimumInputValue=0, fStakeUsePooledKeys=false, nNodeLifespan default
+- **Shutdown flags (2)**: fRequestShutdown initially false, Shutdown() sets true
+- **ParseMoney (1)**: ParseMoney roundtrip for "1.23456789"
+
+**P9 Result:** All 620 test cases pass across 58 test suites (556 from P0-P8 + 68 new P9: 15 pos + 21 wallet_ops + 32 init)
+
+### Tier C — RPC Testing Coverage
+
+Two new test files targeting the untested RPC command handlers and protocol framework.
+
+**rpc_framework_tests.cpp (28 tests):**
+- **HTTP protocol (14)**: HTTPPost formatting (3: body/custom headers/empty), rfc1123Time format (1), ReadHTTPRequestLine (4: POST/GET/reject invalid/reject insufficient), ReadHTTPStatus (2: valid/bad input), ReadHTTPHeaders (2: content-length/empty), ReadHTTPMessage (2: full parse with keep-alive/HTTP 1.0 close default)
+- **JSON-RPC protocol (6)**: JSONRPCRequest well-formed (1), JSONRPCReplyObj success/error (2), JSONRPCReply string serialization (1), ErrorReply HTTP status mapping (3: 400/404/500)
+- **Command table & dispatch (5)**: CRPCTable operator[] known/unknown (2), completeness—all 87 commands registered (1), properties—okSafeMode/unlocked flags (1), help text via fHelp=true (1)
+- **Enum pinning (2)**: HTTPStatusCode all 6 values (1), RPCErrorCode all 22 values (1)
+
+**rpc_command_tests.cpp (36 tests):**
+- **verifymessage (6)**: Valid signature, wrong message returns false, invalid address throws, malformed base64 throws, invalid sig returns false, help text
+- **decodescript (4)**: P2PKH (OP_DUP/OP_HASH160/OP_CHECKSIG), P2SH, empty script, P2SH address prefix "C"
+- **decoderawtransaction (4)**: Valid tx with fields, invalid hex throws, truncated data throws, Pinkcoin nTime field present
+- **createrawtransaction (5)**: Valid roundtrip, invalid address throws, duplicate address throws, missing txid throws, negative vout throws
+- **makekeypair (3)**: Returns PrivateKey/PublicKey hex, uncompressed pubkey 65 bytes with 0x04 prefix, two calls produce different keys
+- **AccountFromValue (3)**: Valid passthrough, wildcard "*" throws, empty string is default account
+- **ScriptPubKeyToJSON (4)**: P2PKH type/reqSigs/address prefix "2", P2SH type/address prefix "C", OP_RETURN nulldata (no addresses), fIncludeHex adds hex field
+- **TxToJSON (4)**: Coinbase vin has "coinbase" key, regular tx has txid/vout/scriptSig, all Pinkcoin fields present (txid/version/time/locktime/vin/vout), hashBlock=0 omits blockhash/confirmations
+- **GetDifficulty (3)**: nullptr with pindexBest=nullptr returns 1.0, genesis nBits (0x1e0fffff) < 1.0, minimum nBits (0x1d00ffff) = 1.0
+
+**Tier C Result:** All 684 test cases pass across 62 test suites (620 from P0-P9 + 64 new Tier C: 28 framework + 36 command)
+
 ---
 
-**Final Result:** All 523 test cases pass across 42 test suites, zero failures
+**Current Result:** All 684 test cases pass across 62 test suites, zero failures
