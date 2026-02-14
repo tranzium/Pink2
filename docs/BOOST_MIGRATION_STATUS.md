@@ -518,6 +518,29 @@ Two new test files targeting the untested RPC command handlers and protocol fram
 
 **Tier C Result:** All 684 test cases pass across 62 test suites (620 from P0-P9 + 64 new Tier C: 28 framework + 36 command)
 
+### Tier D — Network Layer Testing Coverage
+
+One new test file covering the previously untested network layer (net.h/net.cpp) and additional
+netbase.cpp functions not covered by netbase_tests.cpp.
+
+**net_tests.cpp (48 tests):**
+- **ParseNetwork (6)**: Case-insensitive parsing of "ipv4"/"ipv6"/"tor"/"i2p", unknown returns NET_UNROUTABLE, mixed-case variants
+- **Net constants (3)**: PING_INTERVAL=120, TIMEOUT_INTERVAL=1200, LOCAL_NONE through LOCAL_MAX enum (7 values), threadId enum (10 values), MSG_TX=1/MSG_BLOCK=2
+- **CNetMessage state machine (9)**: Initial state, partial header read (10 of 24 bytes), two-chunk header assembly, full header with zero payload (immediate complete), header with payload size (not complete), oversized message rejected (MAX_SIZE+1 → returns -1), data accumulation (partial+complete), excess data capped to declared size
+- **CNode::ReceiveMsgBytes (2)**: Complete message assembly (24-byte header + 4-byte payload), oversized message rejection
+- **CNode construction (4)**: Initial state verification (17 fields), custom addrName override, AddRef/Release reference counting, copyStats populates CNodeStats (12 fields including ping times)
+- **Inventory relay (2)**: AddInventoryKnown marks inv in setInventoryKnown, PushInventory deduplication via setInventoryKnown
+- **Address relay (3)**: PushAddress adds valid address, AddAddressKnown filters subsequent pushes, invalid address (0.0.0.0) rejected
+- **Ban list (5)**: ClearBanned empties map, Misbehaving below threshold (50 < 100), Misbehaving at threshold (100 → banned), cumulative misbehavior (50+50=100), local node exempt (127.0.0.1 never banned)
+- **Byte counters (2)**: RecordBytesRecv/GetTotalBytesRecv delta accumulation, RecordBytesSent/GetTotalBytesSent delta accumulation
+- **SetLimited/IsLimited (4)**: Set and unset per-network, NET_UNROUTABLE ignored by SetLimited, per-network independence (TOR limited doesn't affect IPV4), CNetAddr overload delegates to GetNetwork()
+- **SetReachable/IsReachable (4)**: Default unreachable (vfReachable[] all false), set and check reachable, limited overrides reachable (reachable+limited → not reachable), IPv6 reachable also sets IPv4 reachable
+- **CNetAddr extensions (5)**: GetByte reads ip[15-n] (verified for 1.2.3.4), GetHash deterministic and distinct for different addresses, GetReachabilityFrom IPv4→IPv4 = REACH_IPV4 (4), unroutable = REACH_UNREACHABLE (0), nullptr partner = REACH_IPV4 (4)
+
+Test technique: CNode instances constructed with INVALID_SOCKET + fInbound=true to skip PushVersion() and socket operations. Global state (ban list, SetLimited, SetReachable) saved and restored per test.
+
+**Tier D Result:** All 732 test cases pass across 63 test suites (684 from P0-Tier C + 48 new Tier D)
+
 ---
 
-**Current Result:** All 684 test cases pass across 62 test suites, zero failures
+**Current Result:** All 732 test cases pass across 63 test suites, zero failures

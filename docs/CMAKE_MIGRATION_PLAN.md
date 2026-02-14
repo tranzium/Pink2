@@ -208,7 +208,7 @@ The `arm64-cross` preset exists but requires manual sysroot setup.
 
 Tests run with: `ctest --output-on-failure` (from `build/linux-release/`)
 
-### Current Status: ALL 684 TESTS PASSING
+### Current Status: ALL 732 TESTS PASSING
 
 All Bitcoin-specific test data issues have been resolved:
 - **base58_tests**: Rewritten with dynamic Pinkcoin key generation
@@ -217,7 +217,7 @@ All Bitcoin-specific test data issues have been resolved:
 - **transaction_tests**: Programmatic Pinkcoin transactions (with nTime)
 - **script_tests**: Coin-agnostic (no changes needed)
 
-### Test Coverage (684 tests across 62 suites)
+### Test Coverage (732 tests across 63 suites)
 - P0: Consensus-critical (kernel, consensus, scrypt) — 61 tests
 - P1: Wallet safety (wallet, crypter, walletdb) — 47 tests
 - P2: Migration safety (hash, stealth, block) — 39 tests
@@ -229,6 +229,7 @@ All Bitcoin-specific test data issues have been resolved:
 - P8: Integration tests (chain state operations) — 29 tests
 - P9: PoS/wallet/init — 68 tests
 - Tier C: RPC testing (framework + commands) — 64 tests
+- Tier D: Network layer (net) — 48 tests
 - Legacy tests (base58, script, serialize, etc.) — 149 tests
 
 See `docs/BOOST_MIGRATION_STATUS.md` for detailed test tier documentation.
