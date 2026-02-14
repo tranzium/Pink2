@@ -62,17 +62,6 @@ bool fLogTimestamps = false;
 CMedianFilter<int64_t> vTimeOffsets(200,0);
 bool fReopenDebugLog = false;
 
-// Init OpenSSL library multithreading support
-static CCriticalSection** ppmutexOpenSSL;
-void locking_callback(int mode, int i, const char* file, int line)
-{
-    if (mode & CRYPTO_LOCK) {
-        ENTER_CRITICAL_SECTION(*ppmutexOpenSSL[i]);
-    } else {
-        LEAVE_CRITICAL_SECTION(*ppmutexOpenSSL[i]);
-    }
-}
-
 LockedPageManager LockedPageManager::instance;
 
 // Init
@@ -81,12 +70,6 @@ class CInit
 public:
     CInit()
     {
-        // Init OpenSSL library multithreading support
-        ppmutexOpenSSL = (CCriticalSection**)OPENSSL_malloc(CRYPTO_num_locks() * sizeof(CCriticalSection*));
-        for (int i = 0; i < CRYPTO_num_locks(); i++)
-            ppmutexOpenSSL[i] = new CCriticalSection();
-        CRYPTO_set_locking_callback(locking_callback);
-
 #ifdef WIN32
         // Seed OpenSSL PRNG with current contents of the screen
         RAND_screen();
@@ -97,13 +80,6 @@ public:
     }
     ~CInit()
     {
-        // Securely erase the memory used by the PRNG
-        RAND_cleanup();
-        // Shutdown OpenSSL library multithreading support
-        CRYPTO_set_locking_callback(nullptr);
-        for (int i = 0; i < CRYPTO_num_locks(); i++)
-            delete ppmutexOpenSSL[i];
-        OPENSSL_free(ppmutexOpenSSL);
     }
 }
 instance_of_cinit;

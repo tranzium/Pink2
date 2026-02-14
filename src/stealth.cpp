@@ -92,9 +92,9 @@ uint32_t BitcoinChecksum(uint8_t* p, uint32_t nBytes)
         return 0;
     
     uint8_t hash1[32];
-    SHA256(p, nBytes, (uint8_t*)hash1);
+    EVP_Digest(p, nBytes, (uint8_t*)hash1, nullptr, EVP_sha256(), nullptr);
     uint8_t hash2[32];
-    SHA256((uint8_t*)hash1, sizeof(hash1), (uint8_t*)hash2);
+    EVP_Digest((uint8_t*)hash1, sizeof(hash1), (uint8_t*)hash2, nullptr, EVP_sha256(), nullptr);
     
     // -- checksum is the 1st 4 bytes of the hash
     uint32_t checksum = from_little_endian<uint32_t>(&hash2[0]);
@@ -331,7 +331,7 @@ int StealthSecret(ec_secret& secret, ec_point& pubkey, const ec_point& pkSpend, 
         BN_bn2bin(bnOutQ, &vchOutQ[ec_compressed_size - nBytes]);
     }
     
-    SHA256(&vchOutQ[0], vchOutQ.size(), &sharedSOut.e[0]);
+    EVP_Digest(&vchOutQ[0], vchOutQ.size(), &sharedSOut.e[0], nullptr, EVP_sha256(), nullptr);
     
     if (!(bnc = BN_bin2bn(&sharedSOut.e[0], ec_secret_size, BN_new())))
     {
@@ -518,7 +518,7 @@ int StealthSecretSpend(ec_secret& scanSecret, ec_point& ephemPubkey, ec_secret& 
     }
     
     uint8_t hash1[32];
-    SHA256(&vchOutP[0], vchOutP.size(), (uint8_t*)hash1);
+    EVP_Digest(&vchOutP[0], vchOutP.size(), (uint8_t*)hash1, nullptr, EVP_sha256(), nullptr);
     
     
     if (!(bnc = BN_bin2bn(&hash1[0], 32, BN_new())))

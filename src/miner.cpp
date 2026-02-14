@@ -8,6 +8,7 @@
 #include "miner.h"
 #include "kernel.h"
 #include <tuple>
+#include <openssl/sha.h> // SHA256Transform needs internal SHA256_CTX.h[] access
 
 using namespace std;
 
@@ -29,6 +30,12 @@ int static FormatHashBlocks(void* pbuffer, unsigned int len)
 static const unsigned int pSHA256InitState[8] =
 {0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19};
 
+// SHA256Transform accesses internal SHA256_CTX.h[] state for midstate
+// computation (getwork RPC protocol). This cannot use EVP since EVP_MD_CTX
+// hides internal state behind an opaque pointer. Suppress deprecation
+// warnings; this is a future cleanup item when getwork is removed.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 void SHA256Transform(void* pstate, void* pinput, const void* pinit)
 {
     SHA256_CTX ctx;
@@ -46,6 +53,7 @@ void SHA256Transform(void* pstate, void* pinput, const void* pinit)
     for (int i = 0; i < 8; i++)
         ((uint32_t*)pstate)[i] = ctx.h[i];
 }
+#pragma GCC diagnostic pop
 
 // Some explaining would be appreciated
 class COrphan
