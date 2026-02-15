@@ -4,6 +4,10 @@
 #include <vector>
 #include <cstring>
 
+#include <openssl/ec.h>
+#include <openssl/obj_mac.h>
+#include <openssl/bn.h>
+
 #include "key.h"
 #include "base58.h"
 #include "uint256.h"
@@ -418,6 +422,328 @@ BOOST_AUTO_TEST_CASE(key_null_before_set)
 BOOST_AUTO_TEST_CASE(key_ecc_sanity)
 {
     BOOST_CHECK(ECC_InitSanityCheck());
+}
+
+// ============================================================================
+// DER encoding/decoding and wallet.dat backward compatibility
+// ============================================================================
+
+// Helper: create an OpenSSL EC_KEY, serialize with i2d_ECPrivateKey, return DER + pubkey
+static CPrivKey MakeOpenSSLDER(const unsigned char secret[32], bool fCompressed,
+                               std::vector<unsigned char>& vchPubKey)
+{
+    EC_KEY* eckey = EC_KEY_new_by_curve_name(NID_secp256k1);
+    BIGNUM* bn = BN_bin2bn(secret, 32, nullptr);
+    EC_KEY_set_private_key(eckey, bn);
+
+    // Compute public key
+    const EC_GROUP* group = EC_KEY_get0_group(eckey);
+    EC_POINT* pub = EC_POINT_new(group);
+    BN_CTX* ctx = BN_CTX_new();
+    EC_POINT_mul(group, pub, bn, nullptr, nullptr, ctx);
+    EC_KEY_set_public_key(eckey, pub);
+    EC_KEY_set_conv_form(eckey, fCompressed ? POINT_CONVERSION_COMPRESSED
+                                            : POINT_CONVERSION_UNCOMPRESSED);
+
+    // DER encode
+    int n = i2d_ECPrivateKey(eckey, nullptr);
+    CPrivKey der(n, 0);
+    unsigned char* pp = &der[0];
+    i2d_ECPrivateKey(eckey, &pp);
+
+    // Serialize public key
+    size_t publen = fCompressed ? 33 : 65;
+    vchPubKey.resize(publen);
+    unsigned char* pbuf = &vchPubKey[0];
+    size_t outlen = publen;
+    EC_POINT_point2oct(group, pub, fCompressed ? POINT_CONVERSION_COMPRESSED
+                                               : POINT_CONVERSION_UNCOMPRESSED,
+                       pbuf, outlen, ctx);
+
+    BN_CTX_free(ctx);
+    EC_POINT_free(pub);
+    BN_free(bn);
+    EC_KEY_free(eckey);
+    return der;
+}
+
+// Helper: construct a SEC 1 DER blob manually with a given private key length
+// (simulates older OpenSSL versions that don't zero-pad)
+static CPrivKey MakeManualDER(const unsigned char* secretBytes, size_t secretLen,
+                              const std::vector<unsigned char>& pubkey)
+{
+    // secp256k1 OID: 06 05 2B 81 04 00 0A
+    const unsigned char oid[] = { 0x06, 0x05, 0x2B, 0x81, 0x04, 0x00, 0x0A };
+
+    size_t publen = pubkey.size(); // 33 or 65
+    size_t bslen = 1 + publen;    // BIT STRING content: unused-bits + pubkey
+    size_t a1len = 2 + bslen;     // BIT STRING TLV
+    size_t inner = 3                          // version: 02 01 01
+                 + 2 + secretLen              // OCTET STRING: 04 NN <secret>
+                 + 2 + sizeof(oid)            // [0]: A0 07 <oid>
+                 + 2 + a1len;                 // [1]: A1 NN ...
+
+    CPrivKey der;
+    der.reserve(2 + inner);
+
+    // SEQUENCE
+    der.push_back(0x30);
+    der.push_back(static_cast<unsigned char>(inner));
+
+    // version
+    der.push_back(0x02); der.push_back(0x01); der.push_back(0x01);
+
+    // OCTET STRING (variable length)
+    der.push_back(0x04);
+    der.push_back(static_cast<unsigned char>(secretLen));
+    der.insert(der.end(), secretBytes, secretBytes + secretLen);
+
+    // [0] parameters
+    der.push_back(0xA0);
+    der.push_back(static_cast<unsigned char>(sizeof(oid)));
+    der.insert(der.end(), oid, oid + sizeof(oid));
+
+    // [1] publicKey
+    der.push_back(0xA1);
+    der.push_back(static_cast<unsigned char>(a1len));
+    der.push_back(0x03);
+    der.push_back(static_cast<unsigned char>(bslen));
+    der.push_back(0x00); // unused bits
+    der.insert(der.end(), pubkey.begin(), pubkey.end());
+
+    return der;
+}
+
+BOOST_AUTO_TEST_CASE(key_privkey_roundtrip_compressed)
+{
+    // EncodePrivKey → DecodePrivKey roundtrip with compressed key
+    CKey key;
+    key.MakeNewKey(true);
+    CPubKey pub = key.GetPubKey();
+    CPrivKey der = key.GetPrivKey();
+
+    CKey key2;
+    BOOST_CHECK(key2.SetPrivKey(der));
+    BOOST_CHECK(key2.IsCompressed());
+    BOOST_CHECK(key2.GetPubKey() == pub);
+    BOOST_CHECK(key2.IsValid());
+
+    // Verify signing still works after round-trip
+    uint256 h = Hash(string("roundtrip test").begin(), string("roundtrip test").end());
+    vector<unsigned char> sig;
+    BOOST_CHECK(key2.Sign(h, sig));
+    BOOST_CHECK(key.Verify(h, sig));
+}
+
+BOOST_AUTO_TEST_CASE(key_privkey_roundtrip_uncompressed)
+{
+    // EncodePrivKey → DecodePrivKey roundtrip with uncompressed key
+    CKey key;
+    key.MakeNewKey(false);
+    CPubKey pub = key.GetPubKey();
+    CPrivKey der = key.GetPrivKey();
+
+    CKey key2;
+    BOOST_CHECK(key2.SetPrivKey(der));
+    BOOST_CHECK(!key2.IsCompressed());
+    BOOST_CHECK(key2.GetPubKey() == pub);
+    BOOST_CHECK(key2.IsValid());
+}
+
+BOOST_AUTO_TEST_CASE(key_openssl_der_compat_compressed)
+{
+    // OpenSSL's i2d_ECPrivateKey → new SetPrivKey (compressed)
+    // This is the exact code path that wallet.dat loading exercises.
+    CSecret secret(32, 0);
+    uint256 h = Hash(string("openssl compat compressed").begin(),
+                     string("openssl compat compressed").end());
+    memcpy(&secret[0], &h, 32);
+
+    vector<unsigned char> vchPubKey;
+    CPrivKey der = MakeOpenSSLDER(&secret[0], true, vchPubKey);
+
+    // Simulate walletdb.cpp loading: SetPubKey first, then SetPrivKey
+    CKey key;
+    key.SetPubKey(CPubKey(vchPubKey));
+    BOOST_CHECK(key.SetPrivKey(der));
+    BOOST_CHECK(key.IsCompressed());
+    BOOST_CHECK(key.GetPubKey() == CPubKey(vchPubKey));
+    BOOST_CHECK(key.IsValid());
+}
+
+BOOST_AUTO_TEST_CASE(key_openssl_der_compat_uncompressed)
+{
+    // OpenSSL's i2d_ECPrivateKey → new SetPrivKey (uncompressed)
+    CSecret secret(32, 0);
+    uint256 h = Hash(string("openssl compat uncompressed").begin(),
+                     string("openssl compat uncompressed").end());
+    memcpy(&secret[0], &h, 32);
+
+    vector<unsigned char> vchPubKey;
+    CPrivKey der = MakeOpenSSLDER(&secret[0], false, vchPubKey);
+
+    CKey key;
+    key.SetPubKey(CPubKey(vchPubKey));
+    BOOST_CHECK(key.SetPrivKey(der));
+    BOOST_CHECK(!key.IsCompressed());
+    BOOST_CHECK(key.GetPubKey() == CPubKey(vchPubKey));
+    BOOST_CHECK(key.IsValid());
+}
+
+BOOST_AUTO_TEST_CASE(key_decode_short_privkey_31)
+{
+    // Simulate OpenSSL 1.0.x: private key with leading zero → 31-byte OCTET STRING
+    unsigned char secret32[32];
+    uint256 h = Hash(string("short key 31").begin(), string("short key 31").end());
+    memcpy(secret32, &h, 32);
+    secret32[0] = 0x00; // Force leading zero
+
+    // Get the correct public key for this secret
+    CKey refKey;
+    CSecret secVec(secret32, secret32 + 32);
+    refKey.SetSecret(secVec, true);
+    CPubKey refPub = refKey.GetPubKey();
+
+    // Build DER with 31-byte OCTET STRING (strip leading zero, like OpenSSL 1.0.x)
+    CPrivKey der = MakeManualDER(secret32 + 1, 31, refPub.Raw());
+
+    CKey loaded;
+    BOOST_CHECK(loaded.SetPrivKey(der));
+    BOOST_CHECK(loaded.IsCompressed());
+    BOOST_CHECK(loaded.GetPubKey() == refPub);
+    BOOST_CHECK(loaded.IsValid());
+}
+
+BOOST_AUTO_TEST_CASE(key_decode_short_privkey_30)
+{
+    // Two leading zero bytes → 30-byte OCTET STRING
+    unsigned char secret32[32];
+    uint256 h = Hash(string("short key 30").begin(), string("short key 30").end());
+    memcpy(secret32, &h, 32);
+    secret32[0] = 0x00;
+    secret32[1] = 0x00;
+
+    CKey refKey;
+    CSecret secVec(secret32, secret32 + 32);
+    refKey.SetSecret(secVec, true);
+    CPubKey refPub = refKey.GetPubKey();
+
+    CPrivKey der = MakeManualDER(secret32 + 2, 30, refPub.Raw());
+
+    CKey loaded;
+    BOOST_CHECK(loaded.SetPrivKey(der));
+    BOOST_CHECK(loaded.GetPubKey() == refPub);
+}
+
+BOOST_AUTO_TEST_CASE(key_decode_no_pubkey_tag)
+{
+    // DER without [1] publicKey tag — fCompressed should default to true
+    CKey refKey;
+    refKey.MakeNewKey(true);
+    bool fCompr;
+    CSecret secret = refKey.GetSecret(fCompr);
+
+    // Build DER manually: version + OCTET STRING + [0] params (no [1] pubkey)
+    const unsigned char oid[] = { 0x06, 0x05, 0x2B, 0x81, 0x04, 0x00, 0x0A };
+    size_t inner = 3 + 34 + 2 + sizeof(oid); // version + key + [0]
+
+    CPrivKey der;
+    der.push_back(0x30);
+    der.push_back(static_cast<unsigned char>(inner));
+    der.push_back(0x02); der.push_back(0x01); der.push_back(0x01);
+    der.push_back(0x04); der.push_back(0x20);
+    der.insert(der.end(), &secret[0], &secret[0] + 32);
+    der.push_back(0xA0);
+    der.push_back(static_cast<unsigned char>(sizeof(oid)));
+    der.insert(der.end(), oid, oid + sizeof(oid));
+
+    CKey loaded;
+    BOOST_CHECK(loaded.SetPrivKey(der));
+    BOOST_CHECK(loaded.IsCompressed()); // default when [1] absent
+    BOOST_CHECK(loaded.GetPubKey() == refKey.GetPubKey());
+}
+
+BOOST_AUTO_TEST_CASE(key_decode_minimal_der)
+{
+    // Minimal DER: version + OCTET STRING only (no [0] params, no [1] pubkey)
+    CKey refKey;
+    refKey.MakeNewKey(true);
+    bool fCompr;
+    CSecret secret = refKey.GetSecret(fCompr);
+
+    size_t inner = 3 + 34; // version + key
+    CPrivKey der;
+    der.push_back(0x30);
+    der.push_back(static_cast<unsigned char>(inner));
+    der.push_back(0x02); der.push_back(0x01); der.push_back(0x01);
+    der.push_back(0x04); der.push_back(0x20);
+    der.insert(der.end(), &secret[0], &secret[0] + 32);
+
+    CKey loaded;
+    BOOST_CHECK(loaded.SetPrivKey(der));
+    BOOST_CHECK(loaded.IsCompressed()); // default
+    BOOST_CHECK(loaded.GetPubKey() == refKey.GetPubKey());
+}
+
+BOOST_AUTO_TEST_CASE(key_setprivkey_invalid_der)
+{
+    // Various invalid DER blobs must be rejected by both custom + OpenSSL decoders
+    CKey key;
+
+    // Empty
+    CPrivKey empty;
+    BOOST_CHECK(!key.SetPrivKey(empty));
+
+    // Too short
+    CPrivKey tiny = {0x30, 0x01};
+    BOOST_CHECK(!key.SetPrivKey(tiny));
+
+    // Wrong tag (not SEQUENCE — rejected by both decoders)
+    CPrivKey wrongTag = {0x31, 0x25, 0x02, 0x01, 0x01, 0x04, 0x20};
+    wrongTag.resize(39, 0xAA);
+    BOOST_CHECK(!key.SetPrivKey(wrongTag));
+
+    // Random garbage (not valid DER at all)
+    CPrivKey garbage = {0xFF, 0xFE, 0xFD, 0xFC, 0xFB};
+    BOOST_CHECK(!key.SetPrivKey(garbage));
+
+    // Valid DER structure but secret = 0 (fails secp256k1_ec_seckey_verify)
+    CPrivKey zeroSecret;
+    zeroSecret.push_back(0x30); zeroSecret.push_back(0x25);
+    zeroSecret.push_back(0x02); zeroSecret.push_back(0x01); zeroSecret.push_back(0x01);
+    zeroSecret.push_back(0x04); zeroSecret.push_back(0x20);
+    zeroSecret.resize(39, 0x00); // 32 zero bytes = invalid key
+    BOOST_CHECK(!key.SetPrivKey(zeroSecret));
+}
+
+BOOST_AUTO_TEST_CASE(key_openssl_der_multiple_keys)
+{
+    // Test 20 random keys through OpenSSL DER → SetPrivKey to catch edge cases
+    for (int i = 0; i < 20; i++)
+    {
+        CKey origKey;
+        origKey.MakeNewKey(i < 10); // 10 compressed, 10 uncompressed
+        bool fCompr;
+        CSecret secret = origKey.GetSecret(fCompr);
+        CPubKey origPub = origKey.GetPubKey();
+
+        vector<unsigned char> vchPubKey;
+        CPrivKey der = MakeOpenSSLDER(&secret[0], fCompr, vchPubKey);
+
+        // Wallet loading flow: SetPubKey → SetPrivKey → verify
+        CKey loaded;
+        loaded.SetPubKey(CPubKey(vchPubKey));
+        BOOST_CHECK_MESSAGE(loaded.SetPrivKey(der),
+            "SetPrivKey failed for key " + std::to_string(i));
+        BOOST_CHECK(loaded.GetPubKey() == origPub);
+
+        // Verify signing works
+        uint256 hash = Hash(string("multi key test " + std::to_string(i)).begin(),
+                           string("multi key test " + std::to_string(i)).end());
+        vector<unsigned char> sig;
+        BOOST_CHECK(loaded.Sign(hash, sig));
+        BOOST_CHECK(origKey.Verify(hash, sig));
+    }
 }
 
 BOOST_AUTO_TEST_SUITE_END()
