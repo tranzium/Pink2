@@ -38,10 +38,9 @@ Notes:
 #include <openssl/crypto.h>
 #include <openssl/ec.h>
 #include <openssl/ecdh.h>
-#include <openssl/sha.h>
 #include <openssl/aes.h>
 #include <openssl/evp.h>
-#include <openssl/hmac.h>
+#include <openssl/params.h>
 
 #include "string_utils.h"
 
@@ -3151,15 +3150,20 @@ int SecureMsgValidate(unsigned char *pHeader, unsigned char *pPayload, uint32_t 
         memcpy(civ+i, &nonse, 4);
     
     
-    HMAC_CTX *ctx= HMAC_CTX_new();
-    
-    unsigned int nBytes;
-    if (!HMAC_Init_ex(ctx, &civ[0], 32, EVP_sha256(), nullptr)
-        || !HMAC_Update(ctx, (unsigned char*) pHeader+4, SMSG_HDR_LEN-4)
-        || !HMAC_Update(ctx, (unsigned char*) pPayload, nPayload)
-        || !HMAC_Update(ctx, pPayload, nPayload)
-        || !HMAC_Final(ctx, sha256Hash, &nBytes)
-        || nBytes != 32)
+    EVP_MAC *mac = EVP_MAC_fetch(nullptr, "HMAC", nullptr);
+    EVP_MAC_CTX *ctx = EVP_MAC_CTX_new(mac);
+    OSSL_PARAM params[] = {
+        OSSL_PARAM_construct_utf8_string("digest", (char*)"SHA256", 0),
+        OSSL_PARAM_construct_end()
+    };
+    size_t outlen = 0;
+    if (!ctx
+        || !EVP_MAC_init(ctx, &civ[0], 32, params)
+        || !EVP_MAC_update(ctx, (unsigned char*) pHeader+4, SMSG_HDR_LEN-4)
+        || !EVP_MAC_update(ctx, (unsigned char*) pPayload, nPayload)
+        || !EVP_MAC_update(ctx, pPayload, nPayload)
+        || !EVP_MAC_final(ctx, sha256Hash, &outlen, sizeof(sha256Hash))
+        || outlen != 32)
     {
         if (fDebugSmsg)
             printf("HMAC error.\n");
@@ -3174,7 +3178,7 @@ int SecureMsgValidate(unsigned char *pHeader, unsigned char *pPayload, uint32_t 
                 printf("Hash Valid.\n");
             rv = 0; // smsg is valid
         };
-        
+
         if (memcmp(psmsg->hash, sha256Hash, 4) != 0)
         {
              if (fDebugSmsg)
@@ -3182,7 +3186,8 @@ int SecureMsgValidate(unsigned char *pHeader, unsigned char *pPayload, uint32_t 
             rv = 3; // checksum mismatch
         }
     }
-    HMAC_CTX_free(ctx);
+    EVP_MAC_CTX_free(ctx);
+    EVP_MAC_free(mac);
     
     return rv;
 };
@@ -3211,69 +3216,55 @@ int SecureMsgSetHash(unsigned char *pHeader, unsigned char *pPayload, uint32_t n
     
     bool found = false;
     
-    HMAC_CTX *ctx= HMAC_CTX_new();
-    
+    EVP_MAC *mac = EVP_MAC_fetch(nullptr, "HMAC", nullptr);
+    EVP_MAC_CTX *ctx = EVP_MAC_CTX_new(mac);
+    OSSL_PARAM params[] = {
+        OSSL_PARAM_construct_utf8_string("digest", (char*)"SHA256", 0),
+        OSSL_PARAM_construct_end()
+    };
+
     uint32_t nonse = 0;
-    
-    //CBigNum bnTarget(2);
-    //bnTarget = bnTarget.pow(256 - 40);
-    
-    // -- break for HMAC_CTX_cleanup
+
+    // -- break for EVP_MAC cleanup
     for (;;)
     {
         if (!fSecMsgenabled)
            break;
-        
-        //psmsg->timestamp = GetAdjustedTime();
-        //memcpy(&psmsg->timestamp, &now, 8);
+
         memcpy(&psmsg->nonse[0], &nonse, 4);
-        
+
         for (int i = 0; i < 32; i+=4)
             memcpy(civ+i, &nonse, 4);
-        
-        unsigned int nBytes;
-        if (!HMAC_Init_ex(ctx, &civ[0], 32, EVP_sha256(), nullptr)
-            || !HMAC_Update(ctx, (unsigned char*) pHeader+4, SMSG_HDR_LEN-4)
-            || !HMAC_Update(ctx, (unsigned char*) pPayload, nPayload)
-            || !HMAC_Update(ctx, pPayload, nPayload)
-            || !HMAC_Final(ctx, sha256Hash, &nBytes)
-            //|| !HMAC_Final(&ctx, &vchHash[0], &nBytes)
-            || nBytes != 32)
+
+        size_t outlen = 0;
+        if (!ctx
+            || !EVP_MAC_init(ctx, &civ[0], 32, params)
+            || !EVP_MAC_update(ctx, (unsigned char*) pHeader+4, SMSG_HDR_LEN-4)
+            || !EVP_MAC_update(ctx, (unsigned char*) pPayload, nPayload)
+            || !EVP_MAC_update(ctx, pPayload, nPayload)
+            || !EVP_MAC_final(ctx, sha256Hash, &outlen, sizeof(sha256Hash))
+            || outlen != 32)
             break;
-        
-        /*
-        if (CBigNum(vchHash) <= bnTarget)
-        {
-            found = true;
-            if (fDebugSmsg)
-                printf("Match %u\n", nonse);
-            break;
-        };
-        */
-        
+
         if (sha256Hash[31] == 0
             && sha256Hash[30] == 0
             && (~(sha256Hash[29]) & ((1<<0) | (1<<1) | (1<<2)) ))
-        //    && sha256Hash[29] == 0)
         {
             found = true;
-            //if (fDebugSmsg)
-            //    printf("Match %u\n", nonse);
             break;
         }
-        
-        //if (nonse >= UINT32_MAX)
+
         if (nonse >= 4294967295U)
         {
             if (fDebugSmsg)
                 printf("No match %u\n", nonse);
             break;
-            //return 1; 
-        }    
+        }
         nonse++;
     };
-    
-    HMAC_CTX_free(ctx);
+
+    EVP_MAC_CTX_free(ctx);
+    EVP_MAC_free(mac);
     
     if (!fSecMsgenabled)
     {
@@ -3443,7 +3434,7 @@ int SecureMspinkcrypt(SecureMessage& smsg, std::string& addressFrom, std::string
     //    The first 32 bytes of H are called key_e and the last 32 bytes are called key_m.
     std::vector<unsigned char> vchHashed;
     vchHashed.resize(64); // 512
-    SHA512(&vchP[0], vchP.size(), (unsigned char*)&vchHashed[0]);
+    EVP_Digest(&vchP[0], vchP.size(), (unsigned char*)&vchHashed[0], nullptr, EVP_sha512(), nullptr);
     std::vector<unsigned char> key_e(&vchHashed[0], &vchHashed[0]+32);
     std::vector<unsigned char> key_m(&vchHashed[32], &vchHashed[32]+32);
     
@@ -3551,18 +3542,24 @@ int SecureMspinkcrypt(SecureMessage& smsg, std::string& addressFrom, std::string
     // -- Calculate a 32 byte MAC with HMACSHA256, using key_m as salt
     //    Message authentication code, (hash of timestamp + destination + payload)
     bool fHmacOk = true;
-    unsigned int nBytes = 32;
-    
-    HMAC_CTX *ctx= HMAC_CTX_new();
-    
-    if (!HMAC_Init_ex(ctx, &key_m[0], 32, EVP_sha256(), nullptr)
-        || !HMAC_Update(ctx, (unsigned char*) &smsg.timestamp, sizeof(smsg.timestamp))
-        || !HMAC_Update(ctx, &vchCiphertext[0], vchCiphertext.size())
-        || !HMAC_Final(ctx, smsg.mac, &nBytes)
-        || nBytes != 32)
+
+    EVP_MAC *mac = EVP_MAC_fetch(nullptr, "HMAC", nullptr);
+    EVP_MAC_CTX *ctx = EVP_MAC_CTX_new(mac);
+    OSSL_PARAM params[] = {
+        OSSL_PARAM_construct_utf8_string("digest", (char*)"SHA256", 0),
+        OSSL_PARAM_construct_end()
+    };
+    size_t outlen = 0;
+    if (!ctx
+        || !EVP_MAC_init(ctx, &key_m[0], 32, params)
+        || !EVP_MAC_update(ctx, (unsigned char*) &smsg.timestamp, sizeof(smsg.timestamp))
+        || !EVP_MAC_update(ctx, &vchCiphertext[0], vchCiphertext.size())
+        || !EVP_MAC_final(ctx, smsg.mac, &outlen, sizeof(smsg.mac))
+        || outlen != 32)
         fHmacOk = false;
-    
-    HMAC_CTX_free(ctx);
+
+    EVP_MAC_CTX_free(ctx);
+    EVP_MAC_free(mac);
     
     if (!fHmacOk)
     {
@@ -3845,7 +3842,7 @@ int SecureMsgDecrypt(bool fTestOnly, std::string& address, unsigned char *pHeade
     //    The first 32 bytes of H are called key_e and the last 32 bytes are called key_m. 
     std::vector<unsigned char> vchHashedDec;
     vchHashedDec.resize(64);    // 512 bits
-    SHA512(&vchP[0], vchP.size(), (unsigned char*)&vchHashedDec[0]);
+    EVP_Digest(&vchP[0], vchP.size(), (unsigned char*)&vchHashedDec[0], nullptr, EVP_sha512(), nullptr);
     std::vector<unsigned char> key_e(&vchHashedDec[0], &vchHashedDec[0]+32);
     std::vector<unsigned char> key_m(&vchHashedDec[32], &vchHashedDec[32]+32);
     
@@ -3853,18 +3850,24 @@ int SecureMsgDecrypt(bool fTestOnly, std::string& address, unsigned char *pHeade
     // -- Message authentication code, (hash of timestamp + destination + payload)
     unsigned char MAC[32];
     bool fHmacOk = true;
-    unsigned int nBytes = 32;
 
-    HMAC_CTX *ctx= HMAC_CTX_new();
-    
-    if (!HMAC_Init_ex(ctx, &key_m[0], 32, EVP_sha256(), nullptr)
-        || !HMAC_Update(ctx, (unsigned char*) &psmsg->timestamp, sizeof(psmsg->timestamp))
-        || !HMAC_Update(ctx, pPayload, nPayload)
-        || !HMAC_Final(ctx, MAC, &nBytes)
-        || nBytes != 32)
+    EVP_MAC *mac = EVP_MAC_fetch(nullptr, "HMAC", nullptr);
+    EVP_MAC_CTX *ctx = EVP_MAC_CTX_new(mac);
+    OSSL_PARAM params[] = {
+        OSSL_PARAM_construct_utf8_string("digest", (char*)"SHA256", 0),
+        OSSL_PARAM_construct_end()
+    };
+    size_t outlen = 0;
+    if (!ctx
+        || !EVP_MAC_init(ctx, &key_m[0], 32, params)
+        || !EVP_MAC_update(ctx, (unsigned char*) &psmsg->timestamp, sizeof(psmsg->timestamp))
+        || !EVP_MAC_update(ctx, pPayload, nPayload)
+        || !EVP_MAC_final(ctx, MAC, &outlen, sizeof(MAC))
+        || outlen != 32)
         fHmacOk = false;
-    
-    HMAC_CTX_free(ctx);
+
+    EVP_MAC_CTX_free(ctx);
+    EVP_MAC_free(mac);
     
     if (!fHmacOk)
     {

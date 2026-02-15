@@ -25,6 +25,7 @@
 #include <QDesktopWidget>
 #include <QFontDatabase>
 #include <QScreen>
+#include <QThread>
 
 #ifdef Q_OS_MAC
 #include "macdockiconhandler.h"
@@ -93,8 +94,13 @@ static void InitMessage(const std::string &message)
 {
     if(splashref)
     {
-        splashref->showMessage(QString::fromStdString(message), Qt::AlignBottom|Qt::AlignHCenter, QColor(149, 131, 216));
-        QApplication::instance()->processEvents();
+        // Thread-safe: use queued connection since this may be called from
+        // the worker thread while the main thread runs the event loop.
+        QMetaObject::invokeMethod(splashref, "showMessage",
+            Qt::QueuedConnection,
+            Q_ARG(QString, QString::fromStdString(message)),
+            Q_ARG(int, Qt::AlignBottom|Qt::AlignHCenter),
+            Q_ARG(QColor, QColor(149, 131, 216)));
     }
 }
 
@@ -119,6 +125,48 @@ static void handleRunawayException(std::exception *e)
     QMessageBox::critical(0, "Runaway exception", BitcoinGUI::tr("A fatal error occurred. Pinkcoin can no longer continue safely and will quit.") + QString("\n\n") + QString::fromStdString(strMiscWarning));
     exit(1);
 }
+
+/** Worker object that runs AppInit2 on a separate thread. */
+class BitcoinCore : public QObject
+{
+    Q_OBJECT
+public:
+    explicit BitcoinCore(boost::thread_group& threadGroup)
+        : m_threadGroup(threadGroup) {}
+
+public Q_SLOTS:
+    void initialize()
+    {
+        try {
+            bool rv = AppInit2(m_threadGroup);
+            Q_EMIT initializeResult(rv);
+        } catch (std::exception& e) {
+            handleRunawayException(&e);
+        } catch (...) {
+            handleRunawayException(nullptr);
+        }
+    }
+
+Q_SIGNALS:
+    void initializeResult(bool success);
+
+private:
+    boost::thread_group& m_threadGroup;
+};
+
+/** Event filter that swallows mouse clicks on the splash screen. */
+class SplashEventFilter : public QObject
+{
+    Q_OBJECT
+protected:
+    bool eventFilter(QObject *obj, QEvent *event) override {
+        if (event->type() == QEvent::MouseButtonPress ||
+            event->type() == QEvent::MouseButtonRelease ||
+            event->type() == QEvent::MouseButtonDblClick)
+            return true;  // swallow click events
+        return QObject::eventFilter(obj, event);
+    }
+};
 
 #ifndef BITCOIN_QT_TEST
 int main(int argc, char *argv[])
@@ -223,6 +271,8 @@ int main(int argc, char *argv[])
     QPixmap splashPixmap = QPixmap(":/images/splash").scaledToWidth(splashWidth, Qt::SmoothTransformation);
 
     QSplashScreen splash(splashPixmap, 0);
+    // Swallow mouse clicks on the splash screen to prevent Qt state corruption
+    splash.installEventFilter(new SplashEventFilter());
 
     if (GetBoolArg("-splash", true) && !GetBoolArg("-min"))
     {
@@ -241,25 +291,43 @@ int main(int argc, char *argv[])
             GUIUtil::SetStartOnSystemStartup(true);
 
         boost::thread_group threadGroup;
+
         BitcoinGUI window;
         guiref = &window;
-        if(AppInit2(threadGroup))
-        {
-            {
-                // Put this in a block, so that the Model objects are cleaned up before
-                // calling Shutdown().
 
+        // Model pointers — heap-allocated after init completes, cleaned up after event loop
+        ClientModel *pClientModel = nullptr;
+        WalletModel *pWalletModel = nullptr;
+        WalletModel *pStakeModel = nullptr;
+        MessageModel *pMessageModel = nullptr;
+
+        // Run AppInit2 on a worker thread so the splash screen stays responsive
+        QThread workerThread;
+        BitcoinCore core(threadGroup);
+        core.moveToThread(&workerThread);
+
+        // When the thread starts, run initialization
+        QObject::connect(&workerThread, &QThread::started, &core, &BitcoinCore::initialize);
+
+        // When initialization completes, handle the result on the main thread
+        QObject::connect(&core, &BitcoinCore::initializeResult, &app,
+            [&](bool success) {
+            workerThread.quit();
+            workerThread.wait();
+
+            if (success)
+            {
                 if (splashref)
                     splash.finish(&window);
 
-                ClientModel clientModel(&optionsModel);
-                WalletModel walletModel(pwalletMain, &optionsModel);
-                WalletModel stakeModel(pstakeDB, &optionsModel);
-                MessageModel messageModel(pwalletMain, &walletModel);
+                pClientModel = new ClientModel(&optionsModel);
+                pWalletModel = new WalletModel(pwalletMain, &optionsModel);
+                pStakeModel = new WalletModel(pstakeDB, &optionsModel);
+                pMessageModel = new MessageModel(pwalletMain, pWalletModel);
 
-                window.setClientModel(&clientModel);
-                window.setWalletModel(&walletModel, &stakeModel);
-                window.setMessageModel(&messageModel);
+                window.setClientModel(pClientModel);
+                window.setWalletModel(pWalletModel, pStakeModel);
+                window.setMessageModel(pMessageModel);
 
                 window.updateMainToolbar();
 
@@ -275,24 +343,35 @@ int main(int argc, char *argv[])
 
                 // Place this here as guiref has to be defined if we don't want to lose URIs
                 ipcInit(argc, argv);
-
-                app.exec();
-
-                window.hide();
-                window.setClientModel(0);
-                window.setWalletModel(0, 0);
-                window.setMessageModel(0);
-                guiref = 0;
             }
-            // Shutdown the core and its threads, but don't exit Bitcoin-Qt here
-            Shutdown(nullptr);
-            threadGroup.interrupt_all();
-            threadGroup.join_all();
-        }
-        else
-        {
-            return 1;
-        }
+            else
+            {
+                QApplication::quit();
+            }
+        }, Qt::QueuedConnection);
+
+        workerThread.start();
+        app.exec();
+
+        // Cleanup after event loop exits
+        workerThread.quit();
+        workerThread.wait();
+
+        window.hide();
+        window.setClientModel(0);
+        window.setWalletModel(0, 0);
+        window.setMessageModel(0);
+        guiref = 0;
+
+        delete pMessageModel;
+        delete pStakeModel;
+        delete pWalletModel;
+        delete pClientModel;
+
+        // Shutdown the core and its threads, but don't exit Bitcoin-Qt here
+        Shutdown(nullptr);
+        threadGroup.interrupt_all();
+        threadGroup.join_all();
     } catch (std::exception& e) {
         handleRunawayException(&e);
     } catch (...) {
@@ -301,3 +380,5 @@ int main(int argc, char *argv[])
     return 0;
 }
 #endif // BITCOIN_QT_TEST
+
+#include "bitcoin.moc"

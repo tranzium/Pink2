@@ -236,6 +236,97 @@ BOOST_AUTO_TEST_CASE(pos_reward_halving)
 }
 
 // ============================================================================
+// GetProofOfStakeReward() post-v231 tests — fDisablePOW=true path
+// Pin the integer division bug (16/10 == 1) as consensus.
+// ============================================================================
+
+BOOST_AUTO_TEST_CASE(pos_reward_post_v231_regular)
+{
+    // Post-v231: fDisablePOW=true, non-flash, height 16240
+    // nHalving=0, nSubsidy = (100*COIN) >> 0 = 100*COIN, /= 3 → 3333333333, *= 1
+    unsigned int savedTime = pindexBest->nTime;
+    pindexBest->nTime = nTimeV231 + 1; // force fDisablePOW = true
+
+    // nTime at hour 0 (not flash)
+    int64_t reward = GetProofOfStakeReward(1, 0, 16240, nTimeV231 + 1);
+    BOOST_CHECK_EQUAL(reward, 3333333333LL);
+
+    pindexBest->nTime = savedTime;
+}
+
+BOOST_AUTO_TEST_CASE(pos_reward_post_v231_flash)
+{
+    // Post-v231: fDisablePOW=true, flash stake, height 16240
+    // nHalving=0, nSubsidy = (150*COIN) >> 0 = 150*COIN, *= 1 (NOT divided by 3)
+    unsigned int savedTime = pindexBest->nTime;
+    pindexBest->nTime = nTimeV231 + 1;
+
+    // nTime at hour 1 (flash)
+    int64_t reward = GetProofOfStakeReward(1, 0, 16240, nTimeV231 + 3600);
+    BOOST_CHECK_EQUAL(reward, 15000000000LL);
+
+    pindexBest->nTime = savedTime;
+}
+
+BOOST_AUTO_TEST_CASE(pos_reward_post_v231_halving)
+{
+    // Post-v231: first halving at height 846800
+    // nHalving=1, nSubsidy = (100*COIN) >> 1 = 50*COIN, /= 3 → 1666666666, *= 1
+    unsigned int savedTime = pindexBest->nTime;
+    pindexBest->nTime = nTimeV231 + 1;
+
+    int64_t reward = GetProofOfStakeReward(1, 0, 846800, nTimeV231 + 1);
+    BOOST_CHECK_EQUAL(reward, 1666666666LL);
+
+    pindexBest->nTime = savedTime;
+}
+
+BOOST_AUTO_TEST_CASE(pos_reward_integer_division_is_consensus)
+{
+    // Explicitly verify that 16/10 == 1 in integer arithmetic.
+    // This is the consensus bug: the multiply is a no-op.
+    // If someone "fixes" this to use floating point or reorders the
+    // expression, this test will catch the consensus break.
+    BOOST_CHECK_EQUAL(16 / 10, 1);
+
+    // Verify the post-v231 non-flash reward equals the /3 value exactly
+    // (no additional 1.6x multiplier applied)
+    unsigned int savedTime = pindexBest->nTime;
+    pindexBest->nTime = nTimeV231 + 1;
+
+    int64_t reward = GetProofOfStakeReward(1, 0, 16240, nTimeV231 + 1);
+    int64_t expected = (100 * COIN) / 3; // 3333333333
+    BOOST_CHECK_EQUAL(reward, expected);
+
+    pindexBest->nTime = savedTime;
+}
+
+BOOST_AUTO_TEST_CASE(pos_reward_post_v231_with_fees)
+{
+    // Fees are added on top of the subsidy
+    unsigned int savedTime = pindexBest->nTime;
+    pindexBest->nTime = nTimeV231 + 1;
+
+    int64_t fees = 50000;
+    int64_t reward = GetProofOfStakeReward(1, fees, 16240, nTimeV231 + 1);
+    BOOST_CHECK_EQUAL(reward, 3333333333LL + fees);
+
+    pindexBest->nTime = savedTime;
+}
+
+BOOST_AUTO_TEST_CASE(pos_reward_post_v231_before_start)
+{
+    // Height < 16240 still returns 0 even with fDisablePOW=true
+    unsigned int savedTime = pindexBest->nTime;
+    pindexBest->nTime = nTimeV231 + 1;
+
+    int64_t reward = GetProofOfStakeReward(1, 0, 16239, nTimeV231 + 1);
+    BOOST_CHECK_EQUAL(reward, 0);
+
+    pindexBest->nTime = savedTime;
+}
+
+// ============================================================================
 // IsFlashStake() tests — time-window consensus
 // ============================================================================
 

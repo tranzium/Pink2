@@ -361,6 +361,9 @@ bool CWallet::EncryptWallet(const SecureString& strWalletPassphrase)
             vchSecret.resize(32);
             memcpy(&vchSecret[0], &sxAddr.spend_secret[0], 32);
             
+            // IV derived from public key — inherited Bitcoin Core design pattern.
+            // Security comes from the master key, not IV randomness.
+            // Changing this would break existing encrypted wallet.dat files.
             uint256 iv = Hash(sxAddr.spend_pubkey.begin(), sxAddr.spend_pubkey.end());
             if (!EncryptSecret(vMasterKey, vchSecret, iv, vchCryptedSecret))
             {
@@ -612,7 +615,10 @@ bool CWallet::AddToWallet(const CWalletTx& wtxIn)
 
         if ( !strCmd.empty())
         {
-            strutil::replace_all(strCmd, "%s", wtxIn.GetHash().GetHex());
+            // Defense-in-depth: single-quote the hex hash to prevent shell injection.
+            // The hash is already safe (hex chars only), but quoting guards against
+            // future changes or unexpected input. Matches blocknotify pattern.
+            strutil::replace_all(strCmd, "%s", "'" + wtxIn.GetHash().GetHex() + "'");
             boost::thread t(runCommand, strCmd); // thread runs free
         }
 
@@ -1772,6 +1778,9 @@ bool CWallet::AddStealthAddress(CStealthAddress& sxAddr)
             vchSecret.resize(32);
             memcpy(&vchSecret[0], &sxAddr.spend_secret[0], 32);
             
+            // IV derived from public key — inherited Bitcoin Core design pattern.
+            // Security comes from the master key, not IV randomness.
+            // Changing this would break existing encrypted wallet.dat files.
             uint256 iv = Hash(sxAddr.spend_pubkey.begin(), sxAddr.spend_pubkey.end());
             if (!EncryptSecret(vMasterKey, vchSecret, iv, vchCryptedSecret))
             {
@@ -1808,6 +1817,9 @@ bool CWallet::UnlockStealthAddresses(const CKeyingMaterial& vMasterKeyIn)
             printf("Decrypting stealth key %s\n", sxAddr.Encoded().c_str());
         
         CSecret vchSecret;
+        // IV derived from public key — inherited Bitcoin Core design pattern.
+        // Security comes from the master key, not IV randomness.
+        // Changing this would break existing encrypted wallet.dat files.
         uint256 iv = Hash(sxAddr.spend_pubkey.begin(), sxAddr.spend_pubkey.end());
         if(!DecryptSecret(vMasterKeyIn, sxAddr.spend_secret, iv, vchSecret)
             || vchSecret.size() != 32)

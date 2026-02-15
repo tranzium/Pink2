@@ -1034,7 +1034,10 @@ int64_t GetProofOfStakeReward(int64_t nCoinAge, int64_t nFees, int nHeight, unsi
         }
 
 
-        // Account for difference; (Daily Rewards / Daily Rewards - POW); 92000/56000 ~ 1.64285714286
+        // NOTE: Integer division bug — 16/10 evaluates to 1 in C++, so this
+        // line is effectively nSubsidy *= 1 (no-op). This has been the consensus
+        // rule since nTimeV231 (Aug 9, 2019). Do NOT "fix" without a hard fork.
+        // Original intent: multiply by 1.6 to compensate for PoW removal.
         if (fDisablePOW)
         {
             nSubsidy *= 16 / 10;
@@ -2041,7 +2044,10 @@ bool CBlock::SetBestChain(CTxDB& txdb, CBlockIndex* pindexNew)
 
     if (!fIsInitialDownload && !strCmd.empty())
     {
-        strutil::replace_all(strCmd, "%s", hashBestChain.GetHex());
+        // Defense-in-depth: single-quote the hex hash to prevent shell injection.
+        // The hash is already safe (hex chars only), but quoting guards against
+        // future changes or unexpected input. Matches walletnotify pattern.
+        strutil::replace_all(strCmd, "%s", "'" + hashBestChain.GetHex() + "'");
         boost::thread t(runCommand, strCmd); // thread runs free
     }
 
