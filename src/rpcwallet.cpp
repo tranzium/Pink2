@@ -1445,9 +1445,13 @@ Value walletpassphrase(const Array& params, bool fHelp)
     // Note that the walletpassphrase is stored in params[0] which is not mlock()ed
     SecureString strWalletPass;
     strWalletPass.reserve(100);
-    // TODO: get rid of this .c_str() by implementing SecureString::operator=(std::string)
-    // Alternately, find a way to make params[0] mlock()'d to begin with.
     strWalletPass = params[0].get_str().c_str();
+
+    // Cleanse non-mlocked source to prevent paging passphrase to swap
+    {
+        std::string& src = const_cast<std::string&>(params[0].get_str());
+        OPENSSL_cleanse(src.data(), src.size());
+    }
 
     if (strWalletPass.length() > 0)
     {
@@ -1484,8 +1488,6 @@ Value walletpassphrasechange(const Array& params, bool fHelp)
     if (!pwalletMain->IsCrypted())
         throw JSONRPCError(RPC_WALLET_WRONG_ENC_STATE, "Error: running with an unencrypted wallet, but walletpassphrasechange was called.");
 
-    // TODO: get rid of these .c_str() calls by implementing SecureString::operator=(std::string)
-    // Alternately, find a way to make params[0] mlock()'d to begin with.
     SecureString strOldWalletPass;
     strOldWalletPass.reserve(100);
     strOldWalletPass = params[0].get_str().c_str();
@@ -1493,6 +1495,14 @@ Value walletpassphrasechange(const Array& params, bool fHelp)
     SecureString strNewWalletPass;
     strNewWalletPass.reserve(100);
     strNewWalletPass = params[1].get_str().c_str();
+
+    // Cleanse non-mlocked sources to prevent paging passphrases to swap
+    {
+        std::string& src0 = const_cast<std::string&>(params[0].get_str());
+        OPENSSL_cleanse(src0.data(), src0.size());
+        std::string& src1 = const_cast<std::string&>(params[1].get_str());
+        OPENSSL_cleanse(src1.data(), src1.size());
+    }
 
     if (strOldWalletPass.length() < 1 || strNewWalletPass.length() < 1)
         throw runtime_error(
@@ -1540,11 +1550,15 @@ Value encryptwallet(const Array& params, bool fHelp)
     if (pwalletMain->IsCrypted())
         throw JSONRPCError(RPC_WALLET_WRONG_ENC_STATE, "Error: running with an encrypted wallet, but encryptwallet was called.");
 
-    // TODO: get rid of this .c_str() by implementing SecureString::operator=(std::string)
-    // Alternately, find a way to make params[0] mlock()'d to begin with.
     SecureString strWalletPass;
     strWalletPass.reserve(100);
     strWalletPass = params[0].get_str().c_str();
+
+    // Cleanse non-mlocked source to prevent paging passphrase to swap
+    {
+        std::string& src = const_cast<std::string&>(params[0].get_str());
+        OPENSSL_cleanse(src.data(), src.size());
+    }
 
     if (strWalletPass.length() < 1)
         throw runtime_error(

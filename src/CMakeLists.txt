@@ -143,6 +143,7 @@ target_link_libraries(pinkcoin_core
         OpenSSL::SSL
         OpenSSL::Crypto
         BerkeleyDB::BerkeleyDB
+        Libsecp256k1::Libsecp256k1
         ZLIB::ZLIB
         Threads::Threads
 )

@@ -96,6 +96,9 @@ find_package(ZLIB REQUIRED)
 # BerkeleyDB 4.8
 find_package(BerkeleyDB 4.8 REQUIRED)
 
+# libsecp256k1 (optimized elliptic curve library)
+find_package(Libsecp256k1 REQUIRED)
+
 # Optional: miniupnpc
 if(USE_UPNP)
     find_package(MiniUPnPc)
@@ -219,6 +222,9 @@ message(STATUS "Optional features:")
 message(STATUS "  UPnP:              ${USE_UPNP}")
 message(STATUS "  QR Code:           ${USE_QRCODE}")
 message(STATUS "  D-Bus:             ${USE_DBUS}")
+message(STATUS "")
+message(STATUS "Crypto:")
+message(STATUS "  libsecp256k1:      ${Libsecp256k1_FOUND}")
 message(STATUS "")
 message(STATUS "Security:")
 message(STATUS "  Hardening:         ${ENABLE_HARDENING}")

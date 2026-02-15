@@ -2,217 +2,241 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include <map>
+#include <string.h>
+#include <cassert>
+#include <algorithm>
 
-#include <openssl/ecdsa.h>
+#include <openssl/rand.h>
+#include <openssl/crypto.h>
+#include <openssl/ec.h>
 #include <openssl/obj_mac.h>
+
+#include <secp256k1.h>
+#include <secp256k1_recovery.h>
 
 #include "key.h"
 
-// OpenSLL 1.1.0 changed EVP data structures to be opaque. In order to preserve
-// usage consistency the OpenSLL wiki suggests that the missing functions are
-// implemented manually when building for <1.1.0. See:
-// https://wiki.openssl.org/index.php/1.1_API_Changes
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
-int ECDSA_SIG_set0(ECDSA_SIG *sig, BIGNUM *r, BIGNUM *s)
+// ---------------------------------------------------------------------------
+// Global secp256k1 context (initialized by ECC_Start, destroyed by ECC_Stop)
+// ---------------------------------------------------------------------------
+static secp256k1_context* secp256k1_ctx = nullptr;
+
+void ECC_Start()
 {
-    if (r == nullptr || s == nullptr)
-        return 0;
-    BN_clear_free(sig->r);
-    BN_clear_free(sig->s);
-    sig->r = r;
-    sig->s = s;
-    return 1;
+    assert(secp256k1_ctx == nullptr);
+    secp256k1_ctx = secp256k1_context_create(SECP256K1_CONTEXT_NONE);
+    assert(secp256k1_ctx != nullptr);
+
+    // Randomize for side-channel protection
+    unsigned char seed[32];
+    RAND_bytes(seed, sizeof(seed));
+    int ret = secp256k1_context_randomize(secp256k1_ctx, seed);
+    assert(ret);
+    OPENSSL_cleanse(seed, sizeof(seed));
 }
 
-void ECDSA_SIG_get0(const ECDSA_SIG *sig, const BIGNUM **pr, const BIGNUM **ps)
+void ECC_Stop()
 {
-    if (pr != nullptr)
-        *pr = sig->r;
-    if (ps != nullptr)
-        *ps = sig->s;
-}
-#endif
-
-// Generate a private key from just the secret parameter
-int EC_KEY_regenerate_key(EC_KEY *eckey, BIGNUM *priv_key)
-{
-    int ok = 0;
-    BN_CTX *ctx = nullptr;
-    EC_POINT *pub_key = nullptr;
-
-    if (!eckey) return 0;
-
-    const EC_GROUP *group = EC_KEY_get0_group(eckey);
-
-    if ((ctx = BN_CTX_new()) == nullptr)
-        goto err;
-
-    pub_key = EC_POINT_new(group);
-
-    if (pub_key == nullptr)
-        goto err;
-
-    if (!EC_POINT_mul(group, pub_key, priv_key, nullptr, nullptr, ctx))
-        goto err;
-
-    EC_KEY_set_private_key(eckey,priv_key);
-    EC_KEY_set_public_key(eckey,pub_key);
-
-    ok = 1;
-
-err:
-
-    if (pub_key)
-        EC_POINT_free(pub_key);
-    if (ctx != nullptr)
-        BN_CTX_free(ctx);
-
-    return(ok);
+    if (secp256k1_ctx) {
+        secp256k1_context_destroy(secp256k1_ctx);
+        secp256k1_ctx = nullptr;
+    }
 }
 
-// Perform ECDSA key recovery (see SEC1 4.1.6) for curves over (mod p)-fields
-// recid selects which key is recovered
-// if check is non-zero, additional checks are performed
-int ECDSA_SIG_recover_key_GFp(EC_KEY *eckey, ECDSA_SIG *ecsig, const unsigned char *msg, int msglen, int recid, int check)
+// Lazily ensures the context exists (for backward compatibility with code
+// that creates CKey objects before calling ECC_Start explicitly).
+// Non-static: also used by stealth.cpp and smessage.cpp for EC operations.
+secp256k1_context* GetContext()
 {
-    if (!eckey) return 0;
+    if (!secp256k1_ctx)
+        ECC_Start();
+    return secp256k1_ctx;
+}
 
-    int ret = 0;
-    BN_CTX *ctx = nullptr;
+// ---------------------------------------------------------------------------
+// SEC 1 DER encoder/decoder for wallet.dat compatibility
+// ---------------------------------------------------------------------------
 
-    BIGNUM *x = nullptr;
-    BIGNUM *e = nullptr;
-    BIGNUM *order = nullptr;
-    BIGNUM *sor = nullptr;
-    BIGNUM *eor = nullptr;
-    BIGNUM *field = nullptr;
-    EC_POINT *R = nullptr;
-    EC_POINT *O = nullptr;
-    EC_POINT *Q = nullptr;
-    BIGNUM *rr = nullptr;
-    BIGNUM *zero = nullptr;
-    int n = 0;
-    int i = recid / 2;
+// OID for secp256k1: 1.3.132.0.10
+static const unsigned char secp256k1_oid[] = { 0x06, 0x05, 0x2B, 0x81, 0x04, 0x00, 0x0A };
 
-    const BIGNUM *pr, *ps;
-    ECDSA_SIG_get0(ecsig, &pr, &ps);
-    const EC_GROUP *group = EC_KEY_get0_group(eckey);
-    if ((ctx = BN_CTX_new()) == nullptr) { ret = -1; goto err; }
-    BN_CTX_start(ctx);
-    order = BN_CTX_get(ctx);
-    if (!EC_GROUP_get_order(group, order, ctx)) { ret = -2; goto err; }
-    x = BN_CTX_get(ctx);
-    if (!BN_copy(x, order)) { ret=-1; goto err; }
-    if (!BN_mul_word(x, i)) { ret=-1; goto err; }
-    if (!BN_add(x, x, pr)) { ret=-1; goto err; }
-    field = BN_CTX_get(ctx);
-    if (!EC_GROUP_get_curve_GFp(group, field, nullptr, nullptr, ctx)) { ret=-2; goto err; }
-    if (BN_cmp(x, field) >= 0) { ret=0; goto err; }
-    if ((R = EC_POINT_new(group)) == nullptr) { ret = -2; goto err; }
-    if (!EC_POINT_set_compressed_coordinates_GFp(group, R, x, recid % 2, ctx)) { ret=0; goto err; }
-    if (check)
+// Encode private key in SEC 1 ECPrivateKey DER format (compatible with i2d_ECPrivateKey)
+static CPrivKey EncodePrivKey(const unsigned char secret[32], const std::vector<unsigned char>& pubkey)
+{
+    size_t publen = pubkey.size(); // 33 or 65
+    size_t bitstrlen = 1 + publen; // 00 (no unused bits) + pubkey
+    size_t ctx1len = 2 + bitstrlen; // BIT STRING TLV: tag(1) + len(1) + contents
+    size_t a1len = 2 + ctx1len; // [1] EXPLICIT wrapper
+
+    size_t innerlen = 3                   // INTEGER 1: 02 01 01
+                    + 2 + 32              // OCTET STRING: 04 20 <32>
+                    + 2 + sizeof(secp256k1_oid)  // [0]: A0 07 <oid>
+                    + a1len;              // [1]: A1 <len> ...
+
+    CPrivKey result;
+    result.reserve(2 + innerlen);
+
+    // SEQUENCE header
+    result.push_back(0x30);
+    result.push_back(static_cast<unsigned char>(innerlen));
+
+    // version INTEGER 1
+    result.push_back(0x02);
+    result.push_back(0x01);
+    result.push_back(0x01);
+
+    // privateKey OCTET STRING (32 bytes)
+    result.push_back(0x04);
+    result.push_back(0x20);
+    result.insert(result.end(), secret, secret + 32);
+
+    // parameters [0] EXPLICIT { OID secp256k1 }
+    result.push_back(0xA0);
+    result.push_back(static_cast<unsigned char>(sizeof(secp256k1_oid)));
+    result.insert(result.end(), secp256k1_oid, secp256k1_oid + sizeof(secp256k1_oid));
+
+    // publicKey [1] EXPLICIT { BIT STRING }
+    result.push_back(0xA1);
+    result.push_back(static_cast<unsigned char>(ctx1len));
+    result.push_back(0x03); // BIT STRING tag
+    result.push_back(static_cast<unsigned char>(bitstrlen));
+    result.push_back(0x00); // no unused bits
+    result.insert(result.end(), pubkey.begin(), pubkey.end());
+
+    return result;
+}
+
+// Parse a DER length field (handles both short-form and long-form encoding).
+// Advances p past the length bytes. Returns false if malformed.
+static bool ParseDERLength(const unsigned char*& p, const unsigned char* pend, size_t& len)
+{
+    if (p >= pend) return false;
+    unsigned char first = *p++;
+    if (!(first & 0x80)) {
+        len = first;  // Short form: length in low 7 bits
+        return true;
+    }
+    unsigned char nbytes = first & 0x7F;
+    if (nbytes == 0 || nbytes > 2 || p + nbytes > pend)
+        return false;  // Indefinite form or too many length bytes
+    len = 0;
+    for (unsigned char i = 0; i < nbytes; i++)
+        len = (len << 8) | *p++;
+    return true;
+}
+
+// Decode SEC 1 DER private key, returns true on success.
+// Handles all DER variations produced by any version of OpenSSL's i2d_ECPrivateKey:
+// - Short and long-form DER length encoding
+// - Variable-length private key OCTET STRING (1-32 bytes, zero-padded to 32)
+// - Optional/absent parameters [0] and publicKey [1] tags
+static bool DecodePrivKey(const CPrivKey& vchPrivKey, unsigned char secret[32], bool& fCompressed)
+{
+    if (vchPrivKey.size() < 2)
+        return false;
+
+    const unsigned char* p = &vchPrivKey[0];
+    const unsigned char* pend = p + vchPrivKey.size();
+
+    // SEQUENCE
+    if (*p++ != 0x30)
+        return false;
+    size_t seqlen;
+    if (!ParseDERLength(p, pend, seqlen))
+        return false;
+    if (p + seqlen > pend)
+        return false;
+    pend = p + seqlen;
+
+    // version INTEGER (must be 1)
+    if (p + 3 > pend || p[0] != 0x02 || p[1] != 0x01 || p[2] != 0x01)
+        return false;
+    p += 3;
+
+    // privateKey OCTET STRING (1-32 bytes; zero-pad to 32)
+    if (p + 2 > pend || p[0] != 0x04)
+        return false;
+    p++;
+    size_t keylen;
+    if (!ParseDERLength(p, pend, keylen))
+        return false;
+    if (keylen == 0 || keylen > 32 || p + keylen > pend)
+        return false;
+    memset(secret, 0, 32);
+    memcpy(secret + 32 - keylen, p, keylen);
+    p += keylen;
+
+    // Default to compressed; detect from publicKey [1] if present
+    fCompressed = true;
+    while (p < pend) {
+        if (p + 1 > pend) break;
+        unsigned char tag = *p++;
+        size_t len;
+        if (!ParseDERLength(p, pend, len)) break;
+        if (p + len > pend) break;
+
+        // [1] EXPLICIT publicKey — detect compressed vs uncompressed
+        if (tag == 0xA1 && len >= 3 && p[0] == 0x03) {
+            // BIT STRING: tag(03) + length + unused-bits(00) + pubkey
+            size_t bslen;
+            const unsigned char* bp = p + 1;
+            if (!ParseDERLength(bp, p + len, bslen)) { p += len; continue; }
+            if (bslen >= 2 && bp < p + len && *bp == 0x00) {
+                size_t pubkeylen = bslen - 1;  // subtract unused-bits byte
+                fCompressed = (pubkeylen == 33);
+            }
+        }
+        p += len;
+    }
+
+    return true;
+}
+
+// Fallback decoder using OpenSSL's d2i_ECPrivateKey for maximum compatibility
+// with any DER format variant ever produced by any OpenSSL version.
+static bool DecodePrivKeyOpenSSL(const CPrivKey& vchPrivKey, unsigned char secret[32], bool& fCompressed)
+{
+    EC_KEY* eckey = EC_KEY_new_by_curve_name(NID_secp256k1);
+    if (!eckey)
+        return false;
+
+    const unsigned char* pbegin = &vchPrivKey[0];
+    if (!d2i_ECPrivateKey(&eckey, &pbegin, vchPrivKey.size()))
     {
-        if ((O = EC_POINT_new(group)) == nullptr) { ret = -2; goto err; }
-        if (!EC_POINT_mul(group, O, nullptr, R, order, ctx)) { ret=-2; goto err; }
-        if (!EC_POINT_is_at_infinity(group, O)) { ret = 0; goto err; }
+        EC_KEY_free(eckey);
+        return false;
     }
-    if ((Q = EC_POINT_new(group)) == nullptr) { ret = -2; goto err; }
-    n = EC_GROUP_get_degree(group);
-    e = BN_CTX_get(ctx);
-    if (!BN_bin2bn(msg, msglen, e)) { ret=-1; goto err; }
-    if (8*msglen > n) BN_rshift(e, e, 8-(n & 7));
-    zero = BN_CTX_get(ctx);
-    BN_zero(zero);
-    if (!BN_mod_sub(e, zero, e, order, ctx)) { ret=-1; goto err; }
-    rr = BN_CTX_get(ctx);
-    if (!BN_mod_inverse(rr, pr, order, ctx)) { ret=-1; goto err; }
-    sor = BN_CTX_get(ctx);
-    if (!BN_mod_mul(sor, ps, rr, order, ctx)) { ret=-1; goto err; }
-    eor = BN_CTX_get(ctx);
-    if (!BN_mod_mul(eor, e, rr, order, ctx)) { ret=-1; goto err; }
-    if (!EC_POINT_mul(group, Q, eor, R, sor, ctx)) { ret=-2; goto err; }
-    if (!EC_KEY_set_public_key(eckey, Q)) { ret=-2; goto err; }
 
-    ret = 1;
-
-err:
-    if (ctx) {
-        BN_CTX_end(ctx);
-        BN_CTX_free(ctx);
+    const BIGNUM* bn = EC_KEY_get0_private_key(eckey);
+    if (!bn)
+    {
+        EC_KEY_free(eckey);
+        return false;
     }
-    if (R != nullptr) EC_POINT_free(R);
-    if (O != nullptr) EC_POINT_free(O);
-    if (Q != nullptr) EC_POINT_free(Q);
-    return ret;
+
+    // Extract 32-byte secret with zero-padding
+    memset(secret, 0, 32);
+    int nBytes = BN_num_bytes(bn);
+    if (nBytes <= 0 || nBytes > 32)
+    {
+        EC_KEY_free(eckey);
+        return false;
+    }
+    BN_bn2bin(bn, secret + 32 - nBytes);
+
+    // Detect compression from the EC_KEY's point conversion form
+    point_conversion_form_t form = EC_KEY_get_conv_form(eckey);
+    fCompressed = (form == POINT_CONVERSION_COMPRESSED);
+
+    EC_KEY_free(eckey);
+    return true;
 }
 
-void CKey::SetCompressedPubKey()
-{
-    EC_KEY_set_conv_form(pkey, POINT_CONVERSION_COMPRESSED);
-    fCompressedPubKey = true;
-}
+// ---------------------------------------------------------------------------
+// CheckSignatureElement (used by script.cpp for DER signature validation)
+// ---------------------------------------------------------------------------
 
-void CKey::SetUnCompressedPubKey()
-{
-    EC_KEY_set_conv_form(pkey, POINT_CONVERSION_UNCOMPRESSED);
-    fCompressedPubKey = false;
-}
-
-EC_KEY* CKey::GetECKey()
-{
-    return pkey;
-}
-
-void CKey::Reset()
-{
-    fCompressedPubKey = false;
-    if (pkey != nullptr)
-        EC_KEY_free(pkey);
-    pkey = EC_KEY_new_by_curve_name(NID_secp256k1);
-    if (pkey == nullptr)
-        throw key_error("CKey::CKey() : EC_KEY_new_by_curve_name failed");
-    fSet = false;
-}
-
-CKey::CKey()
-{
-    pkey = nullptr;
-    Reset();
-}
-
-CKey::CKey(const CKey& b)
-{
-    pkey = EC_KEY_dup(b.pkey);
-    if (pkey == nullptr)
-        throw key_error("CKey::CKey(const CKey&) : EC_KEY_dup failed");
-    fSet = b.fSet;
-}
-
-CKey& CKey::operator=(const CKey& b)
-{
-    if (!EC_KEY_copy(pkey, b.pkey))
-        throw key_error("CKey::operator=(const CKey&) : EC_KEY_copy failed");
-    fSet = b.fSet;
-    return (*this);
-}
-
-CKey::~CKey()
-{
-    EC_KEY_free(pkey);
-}
-
-bool CKey::IsNull() const
-{
-    return !fSet;
-}
-
-bool CKey::IsCompressed() const
-{
-    return fCompressedPubKey;
-}
-
-int CompareBipinkdian(const unsigned char *c1, size_t c1len, const unsigned char *c2, size_t c2len) {
+static int CompareBigEndian(const unsigned char *c1, size_t c1len, const unsigned char *c2, size_t c2len) {
     while (c1len > c2len) {
         if (*c1)
             return 1;
@@ -256,60 +280,140 @@ const unsigned char vchMaxModHalfOrder[32] = {
 const unsigned char vchZero[0] = {};
 
 bool CKey::CheckSignatureElement(const unsigned char *vch, int len, bool half) {
-    return CompareBipinkdian(vch, len, vchZero, 0) > 0 &&
-           CompareBipinkdian(vch, len, half ? vchMaxModHalfOrder : vchMaxModOrder, 32) <= 0;
+    return CompareBigEndian(vch, len, vchZero, 0) > 0 &&
+           CompareBigEndian(vch, len, half ? vchMaxModHalfOrder : vchMaxModOrder, 32) <= 0;
+}
+
+// ---------------------------------------------------------------------------
+// CKey implementation
+// ---------------------------------------------------------------------------
+
+void CKey::SetCompressedPubKey()
+{
+    fCompressedPubKey = true;
+}
+
+void CKey::SetUnCompressedPubKey()
+{
+    fCompressedPubKey = false;
+}
+
+void CKey::Reset()
+{
+    OPENSSL_cleanse(vch, 32);
+    fCompressedPubKey = false;
+    fSet = false;
+    fPubKeyOnly = false;
+    pubKeyCache = CPubKey();
+}
+
+CKey::CKey()
+{
+    memset(vch, 0, 32);
+    fSet = false;
+    fCompressedPubKey = false;
+    fPubKeyOnly = false;
+}
+
+CKey::CKey(const CKey& b)
+{
+    memcpy(vch, b.vch, 32);
+    fSet = b.fSet;
+    fCompressedPubKey = b.fCompressedPubKey;
+    fPubKeyOnly = b.fPubKeyOnly;
+    pubKeyCache = b.pubKeyCache;
+}
+
+CKey& CKey::operator=(const CKey& b)
+{
+    memcpy(vch, b.vch, 32);
+    fSet = b.fSet;
+    fCompressedPubKey = b.fCompressedPubKey;
+    fPubKeyOnly = b.fPubKeyOnly;
+    pubKeyCache = b.pubKeyCache;
+    return (*this);
+}
+
+CKey::~CKey()
+{
+    OPENSSL_cleanse(vch, 32);
+}
+
+bool CKey::IsNull() const
+{
+    return !fSet;
+}
+
+bool CKey::IsCompressed() const
+{
+    return fCompressedPubKey;
 }
 
 void CKey::MakeNewKey(bool fCompressed)
 {
-    if (!EC_KEY_generate_key(pkey))
-        throw key_error("CKey::MakeNewKey() : EC_KEY_generate_key failed");
+    secp256k1_context* ctx = GetContext();
+    do {
+        RAND_bytes(vch, 32);
+    } while (!secp256k1_ec_seckey_verify(ctx, vch));
+
+    fSet = true;
+    fPubKeyOnly = false;
+    pubKeyCache = CPubKey();
     if (fCompressed)
         SetCompressedPubKey();
-    fSet = true;
 }
 
 bool CKey::SetPrivKey(const CPrivKey& vchPrivKey)
 {
-    const unsigned char* pbegin = &vchPrivKey[0];
-    if (d2i_ECPrivateKey(&pkey, &pbegin, vchPrivKey.size()))
+    unsigned char secret[32];
+    bool fCompressed;
+
+    // Try custom DER decoder first; fall back to OpenSSL for any format
+    // variations produced by older OpenSSL versions (1.0.x, 1.1.x, etc.)
+    if (!DecodePrivKey(vchPrivKey, secret, fCompressed))
     {
-        // In testing, d2i_ECPrivateKey can return true
-        // but fill in pkey with a key that fails
-        // EC_KEY_check_key, so:
-        if (EC_KEY_check_key(pkey))
+        if (!DecodePrivKeyOpenSSL(vchPrivKey, secret, fCompressed))
         {
-            fSet = true;
-            return true;
+            printf("SetPrivKey: DER decode failed (size=%u, first bytes:", (unsigned)vchPrivKey.size());
+            for (size_t i = 0; i < std::min(vchPrivKey.size(), (size_t)16); i++)
+                printf(" %02x", vchPrivKey[i]);
+            printf(")\n");
+            Reset();
+            return false;
         }
     }
-    // If vchPrivKey data is bad d2i_ECPrivateKey() can
-    // leave pkey in a state where calling EC_KEY_free()
-    // crashes. To avoid that, set pkey to nullptr and
-    // leak the memory (a leak is better than a crash)
-    pkey = nullptr;
-    Reset();
-    return false;
+
+    secp256k1_context* ctx = GetContext();
+    if (!secp256k1_ec_seckey_verify(ctx, secret))
+    {
+        printf("SetPrivKey: secp256k1_ec_seckey_verify failed\n");
+        OPENSSL_cleanse(secret, 32);
+        Reset();
+        return false;
+    }
+
+    memcpy(vch, secret, 32);
+    OPENSSL_cleanse(secret, 32);
+    fSet = true;
+    fPubKeyOnly = false;
+    pubKeyCache = CPubKey();
+    fCompressedPubKey = fCompressed;
+    return true;
 }
 
 bool CKey::SetSecret(const CSecret& vchSecret, bool fCompressed)
 {
-    EC_KEY_free(pkey);
-    pkey = EC_KEY_new_by_curve_name(NID_secp256k1);
-    if (pkey == nullptr)
-        throw key_error("CKey::SetSecret() : EC_KEY_new_by_curve_name failed");
     if (vchSecret.size() != 32)
         throw key_error("CKey::SetSecret() : secret must be 32 bytes");
-    BIGNUM *bn = BN_bin2bn(&vchSecret[0],32,BN_new());
-    if (bn == nullptr)
-        throw key_error("CKey::SetSecret() : BN_bin2bn failed");
-    if (!EC_KEY_regenerate_key(pkey,bn))
-    {
-        BN_clear_free(bn);
-        throw key_error("CKey::SetSecret() : EC_KEY_regenerate_key failed");
-    }
-    BN_clear_free(bn);
+
+    secp256k1_context* ctx = GetContext();
+    if (!secp256k1_ec_seckey_verify(ctx, &vchSecret[0]))
+        throw key_error("CKey::SetSecret() : invalid secret key");
+
+    memcpy(vch, &vchSecret[0], 32);
     fSet = true;
+    fPubKeyOnly = false;
+    pubKeyCache = CPubKey();
     if (fCompressed || fCompressedPubKey)
         SetCompressedPubKey();
     return true;
@@ -319,196 +423,150 @@ CSecret CKey::GetSecret(bool &fCompressed) const
 {
     CSecret vchRet;
     vchRet.resize(32);
-    const BIGNUM *bn = EC_KEY_get0_private_key(pkey);
-    int nBytes = BN_num_bytes(bn);
-    if (bn == nullptr)
-        throw key_error("CKey::GetSecret() : EC_KEY_get0_private_key failed");
-    int n=BN_bn2bin(bn,&vchRet[32 - nBytes]);
-    if (n != nBytes)
-        throw key_error("CKey::GetSecret(): BN_bn2bin failed");
+    memcpy(&vchRet[0], vch, 32);
     fCompressed = fCompressedPubKey;
     return vchRet;
 }
 
 CPrivKey CKey::GetPrivKey() const
 {
-    int nSize = i2d_ECPrivateKey(pkey, nullptr);
-    if (!nSize)
-        throw key_error("CKey::GetPrivKey() : i2d_ECPrivateKey failed");
-    CPrivKey vchPrivKey(nSize, 0);
-    unsigned char* pbegin = &vchPrivKey[0];
-    if (i2d_ECPrivateKey(pkey, &pbegin) != nSize)
-        throw key_error("CKey::GetPrivKey() : i2d_ECPrivateKey returned unexpected size");
-    return vchPrivKey;
+    std::vector<unsigned char> pubkey = GetPubKey().Raw();
+    return EncodePrivKey(vch, pubkey);
 }
 
 bool CKey::SetPubKey(const CPubKey& vchPubKey)
 {
-    const unsigned char* pbegin = &vchPubKey.vchPubKey[0];
-    if (o2i_ECPublicKey(&pkey, &pbegin, vchPubKey.vchPubKey.size()))
+    secp256k1_context* ctx = GetContext();
+    secp256k1_pubkey pubkey;
+    if (!secp256k1_ec_pubkey_parse(ctx, &pubkey, &vchPubKey.vchPubKey[0], vchPubKey.vchPubKey.size()))
     {
-        fSet = true;
-        if (vchPubKey.vchPubKey.size() == 33)
-            SetCompressedPubKey();
-        return true;
+        Reset();
+        return false;
     }
-    pkey = nullptr;
-    Reset();
-    return false;
+
+    memset(vch, 0, 32);
+    fSet = true;
+    fPubKeyOnly = true;
+    pubKeyCache = vchPubKey;
+    if (vchPubKey.vchPubKey.size() == 33)
+        SetCompressedPubKey();
+    else
+        SetUnCompressedPubKey();
+    return true;
 }
 
 CPubKey CKey::GetPubKey() const
 {
-    int nSize = i2o_ECPublicKey(pkey, nullptr);
-    if (!nSize)
-        throw key_error("CKey::GetPubKey() : i2o_ECPublicKey failed");
-    std::vector<unsigned char> vchPubKey(nSize, 0);
-    unsigned char* pbegin = &vchPubKey[0];
-    if (i2o_ECPublicKey(pkey, &pbegin) != nSize)
-        throw key_error("CKey::GetPubKey() : i2o_ECPublicKey returned unexpected size");
+    if (fPubKeyOnly)
+        return pubKeyCache;
+
+    secp256k1_context* ctx = GetContext();
+    secp256k1_pubkey pubkey;
+    if (!secp256k1_ec_pubkey_create(ctx, &pubkey, vch))
+        throw key_error("CKey::GetPubKey() : secp256k1_ec_pubkey_create failed");
+
+    size_t outlen = fCompressedPubKey ? 33 : 65;
+    std::vector<unsigned char> vchPubKey(outlen);
+    secp256k1_ec_pubkey_serialize(ctx, &vchPubKey[0], &outlen, &pubkey,
+        fCompressedPubKey ? SECP256K1_EC_COMPRESSED : SECP256K1_EC_UNCOMPRESSED);
+
     return CPubKey(vchPubKey);
 }
 
 bool CKey::Sign(uint256 hash, std::vector<unsigned char>& vchSig)
 {
     vchSig.clear();
-    ECDSA_SIG *sig = ECDSA_do_sign((unsigned char*)&hash, sizeof(hash), pkey);
-    if (sig == nullptr)
-        return false;
-    BN_CTX *ctx = BN_CTX_new();
-    BN_CTX_start(ctx);
-    const EC_GROUP *group = EC_KEY_get0_group(pkey);
-    BIGNUM *order = BN_CTX_get(ctx);
-    BIGNUM *halforder = BN_CTX_get(ctx);
-    EC_GROUP_get_order(group, order, ctx);
-    BN_rshift1(halforder, order);
-    const BIGNUM *pr, *ps;
-    ECDSA_SIG_get0(sig, &pr, &ps);
-    if (BN_cmp(ps, halforder) > 0) {
-        // enforce low S values, by negating the value (modulo the order) if above order/2.
-        BIGNUM *nps = BN_dup(ps);
-        if(!nps)
-            throw std::runtime_error("CKey : BN_dup() returned nullptr"); 
-        BIGNUM *npr = BN_dup(pr);
-        if(!npr)
-        {
-            BN_free(nps);
-            throw std::runtime_error("CKey : BN_dup() returned nullptr"); 
-        }
+    secp256k1_context* ctx = GetContext();
 
-        BN_sub(nps, order, nps);
-        ECDSA_SIG_set0(sig, npr, nps);
-    }
-    BN_CTX_end(ctx);
-    BN_CTX_free(ctx);
-    unsigned int nSize = ECDSA_size(pkey);
-    vchSig.resize(nSize); // Make sure it is big enough
-    unsigned char *pos = &vchSig[0];
-    nSize = i2d_ECDSA_SIG(sig, &pos);
-    ECDSA_SIG_free(sig);
-    vchSig.resize(nSize); // Shrink to fit actual size
+    secp256k1_ecdsa_signature sig;
+    if (!secp256k1_ecdsa_sign(ctx, &sig, (unsigned char*)&hash, vch, nullptr, nullptr))
+        return false;
+
+    // libsecp256k1 produces low-S signatures by default
+    unsigned char der[72];
+    size_t derlen = sizeof(der);
+    secp256k1_ecdsa_signature_serialize_der(ctx, der, &derlen, &sig);
+
+    vchSig.assign(der, der + derlen);
     return true;
 }
 
-// create a compact signature (65 bytes), which allows reconstructing the used public key
-// The format is one header byte, followed by two times 32 bytes for the serialized r and s values.
-// The header byte: 0x1B = first key with even y, 0x1C = first key with odd y,
-//                  0x1D = second key with even y, 0x1E = second key with odd y
 bool CKey::SignCompact(uint256 hash, std::vector<unsigned char>& vchSig)
 {
-    bool fOk = false;
-    ECDSA_SIG *sig = ECDSA_do_sign((unsigned char*)&hash, sizeof(hash), pkey);
-    if (sig==nullptr)
+    secp256k1_context* ctx = GetContext();
+
+    secp256k1_ecdsa_recoverable_signature rsig;
+    if (!secp256k1_ecdsa_sign_recoverable(ctx, &rsig, (unsigned char*)&hash, vch, nullptr, nullptr))
         return false;
-    vchSig.clear();
-    vchSig.resize(65,0);
-    const BIGNUM *pr, *ps;
-    ECDSA_SIG_get0(sig, &pr, &ps);
-    int nBitsR = BN_num_bits(pr);
-    int nBitsS = BN_num_bits(ps);
-    if (nBitsR <= 256 && nBitsS <= 256)
-    {
-        int nRecId = -1;
-        for (int i=0; i<4; i++)
-        {
-            CKey keyRec;
-            keyRec.fSet = true;
-            if (fCompressedPubKey)
-                keyRec.SetCompressedPubKey();
-            if (ECDSA_SIG_recover_key_GFp(keyRec.pkey, sig, (unsigned char*)&hash, sizeof(hash), i, 1) == 1)
-                if (keyRec.GetPubKey() == this->GetPubKey())
-                {
-                    nRecId = i;
-                    break;
-                }
-        }
 
-        if (nRecId == -1)
-        {
-            ECDSA_SIG_free(sig);
-            throw key_error("CKey::SignCompact() : unable to construct recoverable key");
-        }
+    unsigned char compact[64];
+    int recid = 0;
+    secp256k1_ecdsa_recoverable_signature_serialize_compact(ctx, compact, &recid, &rsig);
 
-        vchSig[0] = nRecId+27+(fCompressedPubKey ? 4 : 0);
-        ECDSA_SIG_get0(sig, &pr, &ps);
-        BN_bn2bin(pr,&vchSig[33-(nBitsR+7)/8]);
-        BN_bn2bin(ps,&vchSig[65-(nBitsS+7)/8]);
-        fOk = true;
-    }
-    ECDSA_SIG_free(sig);
-    return fOk;
+    vchSig.resize(65);
+    vchSig[0] = 27 + recid + (fCompressedPubKey ? 4 : 0);
+    memcpy(&vchSig[1], compact, 64);
+    return true;
 }
 
-// reconstruct public key from a compact signature
-// This is only slightly more CPU intensive than just verifying it.
-// If this function succeeds, the recovered public key is guaranteed to be valid
-// (the signature is a valid signature of the given data for that key)
 bool CKey::SetCompactSignature(uint256 hash, const std::vector<unsigned char>& vchSig)
 {
     if (vchSig.size() != 65)
         return false;
     int nV = vchSig[0];
-    if (nV<27 || nV>=35)
+    if (nV < 27 || nV >= 35)
         return false;
-    ECDSA_SIG *sig = ECDSA_SIG_new();
-    ECDSA_SIG_set0(
-        sig,
-        BN_bin2bn(&vchSig[1],32,nullptr),
-        BN_bin2bn(&vchSig[33],32,nullptr));
 
-    EC_KEY_free(pkey);
-    pkey = EC_KEY_new_by_curve_name(NID_secp256k1);
-    if (nV >= 31)
-    {
-        SetCompressedPubKey();
-        nV -= 4;
-    }
-    if (ECDSA_SIG_recover_key_GFp(pkey, sig, (unsigned char*)&hash, sizeof(hash), nV - 27, 0) == 1)
-    {
-        fSet = true;
-        ECDSA_SIG_free(sig);
-        return true;
-    }
-    ECDSA_SIG_free(sig);
-    return false;
+    bool fComp = (nV >= 31);
+    int recid = (nV - 27) & 3;
+
+    secp256k1_context* ctx = GetContext();
+
+    secp256k1_ecdsa_recoverable_signature rsig;
+    if (!secp256k1_ecdsa_recoverable_signature_parse_compact(ctx, &rsig, &vchSig[1], recid))
+        return false;
+
+    secp256k1_pubkey pubkey;
+    if (!secp256k1_ecdsa_recover(ctx, &pubkey, &rsig, (unsigned char*)&hash))
+        return false;
+
+    // Serialize recovered public key
+    size_t outlen = fComp ? 33 : 65;
+    std::vector<unsigned char> vchPubKey(outlen);
+    secp256k1_ec_pubkey_serialize(ctx, &vchPubKey[0], &outlen, &pubkey,
+        fComp ? SECP256K1_EC_COMPRESSED : SECP256K1_EC_UNCOMPRESSED);
+
+    // Store as pub-key-only (no private key available)
+    memset(vch, 0, 32);
+    fSet = true;
+    fPubKeyOnly = true;
+    fCompressedPubKey = fComp;
+    pubKeyCache = CPubKey(vchPubKey);
+    return true;
 }
 
 bool CKey::Verify(uint256 hash, const std::vector<unsigned char>& vchSig)
 {
-    // New versions of OpenSSL will reject non-canonical DER signatures. de/re-serialize first.
-    unsigned char *norm_der = nullptr;
-    ECDSA_SIG *norm_sig = ECDSA_SIG_new();
-    const unsigned char* sigptr = &vchSig[0];
-    d2i_ECDSA_SIG(&norm_sig, &sigptr, vchSig.size());
-    int derlen = i2d_ECDSA_SIG(norm_sig, &norm_der);
-    ECDSA_SIG_free(norm_sig);
-    if (derlen <= 0)
+    if (vchSig.empty())
         return false;
 
-    // -1 = error, 0 = bad sig, 1 = good
-    bool ret = ECDSA_verify(0, (unsigned char*)&hash, sizeof(hash), norm_der, derlen, pkey) == 1;
-    OPENSSL_free(norm_der);
-    return ret;
+    secp256k1_context* ctx = GetContext();
+
+    // Parse the public key
+    CPubKey pub = GetPubKey();
+    secp256k1_pubkey pubkey;
+    if (!secp256k1_ec_pubkey_parse(ctx, &pubkey, &pub.vchPubKey[0], pub.vchPubKey.size()))
+        return false;
+
+    // Parse the DER signature (normalizing to low-S)
+    secp256k1_ecdsa_signature sig;
+    if (!secp256k1_ecdsa_signature_parse_der(ctx, &sig, &vchSig[0], vchSig.size()))
+        return false;
+
+    // Normalize to low-S for verification
+    secp256k1_ecdsa_signature_normalize(ctx, &sig, &sig);
+
+    return secp256k1_ecdsa_verify(ctx, &sig, (unsigned char*)&hash, &pubkey) == 1;
 }
 
 bool CKey::VerifyCompact(uint256 hash, const std::vector<unsigned char>& vchSig)
@@ -527,9 +585,6 @@ bool CKey::IsValid()
     if (!fSet)
         return false;
 
-    if (!EC_KEY_check_key(pkey))
-        return false;
-
     bool fCompr;
     CSecret secret = GetSecret(fCompr);
     CKey key2;
@@ -538,11 +593,6 @@ bool CKey::IsValid()
 }
 
 bool ECC_InitSanityCheck() {
-    EC_KEY *pkey = EC_KEY_new_by_curve_name(NID_secp256k1);
-    if(pkey == nullptr)
-        return false;
-    EC_KEY_free(pkey);
-
-    // TODO Is there more EC functionality that could be missing?
-    return true;
+    secp256k1_context* ctx = GetContext();
+    return ctx != nullptr;
 }

@@ -36,11 +36,12 @@ Notes:
 #include <errno.h>
 
 #include <openssl/crypto.h>
-#include <openssl/ec.h>
-#include <openssl/ecdh.h>
 #include <openssl/aes.h>
 #include <openssl/evp.h>
 #include <openssl/params.h>
+
+#include <secp256k1.h>
+#include <secp256k1_ecdh.h>
 
 #include "string_utils.h"
 
@@ -3399,25 +3400,34 @@ int SecureMspinkcrypt(SecureMessage& smsg, std::string& addressFrom, std::string
         return 4; // address to is invalid
     };
     
+    // -- ECDH: compute shared secret P = r * K (x-coordinate only)
     std::vector<unsigned char> vchP;
     vchP.resize(32);
-    EC_KEY* pkeyr = keyR.GetECKey();
-    EC_KEY* pkeyK = keyK.GetECKey();
-    
-    // always seems to be 32, worth checking?
-    //int field_size = EC_GROUP_get_degree(EC_KEY_get0_group(pkeyr));
-    //int secret_len = (field_size+7)/8;
-    //printf("secret_len %d.\n", secret_len);
-    
-    // -- ECDH_compute_key returns the same P if fed compressed or uncompressed public keys
-    EC_KEY_set_method(pkeyr, EC_KEY_OpenSSL());
-    int lenP = ECDH_compute_key(&vchP[0], 32, EC_KEY_get0_public_key(pkeyK), pkeyr, nullptr);
-    
-    if (lenP != 32)
     {
-        printf("ECDH_compute_key failed, lenP: %d.\n", lenP);
-        return 6;
-    };
+        extern secp256k1_context* GetContext();
+        secp256k1_context* ctx = GetContext();
+
+        // Custom hash function: return raw x-coordinate (matches ECDH_compute_key with NULL KDF)
+        auto ecdh_copy_x = [](unsigned char *output, const unsigned char *x32,
+                              const unsigned char * /*y32*/, void * /*data*/) -> int {
+            memcpy(output, x32, 32);
+            return 1;
+        };
+
+        secp256k1_pubkey pubkey;
+        std::vector<unsigned char> rawK = cpkDestK.Raw();
+        if (!secp256k1_ec_pubkey_parse(ctx, &pubkey, &rawK[0], rawK.size()))
+        {
+            printf("secp256k1_ec_pubkey_parse failed for K.\n");
+            return 6;
+        }
+
+        if (!secp256k1_ecdh(ctx, &vchP[0], &pubkey, keyR.begin(), ecdh_copy_x, nullptr))
+        {
+            printf("secp256k1_ecdh failed.\n");
+            return 6;
+        }
+    }
     
     CPubKey cpkR = keyR.GetPubKey();
     if (!cpkR.IsValid()
@@ -3822,20 +3832,33 @@ int SecureMsgDecrypt(bool fTestOnly, std::string& address, unsigned char *pHeade
     };
     
     
-    // -- Do an EC point multiply with private key k and public key R. This gives you public key P.
+    // -- ECDH: compute shared secret P = k * R (x-coordinate only)
     std::vector<unsigned char> vchP;
     vchP.resize(32);
-    EC_KEY* pkeyk = keyDest.GetECKey();
-    EC_KEY* pkeyR = keyR.GetECKey();
-    
-    EC_KEY_set_method(pkeyk, EC_KEY_OpenSSL());
-    int lenPdec = ECDH_compute_key(&vchP[0], 32, EC_KEY_get0_public_key(pkeyR), pkeyk, nullptr);
-    
-    if (lenPdec != 32)
     {
-        printf("ECDH_compute_key failed, lenPdec: %d.\n", lenPdec);
-        return 1;
-    };
+        extern secp256k1_context* GetContext();
+        secp256k1_context* ctx = GetContext();
+
+        auto ecdh_copy_x = [](unsigned char *output, const unsigned char *x32,
+                              const unsigned char * /*y32*/, void * /*data*/) -> int {
+            memcpy(output, x32, 32);
+            return 1;
+        };
+
+        secp256k1_pubkey pubkey;
+        std::vector<unsigned char> rawR = cpkR.Raw();
+        if (!secp256k1_ec_pubkey_parse(ctx, &pubkey, &rawR[0], rawR.size()))
+        {
+            printf("secp256k1_ec_pubkey_parse failed for R.\n");
+            return 1;
+        }
+
+        if (!secp256k1_ecdh(ctx, &vchP[0], &pubkey, keyDest.begin(), ecdh_copy_x, nullptr))
+        {
+            printf("secp256k1_ecdh failed.\n");
+            return 1;
+        }
+    }
     
     
     // -- Use public key P to calculate the SHA512 hash H. 

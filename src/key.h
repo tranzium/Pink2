@@ -13,31 +13,6 @@
 #include "uint256.h"
 #include "util.h"
 
-#include <openssl/ec.h> // for EC_KEY definition
-
-// secp160k1
-// const unsigned int PRIVATE_KEY_SIZE = 192;
-// const unsigned int PUBLIC_KEY_SIZE  = 41;
-// const unsigned int SIGNATURE_SIZE   = 48;
-//
-// secp192k1
-// const unsigned int PRIVATE_KEY_SIZE = 222;
-// const unsigned int PUBLIC_KEY_SIZE  = 49;
-// const unsigned int SIGNATURE_SIZE   = 57;
-//
-// secp224k1
-// const unsigned int PRIVATE_KEY_SIZE = 250;
-// const unsigned int PUBLIC_KEY_SIZE  = 57;
-// const unsigned int SIGNATURE_SIZE   = 66;
-//
-// secp256k1:
-// const unsigned int PRIVATE_KEY_SIZE = 279;
-// const unsigned int PUBLIC_KEY_SIZE  = 65;
-// const unsigned int SIGNATURE_SIZE   = 72;
-//
-// see www.keylength.com
-// script supports up to 75 for single byte push
-
 class key_error : public std::runtime_error
 {
 public:
@@ -100,27 +75,30 @@ public:
 
 
 // secure_allocator is defined in allocators.h
-// CPrivKey is a serialized private key, with all parameters included (279 bytes)
+// CPrivKey is a serialized private key, with all parameters included
+// (SEC 1 DER format: 86 bytes compressed, 118 bytes uncompressed)
 typedef std::vector<unsigned char, secure_allocator<unsigned char> > CPrivKey;
 // CSecret is a serialization of just the secret parameter (32 bytes)
 typedef std::vector<unsigned char, secure_allocator<unsigned char> > CSecret;
 
-/** An encapsulated OpenSSL Elliptic Curve key (public and/or private) */
+/** An encapsulated secp256k1 elliptic curve key (public and/or private) */
 class CKey
 {
 protected:
-    EC_KEY* pkey;
+    unsigned char vch[32]; // raw 32-byte private key
     bool fSet;
     bool fCompressedPubKey;
-
-    
+    bool fPubKeyOnly;      // true when only public key is known (no private key)
+    CPubKey pubKeyCache;   // cached public key for pub-key-only mode
 
 public:
+    // Raw private key access for ECDH operations (stealth, smessage)
+    const unsigned char* begin() const { return vch; }
+    const unsigned char* end() const { return vch + 32; }
+
     void SetCompressedPubKey();
     void SetUnCompressedPubKey();
-    
-    EC_KEY* GetECKey();
-    
+
     void Reset();
 
     CKey();
@@ -165,6 +143,10 @@ public:
     // Check whether an element of a signature (r or s) is valid.
     static bool CheckSignatureElement(const unsigned char *vch, int len, bool half);
 };
+
+/** Initialize/shutdown libsecp256k1 context */
+void ECC_Start();
+void ECC_Stop();
 
 /** Check that required EC support is available at runtime */
 bool ECC_InitSanityCheck(void);

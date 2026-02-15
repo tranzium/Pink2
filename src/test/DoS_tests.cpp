@@ -285,10 +285,15 @@ BOOST_AUTO_TEST_CASE(DoS_checkSig)
 
     // Exercise -maxsigcachesize code:
     mapArgs["-maxsigcachesize"] = "10";
-    // Generate a new, different signature for vin[0] to trigger cache clear:
+    // Mutate tx so re-signing produces a different signature hash
+    // (libsecp256k1 uses deterministic RFC 6979 nonces, so same input = same sig)
     CScript oldSig = tx.vin[0].scriptSig;
+    tx.nTime++;
     BOOST_CHECK(SignSignature(keystore, orphans[0], tx, 0));
     BOOST_CHECK(tx.vin[0].scriptSig != oldSig);
+    // Re-sign all inputs (tx hash changed due to nTime bump)
+    for (unsigned int j = 1; j < tx.vin.size(); j++)
+        BOOST_CHECK(SignSignature(keystore, orphans[j], tx, j));
     for (unsigned int j = 0; j < tx.vin.size(); j++)
         BOOST_CHECK(VerifySignature(orphans[j], tx, j, SIGHASH_ALL));
     mapArgs.erase("-maxsigcachesize");

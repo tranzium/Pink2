@@ -88,11 +88,22 @@ void AskPassphraseDialog::accept()
     oldpass.reserve(MAX_PASSPHRASE_SIZE);
     newpass1.reserve(MAX_PASSPHRASE_SIZE);
     newpass2.reserve(MAX_PASSPHRASE_SIZE);
-    // TODO: get rid of this .c_str() by implementing SecureString::operator=(std::string)
-    // Alternately, find a way to make this input mlock()'d to begin with.
-    oldpass.assign(ui->passEdit1->text().toStdString().c_str());
-    newpass1.assign(ui->passEdit2->text().toStdString().c_str());
-    newpass2.assign(ui->passEdit3->text().toStdString().c_str());
+    // Capture temporaries so we can cleanse the non-mlocked std::string after copy
+    {
+        std::string tmp = ui->passEdit1->text().toStdString();
+        oldpass.assign(tmp.c_str());
+        OPENSSL_cleanse(tmp.data(), tmp.size());
+    }
+    {
+        std::string tmp = ui->passEdit2->text().toStdString();
+        newpass1.assign(tmp.c_str());
+        OPENSSL_cleanse(tmp.data(), tmp.size());
+    }
+    {
+        std::string tmp = ui->passEdit3->text().toStdString();
+        newpass2.assign(tmp.c_str());
+        OPENSSL_cleanse(tmp.data(), tmp.size());
+    }
 
     secureClearPassFields();
 

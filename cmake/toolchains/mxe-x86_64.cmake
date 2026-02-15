@@ -91,6 +91,9 @@ set(Boost_ARCHITECTURE "-x64")
 # Use custom-built BDB 4.8, NOT MXE's BDB 6.x
 set(BDB_ROOT "/opt/mxe-bdb48" CACHE PATH "BerkeleyDB 4.8 installation root")
 
+# libsecp256k1 paths (cross-compiled from bitcoin-core/secp256k1 v0.2.0)
+set(SECP256K1_ROOT "/opt/mxe-secp256k1" CACHE PATH "libsecp256k1 installation root")
+
 # OpenSSL paths
 set(OPENSSL_ROOT_DIR "${MXE_TARGET_ROOT}" CACHE PATH "OpenSSL installation root")
 set(OPENSSL_USE_STATIC_LIBS TRUE)
