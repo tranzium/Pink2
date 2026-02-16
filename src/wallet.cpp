@@ -448,10 +448,10 @@ void CWallet::WalletUpdateSpent(const CTransaction &tx, bool fBlock)
         LOCK(cs_wallet);
         for (const CTxIn& txin : tx.vin)
         {
-            map<uint256, CWalletTx>::iterator mi = mapWallet.find(txin.prevout.hash);
+            auto mi = mapWallet.find(txin.prevout.hash);
             if (mi != mapWallet.end())
             {
-                CWalletTx& wtx = (*mi).second;
+                CWalletTx& wtx = mi->second;
                 if (txin.prevout.n >= wtx.vout.size())
                     printf("WalletUpdateSpent: bad wtx %s\n", wtx.GetHash().ToString().c_str());
                 else if (!wtx.IsSpent(txin.prevout.n) && IsMine(wtx.vout[txin.prevout.n]))
@@ -467,8 +467,8 @@ void CWallet::WalletUpdateSpent(const CTransaction &tx, bool fBlock)
         if (fBlock)
         {
             uint256 hash = tx.GetHash();
-            map<uint256, CWalletTx>::iterator mi = mapWallet.find(hash);
-            CWalletTx& wtx = (*mi).second;
+            auto mi = mapWallet.find(hash);
+            CWalletTx& wtx = mi->second;
 
             for (const CTxOut& txout : tx.vout)
             {
@@ -675,10 +675,10 @@ bool CWallet::IsMine(const CTxIn &txin) const
 {
     {
         LOCK(cs_wallet);
-        map<uint256, CWalletTx>::const_iterator mi = mapWallet.find(txin.prevout.hash);
+        auto mi = mapWallet.find(txin.prevout.hash);
         if (mi != mapWallet.end())
         {
-            const CWalletTx& prev = (*mi).second;
+            const CWalletTx& prev = mi->second;
             if (txin.prevout.n < prev.vout.size())
                 if (IsMine(prev.vout[txin.prevout.n]))
                     return true;
@@ -691,10 +691,10 @@ int64_t CWallet::GetDebit(const CTxIn &txin) const
 {
     {
         LOCK(cs_wallet);
-        map<uint256, CWalletTx>::const_iterator mi = mapWallet.find(txin.prevout.hash);
+        auto mi = mapWallet.find(txin.prevout.hash);
         if (mi != mapWallet.end())
         {
-            const CWalletTx& prev = (*mi).second;
+            const CWalletTx& prev = mi->second;
             if (txin.prevout.n < prev.vout.size())
                 if (IsMine(prev.vout[txin.prevout.n]))
                     return prev.vout[txin.prevout.n].nValue;
@@ -740,25 +740,25 @@ int CWalletTx::GetRequestCount() const
             // Generated block
             if (hashBlock != 0)
             {
-                map<uint256, int>::const_iterator mi = pwallet->mapRequestCount.find(hashBlock);
+                auto mi = pwallet->mapRequestCount.find(hashBlock);
                 if (mi != pwallet->mapRequestCount.end())
-                    nRequests = (*mi).second;
+                    nRequests = mi->second;
             }
         }
         else
         {
             // Did anyone request this transaction?
-            map<uint256, int>::const_iterator mi = pwallet->mapRequestCount.find(GetHash());
+            auto mi = pwallet->mapRequestCount.find(GetHash());
             if (mi != pwallet->mapRequestCount.end())
             {
-                nRequests = (*mi).second;
+                nRequests = mi->second;
 
                 // How about the block it's in?
                 if (nRequests == 0 && hashBlock != 0)
                 {
-                    map<uint256, int>::const_iterator mi = pwallet->mapRequestCount.find(hashBlock);
-                    if (mi != pwallet->mapRequestCount.end())
-                        nRequests = (*mi).second;
+                    auto mi2 = pwallet->mapRequestCount.find(hashBlock);
+                    if (mi2 != pwallet->mapRequestCount.end())
+                        nRequests = mi2->second;
                     else
                         nRequests = 1; // If it's in someone else's block it must have got out
                 }
@@ -855,8 +855,8 @@ void CWalletTx::GetAccountAmounts(const string& strAccount, int64_t& nReceived,
         {
             if (pwallet->mapAddressBook.count(r.first))
             {
-                map<CTxDestination, string>::const_iterator mi = pwallet->mapAddressBook.find(r.first);
-                if (mi != pwallet->mapAddressBook.end() && (*mi).second == strAccount)
+                auto mi = pwallet->mapAddressBook.find(r.first);
+                if (mi != pwallet->mapAddressBook.end() && mi->second == strAccount)
                     nReceived += r.second;
             }
             else if (strAccount.empty())
@@ -1854,7 +1854,7 @@ bool CWallet::UnlockStealthAddresses(const CKeyingMaterial& vMasterKeyIn)
         CKeyID ckid = pubKey.GetID();
         CBitcoinAddress addr(ckid);
         
-        StealthKeyMetaMap::iterator mi = mapStealthKeyMeta.find(ckid);
+        auto mi = mapStealthKeyMeta.find(ckid);
         if (mi == mapStealthKeyMeta.end())
         {
             printf("Error: No metadata found to add secret for %s\n", addr.ToString().c_str());
@@ -1866,7 +1866,7 @@ bool CWallet::UnlockStealthAddresses(const CKeyingMaterial& vMasterKeyIn)
         CStealthAddress sxFind;
         sxFind.scan_pubkey = sxKeyMeta.pkScan.Raw();
         
-        std::set<CStealthAddress>::iterator si = stealthAddresses.find(sxFind);
+        auto si = stealthAddresses.find(sxFind);
         if (si == stealthAddresses.end())
         {
             printf("No stealth key found to add secret for %s\n", addr.ToString().c_str());
@@ -2950,7 +2950,7 @@ bool CWallet::SetAddressBookName(const CTxDestination& address, const string& st
     ChangeType nMode;
     {
         LOCK(cs_wallet); // mapAddressBook
-        std::map<CTxDestination, std::string>::iterator mi = mapAddressBook.find(address);
+        auto mi = mapAddressBook.find(address);
         nMode = (mi == mapAddressBook.end()) ? CT_NEW : CT_UPDATED;
         fOwned = ::IsMine(*this, address);
         
@@ -2996,7 +2996,7 @@ bool CWallet::SetAddressBookStake(const CTxDestination& address, const string& s
     ChangeType nMode;
     {
         LOCK(cs_wallet); // mapAddressBook
-        std::map<CTxDestination, std::string>::iterator mi = mapAddressBook.find(address);
+        auto mi = mapAddressBook.find(address);
         nMode = (mi == mapAddressBook.end()) ? CT_NEW : CT_UPDATED;
 
         mapAddressBook[address] = strName;
@@ -3047,10 +3047,10 @@ bool CWallet::GetTransaction(const uint256 &hashTx, CWalletTx& wtx)
 {
     {
         LOCK(cs_wallet);
-        map<uint256, CWalletTx>::iterator mi = mapWallet.find(hashTx);
+        auto mi = mapWallet.find(hashTx);
         if (mi != mapWallet.end())
         {
-            wtx = (*mi).second;
+            wtx = mi->second;
             return true;
         }
     }
@@ -3534,7 +3534,7 @@ void CWallet::UpdatedTransaction(const uint256 &hashTx)
     {
         LOCK(cs_wallet);
         // Only notify UI if this transaction is in this wallet
-        map<uint256, CWalletTx>::const_iterator mi = mapWallet.find(hashTx);
+        auto mi = mapWallet.find(hashTx);
         if (mi != mapWallet.end())
             NotifyTransactionChanged(this, hashTx, CT_UPDATED);
     }
@@ -3545,9 +3545,9 @@ void CWallet::GetKeyBirthTimes(std::map<CKeyID, int64_t> &mapKeyBirth) const {
     mapKeyBirth.clear();
 
     // get birth times for keys with metadata
-    for (std::map<CKeyID, CKeyMetadata>::const_iterator it = mapKeyMetadata.begin(); it != mapKeyMetadata.end(); it++)
-        if (it->second.nCreateTime)
-            mapKeyBirth[it->first] = it->second.nCreateTime;
+    for (const auto& entry : mapKeyMetadata)
+        if (entry.second.nCreateTime)
+            mapKeyBirth[entry.first] = entry.second.nCreateTime;
 
     // map in which we'll infer heights of other keys
     CBlockIndex *pindexMax = FindBlockByHeight(std::max(0, nBestHeight - 144)); // the tip can be reorganised; use a 144-block safety margin
@@ -3566,10 +3566,10 @@ void CWallet::GetKeyBirthTimes(std::map<CKeyID, int64_t> &mapKeyBirth) const {
 
     // find first block that affects those keys, if there are any left
     std::vector<CKeyID> vAffected;
-    for (std::map<uint256, CWalletTx>::const_iterator it = mapWallet.begin(); it != mapWallet.end(); it++) {
+    for (const auto& entry : mapWallet) {
         // iterate over all wallet transactions...
-        const CWalletTx &wtx = (*it).second;
-        std::map<uint256, CBlockIndex*>::const_iterator blit = mapBlockIndex.find(wtx.hashBlock);
+        const CWalletTx &wtx = entry.second;
+        auto blit = mapBlockIndex.find(wtx.hashBlock);
         if (blit != mapBlockIndex.end() && blit->second->IsInMainChain()) {
             // ... which are already in a block
             int nHeight = blit->second->nHeight;
@@ -3578,7 +3578,7 @@ void CWallet::GetKeyBirthTimes(std::map<CKeyID, int64_t> &mapKeyBirth) const {
                 ::ExtractAffectedKeys(*this, txout.scriptPubKey, vAffected);
                 for (const CKeyID &keyid : vAffected) {
                     // ... and all their affected keys
-                    std::map<CKeyID, CBlockIndex*>::iterator rit = mapKeyFirstBlock.find(keyid);
+                    auto rit = mapKeyFirstBlock.find(keyid);
                     if (rit != mapKeyFirstBlock.end() && nHeight < rit->second->nHeight)
                         rit->second = blit->second;
                 }
@@ -3588,6 +3588,6 @@ void CWallet::GetKeyBirthTimes(std::map<CKeyID, int64_t> &mapKeyBirth) const {
     }
 
     // Extract block timestamps for those keys
-    for (std::map<CKeyID, CBlockIndex*>::const_iterator it = mapKeyFirstBlock.begin(); it != mapKeyFirstBlock.end(); it++)
-        mapKeyBirth[it->first] = it->second->nTime - 7200; // block times can be 2h off
+    for (const auto& entry : mapKeyFirstBlock)
+        mapKeyBirth[entry.first] = entry.second->nTime - 7200; // block times can be 2h off
 }

@@ -152,7 +152,7 @@ int CAddrMan::ShrinkNew(int nUBucket)
     std::set<int> &vNew = vvNew[nUBucket];
 
     // first look for deletable items
-    for (std::set<int>::iterator it = vNew.begin(); it != vNew.end(); it++)
+    for (auto it = vNew.begin(); it != vNew.end(); ++it)
     {
         assert(mapInfo.count(*it));
         CAddrInfo &info = mapInfo[*it];
@@ -175,7 +175,7 @@ int CAddrMan::ShrinkNew(int nUBucket)
     int n[4] = {GetRandInt(vNew.size()), GetRandInt(vNew.size()), GetRandInt(vNew.size()), GetRandInt(vNew.size())};
     int nI = 0;
     int nOldest = -1;
-    for (std::set<int>::iterator it = vNew.begin(); it != vNew.end(); it++)
+    for (auto it = vNew.begin(); it != vNew.end(); ++it)
     {
         if (nI == n[0] || nI == n[1] || nI == n[2] || nI == n[3])
         {
@@ -414,9 +414,9 @@ CAddress CAddrMan::Select_()
             std::set<int> &vNew = vvNew[nUBucket];
             if (vNew.empty()) continue;
             int nPos = GetRandInt(vNew.size());
-            std::set<int>::iterator it = vNew.begin();
+            auto it = vNew.begin();
             while (nPos--)
-                it++;
+                ++it;
             assert(mapInfo.count(*it) == 1);
             CAddrInfo &info = mapInfo[*it];
             if (GetRandInt(1<<30) < fChanceFactor*info.GetChance()*(1<<30))

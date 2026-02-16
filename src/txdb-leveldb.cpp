@@ -159,7 +159,7 @@ public:
 
     CBatchScanner() : foundEntry(false) {}
 
-    virtual void Put(const leveldb::Slice& key, const leveldb::Slice& value) {
+    void Put(const leveldb::Slice& key, const leveldb::Slice& value) override {
         if (key.ToString() == needle) {
             foundEntry = true;
             *deleted = false;
@@ -167,7 +167,7 @@ public:
         }
     }
 
-    virtual void Delete(const leveldb::Slice& key) {
+    void Delete(const leveldb::Slice& key) override {
         if (key.ToString() == needle) {
             foundEntry = true;
             *deleted = true;

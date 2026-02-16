@@ -281,30 +281,29 @@ public:
         s << nUBuckets;
         std::map<int, int> mapUnkIds;
         int nIds = 0;
-        for (std::map<int, CAddrInfo>::const_iterator it = mapInfo.begin(); it != mapInfo.end(); it++) {
+        for (const auto& entry : mapInfo) {
             if (nIds == nNew) break; // this means nNew was wrong, oh ow
-            mapUnkIds[(*it).first] = nIds;
-            const CAddrInfo &info = (*it).second;
+            mapUnkIds[entry.first] = nIds;
+            const CAddrInfo &info = entry.second;
             if (info.nRefCount) {
                 s << info;
                 nIds++;
             }
         }
         nIds = 0;
-        for (std::map<int, CAddrInfo>::const_iterator it = mapInfo.begin(); it != mapInfo.end(); it++) {
+        for (const auto& entry : mapInfo) {
             if (nIds == nTried) break; // this means nTried was wrong, oh ow
-            const CAddrInfo &info = (*it).second;
+            const CAddrInfo &info = entry.second;
             if (info.fInTried) {
                 s << info;
                 nIds++;
             }
         }
-        for (std::vector<std::set<int> >::const_iterator it = vvNew.begin(); it != vvNew.end(); it++) {
-            const std::set<int> &vNew = (*it);
+        for (const auto& vNew : vvNew) {
             int nSize = vNew.size();
             s << nSize;
-            for (std::set<int>::const_iterator it2 = vNew.begin(); it2 != vNew.end(); it2++) {
-                int nIndex = mapUnkIds[*it2];
+            for (int id : vNew) {
+                int nIndex = mapUnkIds[id];
                 s << nIndex;
             }
         }
@@ -437,8 +436,8 @@ public:
         {
             LOCK(cs);
             Check();
-            for (std::vector<CAddress>::const_iterator it = vAddr.begin(); it != vAddr.end(); it++)
-                nAdd += Add_(*it, source, nTimePenalty) ? 1 : 0;
+            for (const auto& addr : vAddr)
+                nAdd += Add_(addr, source, nTimePenalty) ? 1 : 0;
             Check();
         }
         if (nAdd)

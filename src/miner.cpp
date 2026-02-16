@@ -150,7 +150,7 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake, int64_t* pFees)
     // Largest block you're willing to create:
     unsigned int nBlockMaxSize = GetArg("-blockmaxsize", MAX_BLOCK_SIZE_GEN/2);
     // Limit to betweeen 1K and MAX_BLOCK_SIZE-1K for sanity:
-    nBlockMaxSize = std::max((unsigned int)1000, std::min((unsigned int)(MAX_BLOCK_SIZE-1000), nBlockMaxSize));
+    nBlockMaxSize = std::max(static_cast<unsigned int>(1000), std::min(static_cast<unsigned int>(MAX_BLOCK_SIZE-1000), nBlockMaxSize));
 
     // How much of the block should be dedicated to high-priority transactions,
     // included regardless of the fees they pay
@@ -190,9 +190,9 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake, int64_t* pFees)
         // This vector will be sorted into a priority queue:
         vector<TxPriority> vecPriority;
         vecPriority.reserve(mempool.mapTx.size());
-        for (map<uint256, CTransaction>::iterator mi = mempool.mapTx.begin(); mi != mempool.mapTx.end(); ++mi)
+        for (auto& entry : mempool.mapTx)
         {
-            CTransaction& tx = (*mi).second;
+            CTransaction& tx = entry.second;
             if (tx.IsCoinBase() || tx.IsCoinStake() || !tx.IsFinal())
                 continue;
 
@@ -236,7 +236,7 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake, int64_t* pFees)
                 nTotalIn += nValueIn;
 
                 int nConf = txindex.GetDepthInMainChain();
-                dPriority += (double)nValueIn * nConf;
+                dPriority += static_cast<double>(nValueIn) * nConf;
             }
             if (fMissingInputs) continue;
 
@@ -255,7 +255,7 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake, int64_t* pFees)
                 porphan->dFeePerKb = dFeePerKb;
             }
             else
-                vecPriority.push_back(TxPriority(dPriority, dFeePerKb, &(*mi).second));
+                vecPriority.push_back(TxPriority(dPriority, dFeePerKb, &entry.second));
         }
 
         // Collect transactions into block
@@ -567,7 +567,7 @@ void StakeMiner(CWallet *pwallet)
              * then we can safely assume that we are on a sane chain.
              */
 
-            if ((vNodes.size() < (int)MIN_PEERS && !fTestNet) || nBestHeight < GetNumBlocksOfPeers())
+            if ((vNodes.size() < static_cast<int>(MIN_PEERS) && !fTestNet) || nBestHeight < GetNumBlocksOfPeers())
             {
                 MilliSleep(60000);
                 continue;

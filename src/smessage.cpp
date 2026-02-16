@@ -178,13 +178,11 @@ void SecMsgBucket::hashBucket()
     
     timeChanged = GetAdjustedTime();
     
-    std::set<SecMsgToken>::iterator it;
-    
     void* state = XXH32_init(1);
-    
-    for (it = setTokens.begin(); it != setTokens.end(); ++it)
+
+    for (const auto& token : setTokens)
     {
-        XXH32_update(state, it->sample, 8);
+        XXH32_update(state, token.sample, 8);
     };
     
     hash = XXH32_digest(state);
@@ -240,7 +238,7 @@ public:
     
     SecMsgBatchScanner() : foundEntry(false) {}
     
-    virtual void Put(const leveldb::Slice& key, const leveldb::Slice& value)
+    void Put(const leveldb::Slice& key, const leveldb::Slice& value) override
     {
         if (key.ToString() == needle)
         {
@@ -249,8 +247,8 @@ public:
             *foundValue = value.ToString();
         };
     };
-    
-    virtual void Delete(const leveldb::Slice& key)
+
+    void Delete(const leveldb::Slice& key) override
     {
         if (key.ToString() == needle)
         {
@@ -614,9 +612,8 @@ void ThreadSecureMsg(void* parg)
         
         {
             LOCK(cs_smsg);
-            std::map<int64_t, SecMsgBucket>::iterator it;
-            it = smsgBuckets.begin();
-            
+            auto it = smsgBuckets.begin();
+
             while (it != smsgBuckets.end())
             {
                 //if (fDebugSmsg)
@@ -1270,11 +1267,9 @@ bool SecureMsgDisable()
         fSecMsgenabled = false;
         
         // -- clear smsgBuckets
-        std::map<int64_t, SecMsgBucket>::iterator it;
-        it = smsgBuckets.begin();
-        for (it = smsgBuckets.begin(); it != smsgBuckets.end(); ++it)
+        for (auto& entry : smsgBuckets)
         {
-            it->second.setTokens.clear();
+            entry.second.setTokens.clear();
         };
         smsgBuckets.clear();
         
@@ -1623,8 +1618,7 @@ bool SecureMsgReceiveData(CNode* pfrom, std::string strCommand, CDataStream& vRe
         uint32_t nBunch = 0;
         memcpy(&time, &vchData[0], 8);
         
-        std::map<int64_t, SecMsgBucket>::iterator itb;
-        itb = smsgBuckets.find(time);
+        auto itb = smsgBuckets.find(time);
         if (itb == smsgBuckets.end())
         {
             if (fDebugSmsg)
@@ -1959,8 +1953,8 @@ static bool ScanBlock(CBlock& block, CTxDB& txdb, SecMsgDB& addrpkdb,
             
             opcodetype opcode;
             valtype vch;
-            CScript::const_iterator pc = script->begin();
-            CScript::const_iterator pend = script->end();
+            auto pc = script->begin();
+            auto pend = script->end();
             
             uint256 prevoutHash;
             CKey key;
@@ -3038,8 +3032,7 @@ int SecureMsgStore(unsigned char *pHeader, unsigned char *pPayload, uint32_t nPa
         SecMsgToken token(psmsg->timestamp, pPayload, nPayload, 0);
         
         std::set<SecMsgToken>& tokenSet = smsgBuckets[bucket].setTokens;
-        std::set<SecMsgToken>::iterator it;
-        it = tokenSet.find(token);
+        auto it = tokenSet.find(token);
         if (it != tokenSet.end())
         {
             printf("Already have message.\n");
@@ -3949,7 +3942,7 @@ int SecureMsgDecrypt(bool fTestOnly, std::string& address, unsigned char *pHeade
     if (lenPlain > 128)
     {
         // -- decompress
-        if (LZ4_decompress_safe((char*) pMsgData, (char*) &msg.vchMessage[0], lenData, lenPlain) != (int) lenPlain)
+        if (LZ4_decompress_safe((char*) pMsgData, (char*) &msg.vchMessage[0], lenData, lenPlain) != static_cast<int>(lenPlain))
         {
             printf("Could not decompress message data.\n");
             return 1;

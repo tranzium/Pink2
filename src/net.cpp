@@ -84,7 +84,7 @@ void AddOneShot(string strDest)
 
 unsigned short GetListenPort()
 {
-    return (unsigned short)(GetArg("-port", GetDefaultPort()));
+    return static_cast<unsigned short>(GetArg("-port", GetDefaultPort()));
 }
 
 void CNode::PushGetBlocks(CBlockIndex* pindexBegin, uint256 hashEnd)
@@ -622,8 +622,8 @@ void CNode::copyStats(CNodeStats &stats)
     }
 
     // Raw ping time is in microseconds, but show it to user as whole seconds (Bitcoin users should be well used to small numbers with many decimal places by now :)
-    stats.dPingTime = (((double)nPingUsecTime) / 1e6);
-    stats.dPingWait = (((double)nPingUsecWait) / 1e6);
+    stats.dPingTime = (static_cast<double>(nPingUsecTime) / 1e6);
+    stats.dPingWait = (static_cast<double>(nPingUsecWait) / 1e6);
 }
 #undef X
 
@@ -737,7 +737,7 @@ int CNetMessage::readData(const char *pch, unsigned int nBytes)
 // requires LOCK(cs_vSend)
 void SocketSendData(CNode *pnode)
 {
-    std::deque<CSerializeData>::iterator it = pnode->vSendMsg.begin();
+    auto it = pnode->vSendMsg.begin();
 
     while (it != pnode->vSendMsg.end()) {
         const CSerializeData &data = *it;
@@ -1659,7 +1659,7 @@ void ThreadOpenAddedConnections2(void* parg)
         {
             LOCK(cs_vNodes);
             for (CNode* pnode : vNodes)
-                for (list<vector<CService> >::iterator it = lservAddressesToAdd.begin(); it != lservAddressesToAdd.end(); it++)
+                for (auto it = lservAddressesToAdd.begin(); it != lservAddressesToAdd.end(); ++it)
                     for (CService& addrNode : *(it))
                         if (pnode->addr == addrNode)
                         {
@@ -1977,11 +1977,11 @@ void StartNode(void* parg)
     // Make this thread recognisable as the startup thread
     RenameThread("pinkcoin-start");
     
-    MAX_OUTBOUND_CONNECTIONS = (int)GetArg("-maxoutboundconnections", 32);
+    MAX_OUTBOUND_CONNECTIONS = static_cast<int>(GetArg("-maxoutboundconnections", 32));
 
     if (semOutbound == nullptr) {
         // initialize semaphore
-        int nMaxOutbound = min(MAX_OUTBOUND_CONNECTIONS, (int)GetArg("-maxconnections", 125));
+        int nMaxOutbound = min(MAX_OUTBOUND_CONNECTIONS, static_cast<int>(GetArg("-maxconnections", 125)));
         semOutbound = new CSemaphore(nMaxOutbound);
     }
 

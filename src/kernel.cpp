@@ -17,9 +17,9 @@ int64_t GetWeight(int64_t nIntervalBeginning, int64_t nIntervalEnd, const bool f
     // to secure the network when proof-of-stake difficulty is low
 
     if (fFlashStake)
-        return min(nIntervalEnd - nIntervalBeginning - nStakeMinAge, (int64_t)nFlashStakeMaxAge);
+        return min(nIntervalEnd - nIntervalBeginning - nStakeMinAge, static_cast<int64_t>(nFlashStakeMaxAge));
 
-    return min(nIntervalEnd - nIntervalBeginning - nStakeMinAge, (int64_t)nStakeMaxAge);
+    return min(nIntervalEnd - nIntervalBeginning - nStakeMinAge, static_cast<int64_t>(nStakeMaxAge));
 }
 
 // Get the last stake modifier and its generation time from a given block
@@ -158,7 +158,7 @@ bool ComputeNextStakeModifier(const CBlockIndex* pindexPrev, uint64_t& nStakeMod
     uint64_t nStakeModifierNew = 0;
     int64_t nSelectionIntervalStop = nSelectionIntervalStart;
     map<uint256, const CBlockIndex*> mapSelectedBlocks;
-    for (int nRound=0; nRound<min(64, (int)vSortedByTimestamp.size()); nRound++)
+    for (int nRound=0; nRound<min(64, static_cast<int>(vSortedByTimestamp.size())); nRound++)
     {
         // add an interval section to the current selection round
         nSelectionIntervalStop += GetStakeModifierSelectionIntervalSection(nRound);
@@ -298,7 +298,7 @@ bool CheckStakeKernelHash(unsigned int nBits, const CBlock& blockFrom, unsigned 
 
     fFlashStake = fFlashStake && (pindexBest->nTime > nTimeV231);
     // int64_t nDivideBase = nDayTime;
-    bnCoinDayWeight_Calc = nValueIn * GetWeight((int64_t)txPrev.nTime, (int64_t)nTimeTx, fFlashStake) / nDayTime;
+    bnCoinDayWeight_Calc = nValueIn * GetWeight(static_cast<int64_t>(txPrev.nTime), static_cast<int64_t>(nTimeTx), fFlashStake) / nDayTime;
 
 
     CBigNum bnCoinDayWeight = CBigNum(bnCoinDayWeight_Calc);

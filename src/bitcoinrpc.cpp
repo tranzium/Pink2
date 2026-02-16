@@ -115,7 +115,7 @@ int64_t AmountFromValue(const Value& value)
 
 Value ValueFromAmount(int64_t amount)
 {
-    return (double)amount / (double)COIN;
+    return static_cast<double>(amount) / static_cast<double>(COIN);
 }
 
 std::string HexBits(unsigned int nBits)
@@ -533,7 +533,7 @@ int ReadHTTPMessage(std::basic_istream<char>& stream, map<string,
 
     // Read header
     int nLen = ReadHTTPHeaders(stream, mapHeadersRet);
-    if (nLen < 0 || nLen > (int)MAX_SIZE)
+    if (nLen < 0 || nLen > static_cast<int>(MAX_SIZE))
         return HTTP_INTERNAL_SERVER_ERROR;
 
     // Read message
@@ -714,17 +714,17 @@ public:
     {
     }
 
-    virtual std::iostream& stream()
+    std::iostream& stream() override
     {
         return _stream;
     }
 
-    virtual std::string peer_address_to_string() const
+    std::string peer_address_to_string() const override
     {
         return peer.address().to_string();
     }
 
-    virtual void close()
+    void close() override
     {
         _stream.close();
     }
