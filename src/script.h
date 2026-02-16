@@ -17,7 +17,7 @@
 #include "bignum.h"
 #include "stealth.h"
 
-typedef std::vector<unsigned char> valtype;
+using valtype = std::vector<unsigned char>;
 
 class CTransaction;
 
@@ -57,7 +57,7 @@ public:
  *  * CScriptID: TX_SCRIPTHASH destination
  *  A CTxDestination is the internal data type encoded in a CBitcoinAddress
  */
-typedef std::variant<CNoDestination, CKeyID, CScriptID, CStealthAddress> CTxDestination;
+using CTxDestination = std::variant<CNoDestination, CKeyID, CScriptID, CStealthAddress>;
 
 const char* GetTxnOutputType(txnouttype t);
 

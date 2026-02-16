@@ -61,6 +61,6 @@ public:
 private:
     QList<BitcoinUnits::Unit> unitlist;
 };
-typedef BitcoinUnits::Unit BitcoinUnit;
+using BitcoinUnit = BitcoinUnits::Unit;
 
 #endif // BITCOINUNITS_H

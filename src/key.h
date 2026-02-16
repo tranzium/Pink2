@@ -77,9 +77,9 @@ public:
 // secure_allocator is defined in allocators.h
 // CPrivKey is a serialized private key, with all parameters included
 // (SEC 1 DER format: 86 bytes compressed, 118 bytes uncompressed)
-typedef std::vector<unsigned char, secure_allocator<unsigned char> > CPrivKey;
+using CPrivKey = std::vector<unsigned char, secure_allocator<unsigned char> >;
 // CSecret is a serialization of just the secret parameter (32 bytes)
-typedef std::vector<unsigned char, secure_allocator<unsigned char> > CSecret;
+using CSecret = std::vector<unsigned char, secure_allocator<unsigned char> >;
 
 /** An encapsulated secp256k1 elliptic curve key (public and/or private) */
 class CKey

@@ -29,8 +29,8 @@ class CReserveKey;
 class COutput;
 class CCoinControl;
 
-typedef std::map<CKeyID, CStealthKeyMetadata> StealthKeyMetaMap;
-typedef std::map<std::string, std::string> mapValue_t;
+using StealthKeyMetaMap = std::map<CKeyID, CStealthKeyMetadata>;
+using mapValue_t = std::map<std::string, std::string>;
 
 /** (client) version numbers for particular wallet features */
 enum WalletFeature
@@ -107,7 +107,7 @@ public:
     uint32_t nStealth, nFoundStealth; // for reporting, zero before use
 
 
-    typedef std::map<unsigned int, CMasterKey> MasterKeyMap;
+    using MasterKeyMap = std::map<unsigned int, CMasterKey>;
     MasterKeyMap mapMasterKeys;
     unsigned int nMasterKeyMaxID;
 	bool fSplitBlock;
@@ -144,7 +144,7 @@ public:
     std::map<uint256, int> mapRequestCount;
 
 
-    typedef std::pair<CTxDestination, std::string> mapAddress;
+    using mapAddress = std::pair<CTxDestination, std::string>;
     std::map<CTxDestination, std::string> mapAddressBook;
     std::map<CTxDestination, std::string> mapAddressPercent;
 
@@ -190,8 +190,8 @@ public:
      */
     int64_t IncOrderPosNext(CWalletDB *pwalletdb = nullptr);
 
-    typedef std::pair<CWalletTx*, CAccountingentry*> TxPair;
-    typedef std::multimap<int64_t, TxPair > TxItems;
+    using TxPair = std::pair<CWalletTx*, CAccountingentry*>;
+    using TxItems = std::multimap<int64_t, TxPair >;
 
     /** Get the wallet's activity log
         @return multimap of ordered transactions and accounting entries

@@ -77,10 +77,10 @@ public:
 
 /** Wrapped mutex: supports recursive locking, but no waiting  */
 // TODO: We should move away from using the recursive lock by default.
-typedef AnnotatedMixin<std::recursive_mutex> CCriticalSection;
+using CCriticalSection = AnnotatedMixin<std::recursive_mutex>;
 
 /** Wrapped mutex: supports waiting but not recursive locking */
-typedef AnnotatedMixin<std::mutex> CWaitableCriticalSection;
+using CWaitableCriticalSection = AnnotatedMixin<std::mutex>;
 
 #ifdef DEBUG_LOCKORDER
 void EnterCritical(const char* pszName, const char* pszFile, int nLine, void* cs, bool fTry = false);
@@ -148,7 +148,7 @@ public:
     }
 };
 
-typedef CMutexLock<CCriticalSection> CCriticalBlock;
+using CCriticalBlock = CMutexLock<CCriticalSection>;
 
 #define LOCK(cs) CCriticalBlock criticalblock(cs, #cs, __FILE__, __LINE__)
 #define LOCK2(cs1,cs2) CCriticalBlock criticalblock1(cs1, #cs1, __FILE__, __LINE__),criticalblock2(cs2, #cs2, __FILE__, __LINE__)

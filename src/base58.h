@@ -180,7 +180,7 @@ protected:
     unsigned char nVersion;
 
     // the actually encoded data
-    typedef std::vector<unsigned char, zero_after_free_allocator<unsigned char> > vector_uchar;
+    using vector_uchar = std::vector<unsigned char, zero_after_free_allocator<unsigned char> >;
     vector_uchar vchData;
 
     CBase58Data()

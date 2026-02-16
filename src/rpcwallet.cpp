@@ -2348,11 +2348,11 @@ Value getwalletinfo(const Array& params, bool fHelp)
     Object obj;
     obj.push_back(Pair("walletversion", pwalletMain->GetVersion()));
     obj.push_back(Pair("balance", ValueFromAmount(pwalletMain->GetBalance())));
-    obj.push_back(Pair("txcount", (int)pwalletMain->mapWallet.size()));
-    obj.push_back(Pair("keypoololdest", (boost::int64_t)pwalletMain->GetOldestKeyPoolTime()));
-    obj.push_back(Pair("keypoolsize", (int)pwalletMain->GetKeyPoolSize()));
+    obj.push_back(Pair("txcount", static_cast<int>(pwalletMain->mapWallet.size())));
+    obj.push_back(Pair("keypoololdest", static_cast<int64_t>(pwalletMain->GetOldestKeyPoolTime())));
+    obj.push_back(Pair("keypoolsize", static_cast<int>(pwalletMain->GetKeyPoolSize())));
     if (pwalletMain->IsCrypted())
-        obj.push_back(Pair("unlocked_until", (boost::int64_t)nWalletUnlockTime));
+        obj.push_back(Pair("unlocked_until", static_cast<int64_t>(nWalletUnlockTime)));
     return obj;
 }
 

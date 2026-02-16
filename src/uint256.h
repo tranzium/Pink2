@@ -383,8 +383,8 @@ public:
     friend inline int Testuint256AdHoc(std::vector<std::string> vArg);
 };
 
-typedef base_uint<160> base_uint160;
-typedef base_uint<256> base_uint256;
+using base_uint160 = base_uint<160>;
+using base_uint256 = base_uint<256>;
 
 
 //
@@ -403,7 +403,7 @@ typedef base_uint<256> base_uint256;
 class uint160 : public base_uint160
 {
 public:
-    typedef base_uint160 basetype;
+    using basetype = base_uint160;
 
     uint160()
     {
@@ -518,7 +518,7 @@ inline const uint160 operator-(const uint160& a, const uint160& b)      { return
 class uint256 : public base_uint256
 {
 public:
-    typedef base_uint256 basetype;
+    using basetype = base_uint256;
 
     uint256()
     {

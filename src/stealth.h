@@ -14,16 +14,16 @@
 #include <inttypes.h>
 
 
-typedef std::vector<uint8_t> data_chunk;
+using data_chunk = std::vector<uint8_t>;
 
 const size_t ec_secret_size = 32;
 const size_t ec_compressed_size = 33;
 const size_t ec_uncompressed_size = 65;
 
 typedef struct ec_secret { uint8_t e[ec_secret_size]; } ec_secret;
-typedef data_chunk ec_point;
+using ec_point = data_chunk;
 
-typedef uint32_t stealth_bitfield;
+using stealth_bitfield = uint32_t;
 
 struct stealth_prefix
 {
