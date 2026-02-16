@@ -59,6 +59,7 @@ set(PINKCOIN_TEST_SOURCES
     rpc_framework_tests.cpp
     rpc_command_tests.cpp
     net_tests.cpp
+    golden_tests.cpp
 )
 
 #-----------------------------------------
