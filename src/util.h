@@ -38,16 +38,16 @@
 static const int64_t COIN = 100000000;
 static const int64_t CENT = 1000000;
 
-#define BEGIN(a)            ((char*)&(a))
-#define END(a)              ((char*)&((&(a))[1]))
-#define UBEGIN(a)           ((unsigned char*)&(a))
-#define UEND(a)             ((unsigned char*)&((&(a))[1]))
+#define BEGIN(a)            (const_cast<char*>(reinterpret_cast<const char*>(&(a))))
+#define END(a)              (const_cast<char*>(reinterpret_cast<const char*>(&((&(a))[1]))))
+#define UBEGIN(a)           (const_cast<unsigned char*>(reinterpret_cast<const unsigned char*>(&(a))))
+#define UEND(a)             (const_cast<unsigned char*>(reinterpret_cast<const unsigned char*>(&((&(a))[1]))))
 #define ARRAYLEN(array)     (sizeof(array)/sizeof((array)[0]))
 
-#define UVOIDBEGIN(a)        ((void*)&(a))
-#define CVOIDBEGIN(a)        ((const void*)&(a))
-#define UINTBEGIN(a)        ((uint32_t*)&(a))
-#define CUINTBEGIN(a)        ((const uint32_t*)&(a))
+#define UVOIDBEGIN(a)        (reinterpret_cast<void*>(&(a)))
+#define CVOIDBEGIN(a)        (reinterpret_cast<const void*>(&(a)))
+#define UINTBEGIN(a)        (reinterpret_cast<uint32_t*>(&(a)))
+#define CUINTBEGIN(a)        (reinterpret_cast<const uint32_t*>(&(a)))
 
 /* Format characters for (s)size_t and ptrdiff_t */
 #if defined(_MSC_VER) || defined(__MSVCRT__)
@@ -252,12 +252,12 @@ inline int atoi(const std::string& str)
 
 inline int roundint(double d)
 {
-    return (int)(d > 0 ? d + 0.5 : d - 0.5);
+    return static_cast<int>(d > 0 ? d + 0.5 : d - 0.5);
 }
 
 inline int64_t roundint64(double d)
 {
-    return (int64_t)(d > 0 ? d + 0.5 : d - 0.5);
+    return static_cast<int64_t>(d > 0 ? d + 0.5 : d - 0.5);
 }
 
 inline int64_t abs64(int64_t n)
@@ -284,7 +284,7 @@ std::string HexStr(const T itbegin, const T itend, bool fSpaces=false)
     rv.reserve((itend-itbegin)*3);
     for(T it = itbegin; it < itend; ++it)
     {
-        unsigned char val = (unsigned char)(*it);
+        unsigned char val = static_cast<unsigned char>(*it);
         if(fSpaces && it != itbegin)
             rv.push_back(' ');
         rv.push_back(hexmap[val>>4]);
@@ -303,11 +303,11 @@ inline int64_t GetPerformanceCounter()
 {
     int64_t nCounter = 0;
 #ifdef WIN32
-    QueryPerformanceCounter((LARGE_INTEGER*)&nCounter);
+    QueryPerformanceCounter(reinterpret_cast<LARGE_INTEGER*>(&nCounter));
 #else
     timeval t;
     gettimeofday(&t, nullptr);
-    nCounter = (int64_t) t.tv_sec * 1000000 + t.tv_usec;
+    nCounter = static_cast<int64_t>(t.tv_sec) * 1000000 + t.tv_usec;
 #endif
     return nCounter;
 }
@@ -428,9 +428,9 @@ inline uint256 Hash(const T1 pbegin, const T1 pend)
 {
     static unsigned char pblank[1];
     uint256 hash1;
-    EVP_Digest((pbegin == pend ? pblank : (unsigned char*)&pbegin[0]), (pend - pbegin) * sizeof(pbegin[0]), (unsigned char*)&hash1, nullptr, EVP_sha256(), nullptr);
+    EVP_Digest((pbegin == pend ? pblank : reinterpret_cast<const unsigned char*>(&pbegin[0])), (pend - pbegin) * sizeof(pbegin[0]), reinterpret_cast<unsigned char*>(&hash1), nullptr, EVP_sha256(), nullptr);
     uint256 hash2;
-    EVP_Digest((unsigned char*)&hash1, sizeof(hash1), (unsigned char*)&hash2, nullptr, EVP_sha256(), nullptr);
+    EVP_Digest(reinterpret_cast<const unsigned char*>(&hash1), sizeof(hash1), reinterpret_cast<unsigned char*>(&hash2), nullptr, EVP_sha256(), nullptr);
     return hash2;
 }
 
@@ -464,9 +464,9 @@ public:
     // invalidates the object
     uint256 GetHash() {
         uint256 hash1;
-        EVP_DigestFinal_ex(ctx, (unsigned char*)&hash1, nullptr);
+        EVP_DigestFinal_ex(ctx, reinterpret_cast<unsigned char*>(&hash1), nullptr);
         uint256 hash2;
-        EVP_Digest((unsigned char*)&hash1, sizeof(hash1), (unsigned char*)&hash2, nullptr, EVP_sha256(), nullptr);
+        EVP_Digest(reinterpret_cast<const unsigned char*>(&hash1), sizeof(hash1), reinterpret_cast<unsigned char*>(&hash2), nullptr, EVP_sha256(), nullptr);
         return hash2;
     }
 
@@ -487,12 +487,12 @@ inline uint256 Hash(const T1 p1begin, const T1 p1end,
     uint256 hash1;
     EVP_MD_CTX* ctx = EVP_MD_CTX_new();
     EVP_DigestInit_ex(ctx, EVP_sha256(), nullptr);
-    EVP_DigestUpdate(ctx, (p1begin == p1end ? pblank : (unsigned char*)&p1begin[0]), (p1end - p1begin) * sizeof(p1begin[0]));
-    EVP_DigestUpdate(ctx, (p2begin == p2end ? pblank : (unsigned char*)&p2begin[0]), (p2end - p2begin) * sizeof(p2begin[0]));
-    EVP_DigestFinal_ex(ctx, (unsigned char*)&hash1, nullptr);
+    EVP_DigestUpdate(ctx, (p1begin == p1end ? pblank : reinterpret_cast<const unsigned char*>(&p1begin[0])), (p1end - p1begin) * sizeof(p1begin[0]));
+    EVP_DigestUpdate(ctx, (p2begin == p2end ? pblank : reinterpret_cast<const unsigned char*>(&p2begin[0])), (p2end - p2begin) * sizeof(p2begin[0]));
+    EVP_DigestFinal_ex(ctx, reinterpret_cast<unsigned char*>(&hash1), nullptr);
     EVP_MD_CTX_free(ctx);
     uint256 hash2;
-    EVP_Digest((unsigned char*)&hash1, sizeof(hash1), (unsigned char*)&hash2, nullptr, EVP_sha256(), nullptr);
+    EVP_Digest(reinterpret_cast<const unsigned char*>(&hash1), sizeof(hash1), reinterpret_cast<unsigned char*>(&hash2), nullptr, EVP_sha256(), nullptr);
     return hash2;
 }
 
@@ -505,13 +505,13 @@ inline uint256 Hash(const T1 p1begin, const T1 p1end,
     uint256 hash1;
     EVP_MD_CTX* ctx = EVP_MD_CTX_new();
     EVP_DigestInit_ex(ctx, EVP_sha256(), nullptr);
-    EVP_DigestUpdate(ctx, (p1begin == p1end ? pblank : (unsigned char*)&p1begin[0]), (p1end - p1begin) * sizeof(p1begin[0]));
-    EVP_DigestUpdate(ctx, (p2begin == p2end ? pblank : (unsigned char*)&p2begin[0]), (p2end - p2begin) * sizeof(p2begin[0]));
-    EVP_DigestUpdate(ctx, (p3begin == p3end ? pblank : (unsigned char*)&p3begin[0]), (p3end - p3begin) * sizeof(p3begin[0]));
-    EVP_DigestFinal_ex(ctx, (unsigned char*)&hash1, nullptr);
+    EVP_DigestUpdate(ctx, (p1begin == p1end ? pblank : reinterpret_cast<const unsigned char*>(&p1begin[0])), (p1end - p1begin) * sizeof(p1begin[0]));
+    EVP_DigestUpdate(ctx, (p2begin == p2end ? pblank : reinterpret_cast<const unsigned char*>(&p2begin[0])), (p2end - p2begin) * sizeof(p2begin[0]));
+    EVP_DigestUpdate(ctx, (p3begin == p3end ? pblank : reinterpret_cast<const unsigned char*>(&p3begin[0])), (p3end - p3begin) * sizeof(p3begin[0]));
+    EVP_DigestFinal_ex(ctx, reinterpret_cast<unsigned char*>(&hash1), nullptr);
     EVP_MD_CTX_free(ctx);
     uint256 hash2;
-    EVP_Digest((unsigned char*)&hash1, sizeof(hash1), (unsigned char*)&hash2, nullptr, EVP_sha256(), nullptr);
+    EVP_Digest(reinterpret_cast<const unsigned char*>(&hash1), sizeof(hash1), reinterpret_cast<unsigned char*>(&hash2), nullptr, EVP_sha256(), nullptr);
     return hash2;
 }
 
@@ -526,9 +526,9 @@ uint256 SerializeHash(const T& obj, int nType=SER_GETHASH, int nVersion=PROTOCOL
 inline uint160 Hash160(const std::vector<unsigned char>& vch)
 {
     uint256 hash1;
-    EVP_Digest(&vch[0], vch.size(), (unsigned char*)&hash1, nullptr, EVP_sha256(), nullptr);
+    EVP_Digest(&vch[0], vch.size(), reinterpret_cast<unsigned char*>(&hash1), nullptr, EVP_sha256(), nullptr);
     uint160 hash2;
-    EVP_Digest((unsigned char*)&hash1, sizeof(hash1), (unsigned char*)&hash2, nullptr, EVP_ripemd160(), nullptr);
+    EVP_Digest(reinterpret_cast<const unsigned char*>(&hash1), sizeof(hash1), reinterpret_cast<unsigned char*>(&hash2), nullptr, EVP_ripemd160(), nullptr);
     return hash2;
 }
 
@@ -630,7 +630,7 @@ inline void SetThreadPriority(int nPriority)
 
 inline void ExitThread(size_t nExitCode)
 {
-    pthread_exit((void*)nExitCode);
+    pthread_exit(reinterpret_cast<void*>(nExitCode));
 }
 #endif
 

@@ -103,8 +103,8 @@ enum
 //
 // Basic types
 //
-#define WRITEDATA(s, obj)   s.write((char*)&(obj), sizeof(obj))
-#define READDATA(s, obj)    s.read((char*)&(obj), sizeof(obj))
+#define WRITEDATA(s, obj)   s.write(reinterpret_cast<const char*>(&(obj)), sizeof(obj))
+#define READDATA(s, obj)    s.read(reinterpret_cast<char*>(&(obj)), sizeof(obj))
 
 inline unsigned int GetSerializeSize(char a,               int, int=0) { return sizeof(a); }
 inline unsigned int GetSerializeSize(signed char a,        int, int=0) { return sizeof(a); }
@@ -238,7 +238,7 @@ uint64_t ReadCompactSize(Stream& is)
         if (nSizeRet < 0x100000000LLu)
             throw std::ios_base::failure("non-canonical ReadCompactSize()");
     }
-    if (nSizeRet > (uint64_t)MAX_SIZE)
+    if (nSizeRet > static_cast<uint64_t>(MAX_SIZE))
         throw std::ios_base::failure("ReadCompactSize() : size too large");
     return nSizeRet;
 }
@@ -310,7 +310,7 @@ I ReadVarInt(Stream& is)
     }
 }
 
-#define FLATDATA(obj)  REF(CFlatData((char*)&(obj), (char*)&(obj) + sizeof(obj)))
+#define FLATDATA(obj)  REF(CFlatData(const_cast<char*>(reinterpret_cast<const char*>(&(obj))), const_cast<char*>(reinterpret_cast<const char*>(&(obj))) + sizeof(obj)))
 #define VARINT(obj)    REF(WrapVarInt(REF(obj)))
 
 /** Wrapper for serializing arrays and POD.
@@ -321,7 +321,7 @@ protected:
     char* pbegin;
     char* pend;
 public:
-    CFlatData(void* pbeginIn, void* pendIn) : pbegin((char*)pbeginIn), pend((char*)pendIn) { }
+    CFlatData(void* pbeginIn, void* pendIn) : pbegin(reinterpret_cast<char*>(pbeginIn)), pend(reinterpret_cast<char*>(pendIn)) { }
     char* begin() { return pbegin; }
     const char* begin() const { return pbegin; }
     char* end() { return pend; }
@@ -434,19 +434,19 @@ template<typename Stream, typename K, typename Pred, typename A> void Unserializ
 template<typename T>
 inline unsigned int GetSerializeSize(const T& a, long nType, int nVersion)
 {
-    return a.GetSerializeSize((int)nType, nVersion);
+    return a.GetSerializeSize(static_cast<int>(nType), nVersion);
 }
 
 template<typename Stream, typename T>
 inline void Serialize(Stream& os, const T& a, long nType, int nVersion)
 {
-    a.Serialize(os, (int)nType, nVersion);
+    a.Serialize(os, static_cast<int>(nType), nVersion);
 }
 
 template<typename Stream, typename T>
 inline void Unserialize(Stream& is, T& a, long nType, int nVersion)
 {
-    a.Unserialize(is, (int)nType, nVersion);
+    a.Unserialize(is, static_cast<int>(nType), nVersion);
 }
 
 
@@ -467,7 +467,7 @@ void Serialize(Stream& os, const std::basic_string<C>& str, int, int)
 {
     WriteCompactSize(os, str.size());
     if (!str.empty())
-        os.write((char*)&str[0], str.size() * sizeof(str[0]));
+        os.write(reinterpret_cast<const char*>(&str[0]), str.size() * sizeof(str[0]));
 }
 
 template<typename Stream, typename C>
@@ -476,7 +476,7 @@ void Unserialize(Stream& is, std::basic_string<C>& str, int, int)
     unsigned int nSize = ReadCompactSize(is);
     str.resize(nSize);
     if (nSize != 0)
-        is.read((char*)&str[0], nSize * sizeof(str[0]));
+        is.read(reinterpret_cast<char*>(&str[0]), nSize * sizeof(str[0]));
 }
 
 
@@ -511,7 +511,7 @@ void Serialize_impl(Stream& os, const std::vector<T, A>& v, int nType, int nVers
 {
     WriteCompactSize(os, v.size());
     if (!v.empty())
-        os.write((char*)&v[0], v.size() * sizeof(T));
+        os.write(reinterpret_cast<const char*>(&v[0]), v.size() * sizeof(T));
 }
 
 template<typename Stream, typename T, typename A>
@@ -538,9 +538,9 @@ void Unserialize_impl(Stream& is, std::vector<T, A>& v, int nType, int nVersion,
     unsigned int i = 0;
     while (i < nSize)
     {
-        unsigned int blk = std::min(nSize - i, (unsigned int)(1 + 4999999 / sizeof(T)));
+        unsigned int blk = std::min(nSize - i, static_cast<unsigned int>(1 + 4999999 / sizeof(T)));
         v.resize(i + blk);
-        is.read((char*)&v[i], blk * sizeof(T));
+        is.read(reinterpret_cast<char*>(&v[i]), blk * sizeof(T));
         i += blk;
     }
 }
@@ -883,7 +883,7 @@ public:
         Init(nTypeIn, nVersionIn);
     }
 
-    CDataStream(const std::vector<unsigned char>& vchIn, int nTypeIn, int nVersionIn) : vch((char*)&vchIn.begin()[0], (char*)&vchIn.end()[0])
+    CDataStream(const std::vector<unsigned char>& vchIn, int nTypeIn, int nVersionIn) : vch(reinterpret_cast<const char*>(&vchIn.begin()[0]), reinterpret_cast<const char*>(&vchIn.end()[0]))
     {
         Init(nTypeIn, nVersionIn);
     }
@@ -936,7 +936,7 @@ public:
     void insert(iterator it, std::vector<char>::const_iterator first, std::vector<char>::const_iterator last)
     {
         assert(last - first >= 0);
-        if (it == vch.begin() + nReadPos && (unsigned int)(last - first) <= nReadPos)
+        if (it == vch.begin() + nReadPos && static_cast<unsigned int>(last - first) <= nReadPos)
         {
             // special case for inserting at the front when there's room
             nReadPos -= (last - first);
@@ -950,7 +950,7 @@ public:
     void insert(iterator it, const char* first, const char* last)
     {
         assert(last - first >= 0);
-        if (it == vch.begin() + nReadPos && (unsigned int)(last - first) <= nReadPos)
+        if (it == vch.begin() + nReadPos && static_cast<unsigned int>(last - first) <= nReadPos)
         {
             // special case for inserting at the front when there's room
             nReadPos -= (last - first);
@@ -1091,7 +1091,7 @@ public:
     {
         // Special case: stream << stream concatenates like stream += stream
         if (!vch.empty())
-            s.write((char*)&vch[0], vch.size() * sizeof(vch[0]));
+            s.write(reinterpret_cast<const char*>(&vch[0]), vch.size() * sizeof(vch[0]));
     }
 
     template<typename T>

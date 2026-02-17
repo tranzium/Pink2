@@ -468,7 +468,7 @@ CNode* ConnectNode(CAddress addrConnect, const char *pszDest)
     if (fDebug)
         printf("trying connection %s lastseen=%.1fhrs\n",
         pszDest ? pszDest : addrConnect.ToString().c_str(),
-        pszDest ? 0 : (double)(GetAdjustedTime() - addrConnect.nTime)/3600.0);
+        pszDest ? 0 : static_cast<double>(GetAdjustedTime() - addrConnect.nTime)/3600.0);
 
     // Connect
     SOCKET hSocket;
@@ -534,7 +534,7 @@ void CNode::PushVersion()
     int64_t nTime = GetAdjustedTime();
     CAddress addrYou = (addr.IsRoutable() && !IsProxy(addr) ? addr : CAddress(CService("0.0.0.0",0)));
     CAddress addrMe = GetLocalAddress(&addr);
-    RAND_bytes((unsigned char*)&nLocalHostNonce, sizeof(nLocalHostNonce));
+    RAND_bytes(reinterpret_cast<unsigned char*>(&nLocalHostNonce), sizeof(nLocalHostNonce));
     printf("send version message: version %d, blocks=%d, us=%s, them=%s, peer=%s\n", PROTOCOL_VERSION, nBestHeight, addrMe.ToString().c_str(), addrYou.ToString().c_str(), addr.ToString().c_str());
     PushMessage("version", PROTOCOL_VERSION, nLocalServices, nTime, addrYou, addrMe,
                 nLocalHostNonce, FormatSubVersion(CLIENT_NAME, CLIENT_VERSION, std::vector<string>()), nBestHeight);
@@ -946,7 +946,7 @@ void ThreadSocketHandler2(void* parg)
         {
             struct sockaddr_storage sockaddr;
             socklen_t len = sizeof(sockaddr);
-            SOCKET hSocket = accept(hListenSocket, (struct sockaddr*)&sockaddr, &len);
+            SOCKET hSocket = accept(hListenSocket, reinterpret_cast<struct sockaddr*>(&sockaddr), &len);
             CAddress addr;
             int nInbound = 0;
 
@@ -1833,14 +1833,14 @@ bool BindListenPort(const CService &addrBind, string& strError)
     // Create socket for listening for incoming connections
     struct sockaddr_storage sockaddr;
     socklen_t len = sizeof(sockaddr);
-    if (!addrBind.GetSockAddr((struct sockaddr*)&sockaddr, &len))
+    if (!addrBind.GetSockAddr(reinterpret_cast<struct sockaddr*>(&sockaddr), &len))
     {
         strError = strprintf("Error: bind address family for %s not supported", addrBind.ToString().c_str());
         printf("%s\n", strError.c_str());
         return false;
     }
 
-    SOCKET hListenSocket = socket(((struct sockaddr*)&sockaddr)->sa_family, SOCK_STREAM, IPPROTO_TCP);
+    SOCKET hListenSocket = socket((reinterpret_cast<struct sockaddr*>(&sockaddr))->sa_family, SOCK_STREAM, IPPROTO_TCP);
     if (hListenSocket == INVALID_SOCKET)
     {
         strError = strprintf("Error: Couldn't open socket for incoming connections (socket returned error %d)", WSAGetLastError());
@@ -1850,19 +1850,19 @@ bool BindListenPort(const CService &addrBind, string& strError)
 
 #ifdef SO_NOSIGPIPE
     // Different way of disabling SIGPIPE on BSD
-    setsockopt(hListenSocket, SOL_SOCKET, SO_NOSIGPIPE, (void*)&nOne, sizeof(int));
+    setsockopt(hListenSocket, SOL_SOCKET, SO_NOSIGPIPE, reinterpret_cast<void*>(&nOne), sizeof(int));
 #endif
 
 #ifndef WIN32
     // Allow binding if the port is still in TIME_WAIT state after
     // the program was closed and restarted.  Not an issue on windows.
-    setsockopt(hListenSocket, SOL_SOCKET, SO_REUSEADDR, (void*)&nOne, sizeof(int));
+    setsockopt(hListenSocket, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<void*>(&nOne), sizeof(int));
 #endif
 
 
 #ifdef WIN32
     // Set to non-blocking, incoming connections will also inherit this
-    if (ioctlsocket(hListenSocket, FIONBIO, (u_long*)&nOne) == SOCKET_ERROR)
+    if (ioctlsocket(hListenSocket, FIONBIO, reinterpret_cast<u_long*>(&nOne)) == SOCKET_ERROR)
 #else
     if (fcntl(hListenSocket, F_SETFL, O_NONBLOCK) == SOCKET_ERROR)
 #endif
@@ -1877,20 +1877,20 @@ bool BindListenPort(const CService &addrBind, string& strError)
     if (addrBind.IsIPv6()) {
 #ifdef IPV6_V6ONLY
 #ifdef WIN32
-        setsockopt(hListenSocket, IPPROTO_IPV6, IPV6_V6ONLY, (const char*)&nOne, sizeof(int));
+        setsockopt(hListenSocket, IPPROTO_IPV6, IPV6_V6ONLY, reinterpret_cast<const char*>(&nOne), sizeof(int));
 #else
-        setsockopt(hListenSocket, IPPROTO_IPV6, IPV6_V6ONLY, (void*)&nOne, sizeof(int));
+        setsockopt(hListenSocket, IPPROTO_IPV6, IPV6_V6ONLY, reinterpret_cast<void*>(&nOne), sizeof(int));
 #endif
 #endif
 #ifdef WIN32
         int nProtLevel = 10 /* PROTECTION_LEVEL_UNRESTRICTED */;
         int nParameterId = 23 /* IPV6_PROTECTION_LEVEl */;
         // this call is allowed to fail
-        setsockopt(hListenSocket, IPPROTO_IPV6, nParameterId, (const char*)&nProtLevel, sizeof(int));
+        setsockopt(hListenSocket, IPPROTO_IPV6, nParameterId, reinterpret_cast<const char*>(&nProtLevel), sizeof(int));
 #endif
     }
 
-    if (::bind(hListenSocket, (struct sockaddr*)&sockaddr, len) == SOCKET_ERROR)
+    if (::bind(hListenSocket, reinterpret_cast<struct sockaddr*>(&sockaddr), len) == SOCKET_ERROR)
     {
         int nErr = WSAGetLastError();
         if (nErr == WSAEADDRINUSE)

@@ -136,7 +136,7 @@ uint64_t GetRand(uint64_t nMax)
     uint64_t nRange = (std::numeric_limits<uint64_t>::max() / nMax) * nMax;
     uint64_t nRand = 0;
     do
-        RAND_bytes((unsigned char*)&nRand, sizeof(nRand));
+        RAND_bytes(reinterpret_cast<unsigned char*>(&nRand), sizeof(nRand));
     while (nRand >= nRange);
     return (nRand % nMax);
 }
@@ -149,7 +149,7 @@ int GetRandInt(int nMax)
 uint256 GetRandHash()
 {
     uint256 hash;
-    RAND_bytes((unsigned char*)&hash, sizeof(hash));
+    RAND_bytes(reinterpret_cast<unsigned char*>(&hash), sizeof(hash));
     return hash;
 }
 
@@ -342,9 +342,9 @@ string FormatMoney(int64_t n, bool fPlus)
         str.erase(str.size()-nTrim, nTrim);
 
     if (n < 0)
-        str.insert((unsigned int)0, 1, '-');
+        str.insert(static_cast<unsigned int>(0), 1, '-');
     else if (fPlus && n > 0)
-        str.insert((unsigned int)0, 1, '+');
+        str.insert(static_cast<unsigned int>(0), 1, '+');
     return str;
 }
 
@@ -688,7 +688,7 @@ vector<unsigned char> DecodeBase64(const char* p, bool* pfInvalid)
 string DecodeBase64(const string& str)
 {
     vector<unsigned char> vchRet = DecodeBase64(str.c_str());
-    return string((const char*)&vchRet[0], vchRet.size());
+    return string(reinterpret_cast<const char*>(&vchRet[0]), vchRet.size());
 }
 
 string EncodeBase32(const unsigned char* pch, size_t len)
@@ -875,7 +875,7 @@ vector<unsigned char> DecodeBase32(const char* p, bool* pfInvalid)
 string DecodeBase32(const string& str)
 {
     vector<unsigned char> vchRet = DecodeBase32(str.c_str());
-    return string((const char*)&vchRet[0], vchRet.size());
+    return string(reinterpret_cast<const char*>(&vchRet[0]), vchRet.size());
 }
 
 
@@ -1248,11 +1248,11 @@ void seed_insecure_rand(bool fDeterministic)
     } else {
         uint32_t tmp;
         do{
-            RAND_bytes((unsigned char*)&tmp,4);
+            RAND_bytes(reinterpret_cast<unsigned char*>(&tmp),4);
         }while(tmp==0 || tmp==0x9068ffffU);
         insecure_rand_Rz=tmp;
         do{
-            RAND_bytes((unsigned char*)&tmp,4);
+            RAND_bytes(reinterpret_cast<unsigned char*>(&tmp),4);
         }while(tmp==0 || tmp==0x464fffffU);
         insecure_rand_Rw=tmp;
     }

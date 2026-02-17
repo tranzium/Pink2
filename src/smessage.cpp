@@ -475,7 +475,7 @@ bool SecMsgDB::ReadSmesg(unsigned char* chKey, SecMsgStored& smsgStored)
         return false;
     
     CDataStream ssKey(SER_DISK, CLIENT_VERSION);
-    ssKey.write((const char*)chKey, 18);
+    ssKey.write(reinterpret_cast<const char*>(chKey), 18);
     std::string strValue;
 
     bool readFromDb = true;
@@ -517,7 +517,7 @@ bool SecMsgDB::WriteSmesg(unsigned char* chKey, SecMsgStored& smsgStored)
         return false;
     
     CDataStream ssKey(SER_DISK, CLIENT_VERSION);
-    ssKey.write((const char*)chKey, 18);
+    ssKey.write(reinterpret_cast<const char*>(chKey), 18);
     CDataStream ssValue(SER_DISK, CLIENT_VERSION);
     ssValue << smsgStored;
 
@@ -545,7 +545,7 @@ bool SecMsgDB::ExistsSmesg(unsigned char* chKey)
         return false;
     
     CDataStream ssKey(SER_DISK, CLIENT_VERSION);
-    ssKey.write((const char*)chKey, 18);
+    ssKey.write(reinterpret_cast<const char*>(chKey), 18);
     std::string unused;
     
     if (activeBatch)
@@ -565,7 +565,7 @@ bool SecMsgDB::ExistsSmesg(unsigned char* chKey)
 bool SecMsgDB::EraseSmesg(unsigned char* chKey)
 {
     CDataStream ssKey(SER_DISK, CLIENT_VERSION);
-    ssKey.write((const char*)chKey, 18);
+    ssKey.write(reinterpret_cast<const char*>(chKey), 18);
     
     if (activeBatch)
     {
@@ -904,7 +904,7 @@ int SecureMsgBuildBucketSet()
                 SecMsgToken token;
                 token.offset = ofs;
                 errno = 0;
-                if (fread(&smsg.hash[0], sizeof(unsigned char), SMSG_HDR_LEN, fp) != (size_t)SMSG_HDR_LEN)
+                if (fread(&smsg.hash[0], sizeof(unsigned char), SMSG_HDR_LEN, fp) != static_cast<size_t>(SMSG_HDR_LEN))
                 {
                     if (errno != 0)
                     {
@@ -2246,7 +2246,7 @@ bool SecureMsgScanBuckets()
             for (;;)
             {
                 errno = 0;
-                if (fread(&smsg.hash[0], sizeof(unsigned char), SMSG_HDR_LEN, fp) != (size_t)SMSG_HDR_LEN)
+                if (fread(&smsg.hash[0], sizeof(unsigned char), SMSG_HDR_LEN, fp) != static_cast<size_t>(SMSG_HDR_LEN))
                 {
                     if (errno != 0)
                     {
@@ -2394,7 +2394,7 @@ int SecureMsgWalletUnlocked()
             for (;;)
             {
                 errno = 0;
-                if (fread(&smsg.hash[0], sizeof(unsigned char), SMSG_HDR_LEN, fp) != (size_t)SMSG_HDR_LEN)
+                if (fread(&smsg.hash[0], sizeof(unsigned char), SMSG_HDR_LEN, fp) != static_cast<size_t>(SMSG_HDR_LEN))
                 {
                     if (errno != 0)
                     {
@@ -2782,7 +2782,7 @@ int SecureMsgRetrieve(SecMsgToken &token, std::vector<unsigned char>& vchData)
     
     SecureMessage smsg;
     errno = 0;
-    if (fread(&smsg.hash[0], sizeof(unsigned char), SMSG_HDR_LEN, fp) != (size_t)SMSG_HDR_LEN)
+    if (fread(&smsg.hash[0], sizeof(unsigned char), SMSG_HDR_LEN, fp) != static_cast<size_t>(SMSG_HDR_LEN))
     {
         printf("fread header failed: %s\n", strerror(errno));
         fclose(fp);
@@ -2971,7 +2971,7 @@ int SecureMsgStoreUnscanned(unsigned char *pHeader, unsigned char *pPayload, uin
         return 1;
     };
     
-    if (fwrite(pHeader, sizeof(unsigned char), SMSG_HDR_LEN, fp) != (size_t)SMSG_HDR_LEN
+    if (fwrite(pHeader, sizeof(unsigned char), SMSG_HDR_LEN, fp) != static_cast<size_t>(SMSG_HDR_LEN)
         || fwrite(pPayload, sizeof(unsigned char), nPayload, fp) != nPayload)
     {
         printf("fwrite failed: %s\n", strerror(errno));
@@ -3082,7 +3082,7 @@ int SecureMsgStore(unsigned char *pHeader, unsigned char *pPayload, uint32_t nPa
         
         ofs = ftell(fp);
         
-        if (fwrite(pHeader, sizeof(unsigned char), SMSG_HDR_LEN, fp) != (size_t)SMSG_HDR_LEN
+        if (fwrite(pHeader, sizeof(unsigned char), SMSG_HDR_LEN, fp) != static_cast<size_t>(SMSG_HDR_LEN)
             || fwrite(pPayload, sizeof(unsigned char), nPayload, fp) != nPayload)
         {
             printf("fwrite failed: %s\n", strerror(errno));
@@ -3147,14 +3147,14 @@ int SecureMsgValidate(unsigned char *pHeader, unsigned char *pPayload, uint32_t 
     EVP_MAC *mac = EVP_MAC_fetch(nullptr, "HMAC", nullptr);
     EVP_MAC_CTX *ctx = EVP_MAC_CTX_new(mac);
     OSSL_PARAM params[] = {
-        OSSL_PARAM_construct_utf8_string("digest", (char*)"SHA256", 0),
+        OSSL_PARAM_construct_utf8_string("digest", const_cast<char*>("SHA256"), 0),
         OSSL_PARAM_construct_end()
     };
     size_t outlen = 0;
     if (!ctx
         || !EVP_MAC_init(ctx, &civ[0], 32, params)
-        || !EVP_MAC_update(ctx, (unsigned char*) pHeader+4, SMSG_HDR_LEN-4)
-        || !EVP_MAC_update(ctx, (unsigned char*) pPayload, nPayload)
+        || !EVP_MAC_update(ctx, reinterpret_cast<const unsigned char*>(pHeader)+4, SMSG_HDR_LEN-4)
+        || !EVP_MAC_update(ctx, reinterpret_cast<const unsigned char*>(pPayload), nPayload)
         || !EVP_MAC_update(ctx, pPayload, nPayload)
         || !EVP_MAC_final(ctx, sha256Hash, &outlen, sizeof(sha256Hash))
         || outlen != 32)
@@ -3213,7 +3213,7 @@ int SecureMsgSetHash(unsigned char *pHeader, unsigned char *pPayload, uint32_t n
     EVP_MAC *mac = EVP_MAC_fetch(nullptr, "HMAC", nullptr);
     EVP_MAC_CTX *ctx = EVP_MAC_CTX_new(mac);
     OSSL_PARAM params[] = {
-        OSSL_PARAM_construct_utf8_string("digest", (char*)"SHA256", 0),
+        OSSL_PARAM_construct_utf8_string("digest", const_cast<char*>("SHA256"), 0),
         OSSL_PARAM_construct_end()
     };
 
@@ -3233,8 +3233,8 @@ int SecureMsgSetHash(unsigned char *pHeader, unsigned char *pPayload, uint32_t n
         size_t outlen = 0;
         if (!ctx
             || !EVP_MAC_init(ctx, &civ[0], 32, params)
-            || !EVP_MAC_update(ctx, (unsigned char*) pHeader+4, SMSG_HDR_LEN-4)
-            || !EVP_MAC_update(ctx, (unsigned char*) pPayload, nPayload)
+            || !EVP_MAC_update(ctx, reinterpret_cast<const unsigned char*>(pHeader)+4, SMSG_HDR_LEN-4)
+            || !EVP_MAC_update(ctx, reinterpret_cast<const unsigned char*>(pPayload), nPayload)
             || !EVP_MAC_update(ctx, pPayload, nPayload)
             || !EVP_MAC_final(ctx, sha256Hash, &outlen, sizeof(sha256Hash))
             || outlen != 32)
@@ -3437,11 +3437,11 @@ int SecureMspinkcrypt(SecureMessage& smsg, std::string& addressFrom, std::string
     //    The first 32 bytes of H are called key_e and the last 32 bytes are called key_m.
     std::vector<unsigned char> vchHashed;
     vchHashed.resize(64); // 512
-    EVP_Digest(&vchP[0], vchP.size(), (unsigned char*)&vchHashed[0], nullptr, EVP_sha512(), nullptr);
+    EVP_Digest(&vchP[0], vchP.size(), reinterpret_cast<unsigned char*>(&vchHashed[0]), nullptr, EVP_sha512(), nullptr);
     std::vector<unsigned char> key_e(&vchHashed[0], &vchHashed[0]+32);
     std::vector<unsigned char> key_m(&vchHashed[32], &vchHashed[32]+32);
-    
-    
+
+
     std::vector<unsigned char> vchPayload;
     std::vector<unsigned char> vchCompressed;
     unsigned char* pMsgData;
@@ -3459,7 +3459,7 @@ int SecureMspinkcrypt(SecureMessage& smsg, std::string& addressFrom, std::string
             return 8;
         };
         
-        int lenComp = LZ4_compress((char*)message.c_str(), (char*)&vchCompressed[0], lenMsg);
+        int lenComp = LZ4_compress(reinterpret_cast<const char*>(message.c_str()), reinterpret_cast<char*>(&vchCompressed[0]), lenMsg);
         if (lenComp < 1)
         {
             printf("Could not compress message data.\n");
@@ -3472,7 +3472,7 @@ int SecureMspinkcrypt(SecureMessage& smsg, std::string& addressFrom, std::string
     } else
     {
         // -- no compression
-        pMsgData = (unsigned char*)message.c_str();
+        pMsgData = reinterpret_cast<unsigned char*>(const_cast<char*>(message.c_str()));
         lenMsgData = lenMsg;
     };
     
@@ -3549,13 +3549,13 @@ int SecureMspinkcrypt(SecureMessage& smsg, std::string& addressFrom, std::string
     EVP_MAC *mac = EVP_MAC_fetch(nullptr, "HMAC", nullptr);
     EVP_MAC_CTX *ctx = EVP_MAC_CTX_new(mac);
     OSSL_PARAM params[] = {
-        OSSL_PARAM_construct_utf8_string("digest", (char*)"SHA256", 0),
+        OSSL_PARAM_construct_utf8_string("digest", const_cast<char*>("SHA256"), 0),
         OSSL_PARAM_construct_end()
     };
     size_t outlen = 0;
     if (!ctx
         || !EVP_MAC_init(ctx, &key_m[0], 32, params)
-        || !EVP_MAC_update(ctx, (unsigned char*) &smsg.timestamp, sizeof(smsg.timestamp))
+        || !EVP_MAC_update(ctx, reinterpret_cast<const unsigned char*>(&smsg.timestamp), sizeof(smsg.timestamp))
         || !EVP_MAC_update(ctx, &vchCiphertext[0], vchCiphertext.size())
         || !EVP_MAC_final(ctx, smsg.mac, &outlen, sizeof(smsg.mac))
         || outlen != 32)
@@ -3858,7 +3858,7 @@ int SecureMsgDecrypt(bool fTestOnly, std::string& address, unsigned char *pHeade
     //    The first 32 bytes of H are called key_e and the last 32 bytes are called key_m. 
     std::vector<unsigned char> vchHashedDec;
     vchHashedDec.resize(64);    // 512 bits
-    EVP_Digest(&vchP[0], vchP.size(), (unsigned char*)&vchHashedDec[0], nullptr, EVP_sha512(), nullptr);
+    EVP_Digest(&vchP[0], vchP.size(), reinterpret_cast<unsigned char*>(&vchHashedDec[0]), nullptr, EVP_sha512(), nullptr);
     std::vector<unsigned char> key_e(&vchHashedDec[0], &vchHashedDec[0]+32);
     std::vector<unsigned char> key_m(&vchHashedDec[32], &vchHashedDec[32]+32);
     
@@ -3870,13 +3870,13 @@ int SecureMsgDecrypt(bool fTestOnly, std::string& address, unsigned char *pHeade
     EVP_MAC *mac = EVP_MAC_fetch(nullptr, "HMAC", nullptr);
     EVP_MAC_CTX *ctx = EVP_MAC_CTX_new(mac);
     OSSL_PARAM params[] = {
-        OSSL_PARAM_construct_utf8_string("digest", (char*)"SHA256", 0),
+        OSSL_PARAM_construct_utf8_string("digest", const_cast<char*>("SHA256"), 0),
         OSSL_PARAM_construct_end()
     };
     size_t outlen = 0;
     if (!ctx
         || !EVP_MAC_init(ctx, &key_m[0], 32, params)
-        || !EVP_MAC_update(ctx, (unsigned char*) &psmsg->timestamp, sizeof(psmsg->timestamp))
+        || !EVP_MAC_update(ctx, reinterpret_cast<const unsigned char*>(&psmsg->timestamp), sizeof(psmsg->timestamp))
         || !EVP_MAC_update(ctx, pPayload, nPayload)
         || !EVP_MAC_final(ctx, MAC, &outlen, sizeof(MAC))
         || outlen != 32)
@@ -3917,7 +3917,7 @@ int SecureMsgDecrypt(bool fTestOnly, std::string& address, unsigned char *pHeade
     
     unsigned char* pMsgData;
     bool fFromAnonymous;
-    if ((uint32_t)vchPayload[0] == 250)
+    if (static_cast<uint32_t>(vchPayload[0]) == 250)
     {
         fFromAnonymous = true;
         lenData = vchPayload.size() - (9);
@@ -3942,7 +3942,7 @@ int SecureMsgDecrypt(bool fTestOnly, std::string& address, unsigned char *pHeade
     if (lenPlain > 128)
     {
         // -- decompress
-        if (LZ4_decompress_safe((char*) pMsgData, (char*) &msg.vchMessage[0], lenData, lenPlain) != static_cast<int>(lenPlain))
+        if (LZ4_decompress_safe(reinterpret_cast<char*>(pMsgData), reinterpret_cast<char*>(&msg.vchMessage[0]), lenData, lenPlain) != static_cast<int>(lenPlain))
         {
             printf("Could not decompress message data.\n");
             return 1;

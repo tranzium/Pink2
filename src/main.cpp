@@ -2230,9 +2230,9 @@ bool CBlock::CheckBlock(bool fCheckPOW, bool fCheckMerkleRoot, bool fCheckSig) c
             return DoS(100, error("CheckBlock() : more than one coinbase"));
 
     // Check coinbase timestamp
-    if (futureLimit > FutureDrift((int64_t)vtx[0].nTime) && !fTestNet)
+    if (futureLimit > FutureDrift(static_cast<int64_t>(vtx[0].nTime)) && !fTestNet)
     {
-        printf("\nBlockTime: %" PRId64 ", FutureDrift: %" PRId64 "\n", GetBlockTime(), FutureDrift((int64_t)vtx[0].nTime));
+        printf("\nBlockTime: %" PRId64 ", FutureDrift: %" PRId64 "\n", GetBlockTime(), FutureDrift(static_cast<int64_t>(vtx[0].nTime)));
         return DoS(50, error("CheckBlock() : coinbase timestamp is too early"));
     }
 
@@ -2250,7 +2250,7 @@ bool CBlock::CheckBlock(bool fCheckPOW, bool fCheckMerkleRoot, bool fCheckSig) c
                 return DoS(100, error("CheckBlock() : more than one coinstake"));
 
         // Check coinstake timestamp
-        if (!CheckCoinStakeTimestamp(GetBlockTime(), (int64_t)vtx[1].nTime))
+        if (!CheckCoinStakeTimestamp(GetBlockTime(), static_cast<int64_t>(vtx[1].nTime)))
             return DoS(50, error("CheckBlock() : coinstake timestamp violation nTimeBlock=%" PRId64 " nTimeTx=%u", GetBlockTime(), vtx[1].nTime));
 
         // NovaCoin: check proof-of-stake block signature
@@ -2265,7 +2265,7 @@ bool CBlock::CheckBlock(bool fCheckPOW, bool fCheckMerkleRoot, bool fCheckSig) c
             return DoS(tx.nDoS, error("CheckBlock() : CheckTransaction failed"));
 
         // ppcoin: check transaction timestamp
-        if (GetBlockTime() < (int64_t)tx.nTime)
+        if (GetBlockTime() < static_cast<int64_t>(tx.nTime))
             return DoS(50, error("CheckBlock() : block timestamp earlier than transaction timestamp"));
     }
     
@@ -2576,10 +2576,10 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock)
             CBlockIndex* pindexCPrev = pindexBestCheck->pprev;
             CBlockIndex* pindexCPrevPrev = pindexBestCheck->pprev->pprev;
             if (pindexBestCheck->nTime < nNow - 120 && (pindexBestCheck->nTime > pindexCPrev->nTime + 30 || pindexBestCheck->nTime > pindexCPrevPrev->nTime + 60)){
-                printf("Checked block %s, nTime=%" PRIu64", prev->nTime=%" PRIu64", prev->prev->nTime=%" PRIu64"\n", pindexBestCheck->GetBlockHash().GetHex().c_str(), (uint64_t)pindexBestCheck->nTime, (uint64_t)pindexCPrev->nTime, (uint64_t)pindexCPrevPrev->nTime);
+                printf("Checked block %s, nTime=%" PRIu64", prev->nTime=%" PRIu64", prev->prev->nTime=%" PRIu64"\n", pindexBestCheck->GetBlockHash().GetHex().c_str(), static_cast<uint64_t>(pindexBestCheck->nTime), static_cast<uint64_t>(pindexCPrev->nTime), static_cast<uint64_t>(pindexCPrevPrev->nTime));
                 return pblock->DoS(100, error("AcceptBlock() : Too Late to commit block. We already have acceptable blocks for this height. (bestcheck) \n"));
             }
-            printf("Checked block %s, nTime=%" PRIu64", prev->nTime=%" PRIu64", prev->prev->nTime=%" PRIu64"\n", pindexBestCheck->GetBlockHash().GetHex().c_str(), (uint64_t)pindexBestCheck->nTime, (uint64_t)pindexCPrev->nTime, (uint64_t)pindexCPrevPrev->nTime);
+            printf("Checked block %s, nTime=%" PRIu64", prev->nTime=%" PRIu64", prev->prev->nTime=%" PRIu64"\n", pindexBestCheck->GetBlockHash().GetHex().c_str(), static_cast<uint64_t>(pindexBestCheck->nTime), static_cast<uint64_t>(pindexCPrev->nTime), static_cast<uint64_t>(pindexCPrevPrev->nTime));
         }
 
         if (pindexBest->nTime < nNow - 120)
@@ -2728,7 +2728,7 @@ static std::filesystem::path BlockFilePath(unsigned int nFile)
 
 FILE* OpenBlockFile(unsigned int nFile, unsigned int nBlockPos, const char* pszMode)
 {
-    if ((nFile < 1) || (nFile == (unsigned int) -1))
+    if ((nFile < 1) || (nFile == static_cast<unsigned int>(-1)))
         return nullptr;
     FILE* file = fopen(BlockFilePath(nFile).string().c_str(), pszMode);
     if (!file)
@@ -2959,7 +2959,7 @@ bool LoadExternalBlockFile(FILE* fileIn)
         try {
             CAutoFile blkdat(fileIn, SER_DISK, CLIENT_VERSION);
             unsigned int nPos = 0;
-            while (nPos != (unsigned int)-1 && blkdat.good() && !fRequestShutdown)
+            while (nPos != static_cast<unsigned int>(-1) && blkdat.good() && !fRequestShutdown)
             {
                 unsigned char pchData[65536];
                 do {
@@ -2967,7 +2967,7 @@ bool LoadExternalBlockFile(FILE* fileIn)
                     int nRead = fread(pchData, 1, sizeof(pchData), blkdat);
                     if (nRead <= 8)
                     {
-                        nPos = (unsigned int)-1;
+                        nPos = static_cast<unsigned int>(-1);
                         break;
                     }
                     void* nFind = memchr(pchData, pchMessageStart[0], nRead+1-sizeof(pchMessageStart));
@@ -2975,15 +2975,15 @@ bool LoadExternalBlockFile(FILE* fileIn)
                     {
                         if (memcmp(nFind, pchMessageStart, sizeof(pchMessageStart))==0)
                         {
-                            nPos += ((unsigned char*)nFind - pchData) + sizeof(pchMessageStart);
+                            nPos += (static_cast<unsigned char*>(nFind) - pchData) + sizeof(pchMessageStart);
                             break;
                         }
-                        nPos += ((unsigned char*)nFind - pchData) + 1;
+                        nPos += (static_cast<unsigned char*>(nFind) - pchData) + 1;
                     }
                     else
                         nPos += sizeof(pchData) - sizeof(pchMessageStart) + 1;
                 } while(!fRequestShutdown);
-                if (nPos == (unsigned int)-1)
+                if (nPos == static_cast<unsigned int>(-1))
                     break;
                 fseek(blkdat, nPos, SEEK_SET);
                 unsigned int nSize;
@@ -3351,7 +3351,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
         }
 
         // find last block in inv vector
-        unsigned int nLastBlock = (unsigned int)(-1);
+        unsigned int nLastBlock = static_cast<unsigned int>(-1);
         for (unsigned int nInv = 0; nInv < vInv.size(); nInv++) {
             if (vInv[vInv.size() - 1 - nInv].type == MSG_BLOCK) {
                 nLastBlock = vInv.size() - 1 - nInv;
@@ -3939,7 +3939,7 @@ bool SendMessages(CNode* pto, bool fSendTrickle)
         if (pingSend) {
             uint64_t nonce = 0;
             while (nonce == 0) {
-                RAND_bytes((unsigned char*)&nonce, sizeof(nonce));
+                RAND_bytes(reinterpret_cast<unsigned char*>(&nonce), sizeof(nonce));
             }
             pto->fPingQueued = false;
             pto->nPingUsecStart = GetTimeMicros();

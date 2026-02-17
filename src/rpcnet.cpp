@@ -20,7 +20,7 @@ Value getconnectioncount(const Array& params, bool fHelp)
             "Returns the number of connections to other nodes.");
 
     LOCK(cs_vNodes);
-    return (int)vNodes.size();
+    return static_cast<int>(vNodes.size());
 }
 
 static void CopyNodeStats(std::vector<CNodeStats>& vstats)
@@ -53,9 +53,9 @@ Value getpeerinfo(const Array& params, bool fHelp)
 
         obj.push_back(Pair("addr", stats.addrName));
         obj.push_back(Pair("services", strprintf("%08" PRIx64, stats.nServices)));
-        obj.push_back(Pair("lastsend", (int64_t)stats.nLastSend));
-        obj.push_back(Pair("lastrecv", (int64_t)stats.nLastRecv));
-        obj.push_back(Pair("conntime", (int64_t)stats.nTimeConnected));
+        obj.push_back(Pair("lastsend", static_cast<int64_t>(stats.nLastSend)));
+        obj.push_back(Pair("lastrecv", static_cast<int64_t>(stats.nLastRecv)));
+        obj.push_back(Pair("conntime", static_cast<int64_t>(stats.nTimeConnected)));
         obj.push_back(Pair("version", stats.nVersion));
         obj.push_back(Pair("subver", stats.strSubVer));
         obj.push_back(Pair("inbound", stats.fInbound));

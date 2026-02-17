@@ -65,8 +65,8 @@ public:
 
     base_uint& operator=(uint64_t b)
     {
-        pn[0] = (unsigned int)b;
-        pn[1] = (unsigned int)(b >> 32);
+        pn[0] = static_cast<unsigned int>(b);
+        pn[1] = static_cast<unsigned int>(b >> 32);
         for (int i = 2; i < WIDTH; i++)
             pn[i] = 0;
         return *this;
@@ -95,15 +95,15 @@ public:
 
     base_uint& operator^=(uint64_t b)
     {
-        pn[0] ^= (unsigned int)b;
-        pn[1] ^= (unsigned int)(b >> 32);
+        pn[0] ^= static_cast<unsigned int>(b);
+        pn[1] ^= static_cast<unsigned int>(b >> 32);
         return *this;
     }
 
     base_uint& operator|=(uint64_t b)
     {
-        pn[0] |= (unsigned int)b;
-        pn[1] |= (unsigned int)(b >> 32);
+        pn[0] |= static_cast<unsigned int>(b);
+        pn[1] |= static_cast<unsigned int>(b >> 32);
         return *this;
     }
 
@@ -269,9 +269,9 @@ public:
 
     friend inline bool operator==(const base_uint& a, uint64_t b)
     {
-        if (a.pn[0] != (unsigned int)b)
+        if (a.pn[0] != static_cast<unsigned int>(b))
             return false;
-        if (a.pn[1] != (unsigned int)(b >> 32))
+        if (a.pn[1] != static_cast<unsigned int>(b >> 32))
             return false;
         for (int i = 2; i < base_uint::WIDTH; i++)
             if (a.pn[i] != 0)
@@ -295,7 +295,7 @@ public:
     {
         char psz[sizeof(pn)*2 + 1];
         for (unsigned int i = 0; i < sizeof(pn); i++)
-            sprintf(psz + i*2, "%02x", ((unsigned char*)pn)[sizeof(pn) - i - 1]);
+            sprintf(psz + i*2, "%02x", (reinterpret_cast<const unsigned char*>(pn))[sizeof(pn) - i - 1]);
         return std::string(psz, psz + sizeof(pn)*2);
     }
 
@@ -318,7 +318,7 @@ public:
         while (phexdigit[(unsigned char)*psz] || *psz == '0')
             psz++;
         psz--;
-        unsigned char* p1 = (unsigned char*)pn;
+        unsigned char* p1 = reinterpret_cast<unsigned char*>(pn);
         unsigned char* pend = p1 + WIDTH * 4;
         while (psz >= pbegin && p1 < pend)
         {
@@ -343,12 +343,12 @@ public:
 
     unsigned char* begin()
     {
-        return (unsigned char*)&pn[0];
+        return reinterpret_cast<unsigned char*>(&pn[0]);
     }
 
     unsigned char* end()
     {
-        return (unsigned char*)&pn[WIDTH];
+        return reinterpret_cast<unsigned char*>(&pn[WIDTH]);
     }
 
     unsigned int size()
@@ -358,7 +358,7 @@ public:
 
     uint64_t Get64(int n=0) const
     {
-        return pn[2*n] | (uint64_t)pn[2*n+1] << 32;
+        return pn[2*n] | static_cast<uint64_t>(pn[2*n+1]) << 32;
     }
 
     unsigned int GetSerializeSize(int nType, int nVersion) const
@@ -369,13 +369,13 @@ public:
     template<typename Stream>
     void Serialize(Stream& s, int nType, int nVersion) const
     {
-        s.write((char*)pn, sizeof(pn));
+        s.write(reinterpret_cast<const char*>(pn), sizeof(pn));
     }
 
     template<typename Stream>
     void Unserialize(Stream& s, int nType, int nVersion)
     {
-        s.read((char*)pn, sizeof(pn));
+        s.read(reinterpret_cast<char*>(pn), sizeof(pn));
     }
 
     friend class uint160;
@@ -426,16 +426,16 @@ public:
 
     uint160(uint64_t b)
     {
-        pn[0] = (unsigned int)b;
-        pn[1] = (unsigned int)(b >> 32);
+        pn[0] = static_cast<unsigned int>(b);
+        pn[1] = static_cast<unsigned int>(b >> 32);
         for (int i = 2; i < WIDTH; i++)
             pn[i] = 0;
     }
 
     uint160& operator=(uint64_t b)
     {
-        pn[0] = (unsigned int)b;
-        pn[1] = (unsigned int)(b >> 32);
+        pn[0] = static_cast<unsigned int>(b);
+        pn[1] = static_cast<unsigned int>(b >> 32);
         for (int i = 2; i < WIDTH; i++)
             pn[i] = 0;
         return *this;
@@ -455,8 +455,8 @@ public:
     }
 };
 
-inline bool operator==(const uint160& a, uint64_t b)                         { return (base_uint160)a == b; }
-inline bool operator!=(const uint160& a, uint64_t b)                         { return (base_uint160)a != b; }
+inline bool operator==(const uint160& a, uint64_t b)                         { return static_cast<const base_uint160&>(a) == b; }
+inline bool operator!=(const uint160& a, uint64_t b)                         { return static_cast<const base_uint160&>(a) != b; }
 inline const uint160 operator<<(const base_uint160& a, unsigned int shift)   { return uint160(a) <<= shift; }
 inline const uint160 operator>>(const base_uint160& a, unsigned int shift)   { return uint160(a) >>= shift; }
 inline const uint160 operator<<(const uint160& a, unsigned int shift)        { return uint160(a) <<= shift; }
@@ -468,41 +468,41 @@ inline const uint160 operator|(const base_uint160& a, const base_uint160& b) { r
 inline const uint160 operator+(const base_uint160& a, const base_uint160& b) { return uint160(a) += b; }
 inline const uint160 operator-(const base_uint160& a, const base_uint160& b) { return uint160(a) -= b; }
 
-inline bool operator<(const base_uint160& a, const uint160& b)          { return (base_uint160)a <  (base_uint160)b; }
-inline bool operator<=(const base_uint160& a, const uint160& b)         { return (base_uint160)a <= (base_uint160)b; }
-inline bool operator>(const base_uint160& a, const uint160& b)          { return (base_uint160)a >  (base_uint160)b; }
-inline bool operator>=(const base_uint160& a, const uint160& b)         { return (base_uint160)a >= (base_uint160)b; }
-inline bool operator==(const base_uint160& a, const uint160& b)         { return (base_uint160)a == (base_uint160)b; }
-inline bool operator!=(const base_uint160& a, const uint160& b)         { return (base_uint160)a != (base_uint160)b; }
-inline const uint160 operator^(const base_uint160& a, const uint160& b) { return (base_uint160)a ^  (base_uint160)b; }
-inline const uint160 operator&(const base_uint160& a, const uint160& b) { return (base_uint160)a &  (base_uint160)b; }
-inline const uint160 operator|(const base_uint160& a, const uint160& b) { return (base_uint160)a |  (base_uint160)b; }
-inline const uint160 operator+(const base_uint160& a, const uint160& b) { return (base_uint160)a +  (base_uint160)b; }
-inline const uint160 operator-(const base_uint160& a, const uint160& b) { return (base_uint160)a -  (base_uint160)b; }
+inline bool operator<(const base_uint160& a, const uint160& b)          { return static_cast<const base_uint160&>(a) <  static_cast<const base_uint160&>(b); }
+inline bool operator<=(const base_uint160& a, const uint160& b)         { return static_cast<const base_uint160&>(a) <= static_cast<const base_uint160&>(b); }
+inline bool operator>(const base_uint160& a, const uint160& b)          { return static_cast<const base_uint160&>(a) >  static_cast<const base_uint160&>(b); }
+inline bool operator>=(const base_uint160& a, const uint160& b)         { return static_cast<const base_uint160&>(a) >= static_cast<const base_uint160&>(b); }
+inline bool operator==(const base_uint160& a, const uint160& b)         { return static_cast<const base_uint160&>(a) == static_cast<const base_uint160&>(b); }
+inline bool operator!=(const base_uint160& a, const uint160& b)         { return static_cast<const base_uint160&>(a) != static_cast<const base_uint160&>(b); }
+inline const uint160 operator^(const base_uint160& a, const uint160& b) { return static_cast<const base_uint160&>(a) ^  static_cast<const base_uint160&>(b); }
+inline const uint160 operator&(const base_uint160& a, const uint160& b) { return static_cast<const base_uint160&>(a) &  static_cast<const base_uint160&>(b); }
+inline const uint160 operator|(const base_uint160& a, const uint160& b) { return static_cast<const base_uint160&>(a) |  static_cast<const base_uint160&>(b); }
+inline const uint160 operator+(const base_uint160& a, const uint160& b) { return static_cast<const base_uint160&>(a) +  static_cast<const base_uint160&>(b); }
+inline const uint160 operator-(const base_uint160& a, const uint160& b) { return static_cast<const base_uint160&>(a) -  static_cast<const base_uint160&>(b); }
 
-inline bool operator<(const uint160& a, const base_uint160& b)          { return (base_uint160)a <  (base_uint160)b; }
-inline bool operator<=(const uint160& a, const base_uint160& b)         { return (base_uint160)a <= (base_uint160)b; }
-inline bool operator>(const uint160& a, const base_uint160& b)          { return (base_uint160)a >  (base_uint160)b; }
-inline bool operator>=(const uint160& a, const base_uint160& b)         { return (base_uint160)a >= (base_uint160)b; }
-inline bool operator==(const uint160& a, const base_uint160& b)         { return (base_uint160)a == (base_uint160)b; }
-inline bool operator!=(const uint160& a, const base_uint160& b)         { return (base_uint160)a != (base_uint160)b; }
-inline const uint160 operator^(const uint160& a, const base_uint160& b) { return (base_uint160)a ^  (base_uint160)b; }
-inline const uint160 operator&(const uint160& a, const base_uint160& b) { return (base_uint160)a &  (base_uint160)b; }
-inline const uint160 operator|(const uint160& a, const base_uint160& b) { return (base_uint160)a |  (base_uint160)b; }
-inline const uint160 operator+(const uint160& a, const base_uint160& b) { return (base_uint160)a +  (base_uint160)b; }
-inline const uint160 operator-(const uint160& a, const base_uint160& b) { return (base_uint160)a -  (base_uint160)b; }
+inline bool operator<(const uint160& a, const base_uint160& b)          { return static_cast<const base_uint160&>(a) <  static_cast<const base_uint160&>(b); }
+inline bool operator<=(const uint160& a, const base_uint160& b)         { return static_cast<const base_uint160&>(a) <= static_cast<const base_uint160&>(b); }
+inline bool operator>(const uint160& a, const base_uint160& b)          { return static_cast<const base_uint160&>(a) >  static_cast<const base_uint160&>(b); }
+inline bool operator>=(const uint160& a, const base_uint160& b)         { return static_cast<const base_uint160&>(a) >= static_cast<const base_uint160&>(b); }
+inline bool operator==(const uint160& a, const base_uint160& b)         { return static_cast<const base_uint160&>(a) == static_cast<const base_uint160&>(b); }
+inline bool operator!=(const uint160& a, const base_uint160& b)         { return static_cast<const base_uint160&>(a) != static_cast<const base_uint160&>(b); }
+inline const uint160 operator^(const uint160& a, const base_uint160& b) { return static_cast<const base_uint160&>(a) ^  static_cast<const base_uint160&>(b); }
+inline const uint160 operator&(const uint160& a, const base_uint160& b) { return static_cast<const base_uint160&>(a) &  static_cast<const base_uint160&>(b); }
+inline const uint160 operator|(const uint160& a, const base_uint160& b) { return static_cast<const base_uint160&>(a) |  static_cast<const base_uint160&>(b); }
+inline const uint160 operator+(const uint160& a, const base_uint160& b) { return static_cast<const base_uint160&>(a) +  static_cast<const base_uint160&>(b); }
+inline const uint160 operator-(const uint160& a, const base_uint160& b) { return static_cast<const base_uint160&>(a) -  static_cast<const base_uint160&>(b); }
 
-inline bool operator<(const uint160& a, const uint160& b)               { return (base_uint160)a <  (base_uint160)b; }
-inline bool operator<=(const uint160& a, const uint160& b)              { return (base_uint160)a <= (base_uint160)b; }
-inline bool operator>(const uint160& a, const uint160& b)               { return (base_uint160)a >  (base_uint160)b; }
-inline bool operator>=(const uint160& a, const uint160& b)              { return (base_uint160)a >= (base_uint160)b; }
-inline bool operator==(const uint160& a, const uint160& b)              { return (base_uint160)a == (base_uint160)b; }
-inline bool operator!=(const uint160& a, const uint160& b)              { return (base_uint160)a != (base_uint160)b; }
-inline const uint160 operator^(const uint160& a, const uint160& b)      { return (base_uint160)a ^  (base_uint160)b; }
-inline const uint160 operator&(const uint160& a, const uint160& b)      { return (base_uint160)a &  (base_uint160)b; }
-inline const uint160 operator|(const uint160& a, const uint160& b)      { return (base_uint160)a |  (base_uint160)b; }
-inline const uint160 operator+(const uint160& a, const uint160& b)      { return (base_uint160)a +  (base_uint160)b; }
-inline const uint160 operator-(const uint160& a, const uint160& b)      { return (base_uint160)a -  (base_uint160)b; }
+inline bool operator<(const uint160& a, const uint160& b)               { return static_cast<const base_uint160&>(a) <  static_cast<const base_uint160&>(b); }
+inline bool operator<=(const uint160& a, const uint160& b)              { return static_cast<const base_uint160&>(a) <= static_cast<const base_uint160&>(b); }
+inline bool operator>(const uint160& a, const uint160& b)               { return static_cast<const base_uint160&>(a) >  static_cast<const base_uint160&>(b); }
+inline bool operator>=(const uint160& a, const uint160& b)              { return static_cast<const base_uint160&>(a) >= static_cast<const base_uint160&>(b); }
+inline bool operator==(const uint160& a, const uint160& b)              { return static_cast<const base_uint160&>(a) == static_cast<const base_uint160&>(b); }
+inline bool operator!=(const uint160& a, const uint160& b)              { return static_cast<const base_uint160&>(a) != static_cast<const base_uint160&>(b); }
+inline const uint160 operator^(const uint160& a, const uint160& b)      { return static_cast<const base_uint160&>(a) ^  static_cast<const base_uint160&>(b); }
+inline const uint160 operator&(const uint160& a, const uint160& b)      { return static_cast<const base_uint160&>(a) &  static_cast<const base_uint160&>(b); }
+inline const uint160 operator|(const uint160& a, const uint160& b)      { return static_cast<const base_uint160&>(a) |  static_cast<const base_uint160&>(b); }
+inline const uint160 operator+(const uint160& a, const uint160& b)      { return static_cast<const base_uint160&>(a) +  static_cast<const base_uint160&>(b); }
+inline const uint160 operator-(const uint160& a, const uint160& b)      { return static_cast<const base_uint160&>(a) -  static_cast<const base_uint160&>(b); }
 
 
 
@@ -541,16 +541,16 @@ public:
 
     uint256(uint64_t b)
     {
-        pn[0] = (unsigned int)b;
-        pn[1] = (unsigned int)(b >> 32);
+        pn[0] = static_cast<unsigned int>(b);
+        pn[1] = static_cast<unsigned int>(b >> 32);
         for (int i = 2; i < WIDTH; i++)
             pn[i] = 0;
     }
 
     uint256& operator=(uint64_t b)
     {
-        pn[0] = (unsigned int)b;
-        pn[1] = (unsigned int)(b >> 32);
+        pn[0] = static_cast<unsigned int>(b);
+        pn[1] = static_cast<unsigned int>(b >> 32);
         for (int i = 2; i < WIDTH; i++)
             pn[i] = 0;
         return *this;
@@ -570,8 +570,8 @@ public:
     }
 };
 
-inline bool operator==(const uint256& a, uint64_t b)                         { return (base_uint256)a == b; }
-inline bool operator!=(const uint256& a, uint64_t b)                         { return (base_uint256)a != b; }
+inline bool operator==(const uint256& a, uint64_t b)                         { return static_cast<const base_uint256&>(a) == b; }
+inline bool operator!=(const uint256& a, uint64_t b)                         { return static_cast<const base_uint256&>(a) != b; }
 inline const uint256 operator<<(const base_uint256& a, unsigned int shift)   { return uint256(a) <<= shift; }
 inline const uint256 operator>>(const base_uint256& a, unsigned int shift)   { return uint256(a) >>= shift; }
 inline const uint256 operator<<(const uint256& a, unsigned int shift)        { return uint256(a) <<= shift; }
@@ -583,41 +583,41 @@ inline const uint256 operator|(const base_uint256& a, const base_uint256& b) { r
 inline const uint256 operator+(const base_uint256& a, const base_uint256& b) { return uint256(a) += b; }
 inline const uint256 operator-(const base_uint256& a, const base_uint256& b) { return uint256(a) -= b; }
 
-inline bool operator<(const base_uint256& a, const uint256& b)          { return (base_uint256)a <  (base_uint256)b; }
-inline bool operator<=(const base_uint256& a, const uint256& b)         { return (base_uint256)a <= (base_uint256)b; }
-inline bool operator>(const base_uint256& a, const uint256& b)          { return (base_uint256)a >  (base_uint256)b; }
-inline bool operator>=(const base_uint256& a, const uint256& b)         { return (base_uint256)a >= (base_uint256)b; }
-inline bool operator==(const base_uint256& a, const uint256& b)         { return (base_uint256)a == (base_uint256)b; }
-inline bool operator!=(const base_uint256& a, const uint256& b)         { return (base_uint256)a != (base_uint256)b; }
-inline const uint256 operator^(const base_uint256& a, const uint256& b) { return (base_uint256)a ^  (base_uint256)b; }
-inline const uint256 operator&(const base_uint256& a, const uint256& b) { return (base_uint256)a &  (base_uint256)b; }
-inline const uint256 operator|(const base_uint256& a, const uint256& b) { return (base_uint256)a |  (base_uint256)b; }
-inline const uint256 operator+(const base_uint256& a, const uint256& b) { return (base_uint256)a +  (base_uint256)b; }
-inline const uint256 operator-(const base_uint256& a, const uint256& b) { return (base_uint256)a -  (base_uint256)b; }
+inline bool operator<(const base_uint256& a, const uint256& b)          { return static_cast<const base_uint256&>(a) <  static_cast<const base_uint256&>(b); }
+inline bool operator<=(const base_uint256& a, const uint256& b)         { return static_cast<const base_uint256&>(a) <= static_cast<const base_uint256&>(b); }
+inline bool operator>(const base_uint256& a, const uint256& b)          { return static_cast<const base_uint256&>(a) >  static_cast<const base_uint256&>(b); }
+inline bool operator>=(const base_uint256& a, const uint256& b)         { return static_cast<const base_uint256&>(a) >= static_cast<const base_uint256&>(b); }
+inline bool operator==(const base_uint256& a, const uint256& b)         { return static_cast<const base_uint256&>(a) == static_cast<const base_uint256&>(b); }
+inline bool operator!=(const base_uint256& a, const uint256& b)         { return static_cast<const base_uint256&>(a) != static_cast<const base_uint256&>(b); }
+inline const uint256 operator^(const base_uint256& a, const uint256& b) { return static_cast<const base_uint256&>(a) ^  static_cast<const base_uint256&>(b); }
+inline const uint256 operator&(const base_uint256& a, const uint256& b) { return static_cast<const base_uint256&>(a) &  static_cast<const base_uint256&>(b); }
+inline const uint256 operator|(const base_uint256& a, const uint256& b) { return static_cast<const base_uint256&>(a) |  static_cast<const base_uint256&>(b); }
+inline const uint256 operator+(const base_uint256& a, const uint256& b) { return static_cast<const base_uint256&>(a) +  static_cast<const base_uint256&>(b); }
+inline const uint256 operator-(const base_uint256& a, const uint256& b) { return static_cast<const base_uint256&>(a) -  static_cast<const base_uint256&>(b); }
 
-inline bool operator<(const uint256& a, const base_uint256& b)          { return (base_uint256)a <  (base_uint256)b; }
-inline bool operator<=(const uint256& a, const base_uint256& b)         { return (base_uint256)a <= (base_uint256)b; }
-inline bool operator>(const uint256& a, const base_uint256& b)          { return (base_uint256)a >  (base_uint256)b; }
-inline bool operator>=(const uint256& a, const base_uint256& b)         { return (base_uint256)a >= (base_uint256)b; }
-inline bool operator==(const uint256& a, const base_uint256& b)         { return (base_uint256)a == (base_uint256)b; }
-inline bool operator!=(const uint256& a, const base_uint256& b)         { return (base_uint256)a != (base_uint256)b; }
-inline const uint256 operator^(const uint256& a, const base_uint256& b) { return (base_uint256)a ^  (base_uint256)b; }
-inline const uint256 operator&(const uint256& a, const base_uint256& b) { return (base_uint256)a &  (base_uint256)b; }
-inline const uint256 operator|(const uint256& a, const base_uint256& b) { return (base_uint256)a |  (base_uint256)b; }
-inline const uint256 operator+(const uint256& a, const base_uint256& b) { return (base_uint256)a +  (base_uint256)b; }
-inline const uint256 operator-(const uint256& a, const base_uint256& b) { return (base_uint256)a -  (base_uint256)b; }
+inline bool operator<(const uint256& a, const base_uint256& b)          { return static_cast<const base_uint256&>(a) <  static_cast<const base_uint256&>(b); }
+inline bool operator<=(const uint256& a, const base_uint256& b)         { return static_cast<const base_uint256&>(a) <= static_cast<const base_uint256&>(b); }
+inline bool operator>(const uint256& a, const base_uint256& b)          { return static_cast<const base_uint256&>(a) >  static_cast<const base_uint256&>(b); }
+inline bool operator>=(const uint256& a, const base_uint256& b)         { return static_cast<const base_uint256&>(a) >= static_cast<const base_uint256&>(b); }
+inline bool operator==(const uint256& a, const base_uint256& b)         { return static_cast<const base_uint256&>(a) == static_cast<const base_uint256&>(b); }
+inline bool operator!=(const uint256& a, const base_uint256& b)         { return static_cast<const base_uint256&>(a) != static_cast<const base_uint256&>(b); }
+inline const uint256 operator^(const uint256& a, const base_uint256& b) { return static_cast<const base_uint256&>(a) ^  static_cast<const base_uint256&>(b); }
+inline const uint256 operator&(const uint256& a, const base_uint256& b) { return static_cast<const base_uint256&>(a) &  static_cast<const base_uint256&>(b); }
+inline const uint256 operator|(const uint256& a, const base_uint256& b) { return static_cast<const base_uint256&>(a) |  static_cast<const base_uint256&>(b); }
+inline const uint256 operator+(const uint256& a, const base_uint256& b) { return static_cast<const base_uint256&>(a) +  static_cast<const base_uint256&>(b); }
+inline const uint256 operator-(const uint256& a, const base_uint256& b) { return static_cast<const base_uint256&>(a) -  static_cast<const base_uint256&>(b); }
 
-inline bool operator<(const uint256& a, const uint256& b)               { return (base_uint256)a <  (base_uint256)b; }
-inline bool operator<=(const uint256& a, const uint256& b)              { return (base_uint256)a <= (base_uint256)b; }
-inline bool operator>(const uint256& a, const uint256& b)               { return (base_uint256)a >  (base_uint256)b; }
-inline bool operator>=(const uint256& a, const uint256& b)              { return (base_uint256)a >= (base_uint256)b; }
-inline bool operator==(const uint256& a, const uint256& b)              { return (base_uint256)a == (base_uint256)b; }
-inline bool operator!=(const uint256& a, const uint256& b)              { return (base_uint256)a != (base_uint256)b; }
-inline const uint256 operator^(const uint256& a, const uint256& b)      { return (base_uint256)a ^  (base_uint256)b; }
-inline const uint256 operator&(const uint256& a, const uint256& b)      { return (base_uint256)a &  (base_uint256)b; }
-inline const uint256 operator|(const uint256& a, const uint256& b)      { return (base_uint256)a |  (base_uint256)b; }
-inline const uint256 operator+(const uint256& a, const uint256& b)      { return (base_uint256)a +  (base_uint256)b; }
-inline const uint256 operator-(const uint256& a, const uint256& b)      { return (base_uint256)a -  (base_uint256)b; }
+inline bool operator<(const uint256& a, const uint256& b)               { return static_cast<const base_uint256&>(a) <  static_cast<const base_uint256&>(b); }
+inline bool operator<=(const uint256& a, const uint256& b)              { return static_cast<const base_uint256&>(a) <= static_cast<const base_uint256&>(b); }
+inline bool operator>(const uint256& a, const uint256& b)               { return static_cast<const base_uint256&>(a) >  static_cast<const base_uint256&>(b); }
+inline bool operator>=(const uint256& a, const uint256& b)              { return static_cast<const base_uint256&>(a) >= static_cast<const base_uint256&>(b); }
+inline bool operator==(const uint256& a, const uint256& b)              { return static_cast<const base_uint256&>(a) == static_cast<const base_uint256&>(b); }
+inline bool operator!=(const uint256& a, const uint256& b)              { return static_cast<const base_uint256&>(a) != static_cast<const base_uint256&>(b); }
+inline const uint256 operator^(const uint256& a, const uint256& b)      { return static_cast<const base_uint256&>(a) ^  static_cast<const base_uint256&>(b); }
+inline const uint256 operator&(const uint256& a, const uint256& b)      { return static_cast<const base_uint256&>(a) &  static_cast<const base_uint256&>(b); }
+inline const uint256 operator|(const uint256& a, const uint256& b)      { return static_cast<const base_uint256&>(a) |  static_cast<const base_uint256&>(b); }
+inline const uint256 operator+(const uint256& a, const uint256& b)      { return static_cast<const base_uint256&>(a) +  static_cast<const base_uint256&>(b); }
+inline const uint256 operator-(const uint256& a, const uint256& b)      { return static_cast<const base_uint256&>(a) -  static_cast<const base_uint256&>(b); }
 
 
 #ifdef TEST_UINT256
@@ -669,7 +669,7 @@ inline int Testuint256AdHoc(std::vector<std::string> vArg)
 
     printf("a %s\n", a.ToString().c_str());
 
-    a = a | b | (uint256)0x1000;
+    a = a | b | static_cast<uint256>(0x1000);
 
 
     printf("a %s\n", a.ToString().c_str());

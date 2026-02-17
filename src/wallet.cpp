@@ -218,11 +218,11 @@ bool CWallet::ChangeWalletPassphrase(const SecureString& strOldWalletPassphrase,
             {
                 int64_t nStartTime = GetTimeMillis();
                 crypter.SetKeyFromPassphrase(strNewWalletPassphrase, pMasterKey.second.vchSalt, pMasterKey.second.nDeriveIterations, pMasterKey.second.nDerivationMethod);
-                pMasterKey.second.nDeriveIterations = pMasterKey.second.nDeriveIterations * (100 / ((double)(GetTimeMillis() - nStartTime)));
+                pMasterKey.second.nDeriveIterations = pMasterKey.second.nDeriveIterations * (100 / (static_cast<double>(GetTimeMillis() - nStartTime)));
 
                 nStartTime = GetTimeMillis();
                 crypter.SetKeyFromPassphrase(strNewWalletPassphrase, pMasterKey.second.vchSalt, pMasterKey.second.nDeriveIterations, pMasterKey.second.nDerivationMethod);
-                pMasterKey.second.nDeriveIterations = (pMasterKey.second.nDeriveIterations + pMasterKey.second.nDeriveIterations * 100 / ((double)(GetTimeMillis() - nStartTime))) / 2;
+                pMasterKey.second.nDeriveIterations = (pMasterKey.second.nDeriveIterations + pMasterKey.second.nDeriveIterations * 100 / (static_cast<double>(GetTimeMillis() - nStartTime))) / 2;
 
                 if (pMasterKey.second.nDeriveIterations < 25000)
                     pMasterKey.second.nDeriveIterations = 25000;
@@ -310,11 +310,11 @@ bool CWallet::EncryptWallet(const SecureString& strWalletPassphrase)
     CCrypter crypter;
     int64_t nStartTime = GetTimeMillis();
     crypter.SetKeyFromPassphrase(strWalletPassphrase, kMasterKey.vchSalt, 25000, kMasterKey.nDerivationMethod);
-    kMasterKey.nDeriveIterations = 2500000 / ((double)(GetTimeMillis() - nStartTime));
+    kMasterKey.nDeriveIterations = 2500000 / (static_cast<double>(GetTimeMillis() - nStartTime));
 
     nStartTime = GetTimeMillis();
     crypter.SetKeyFromPassphrase(strWalletPassphrase, kMasterKey.vchSalt, kMasterKey.nDeriveIterations, kMasterKey.nDerivationMethod);
-    kMasterKey.nDeriveIterations = (kMasterKey.nDeriveIterations + kMasterKey.nDeriveIterations * 100 / ((double)(GetTimeMillis() - nStartTime))) / 2;
+    kMasterKey.nDeriveIterations = (kMasterKey.nDeriveIterations + kMasterKey.nDeriveIterations * 100 / (static_cast<double>(GetTimeMillis() - nStartTime))) / 2;
 
     if (kMasterKey.nDeriveIterations < 25000)
         kMasterKey.nDeriveIterations = 25000;
@@ -1084,7 +1084,7 @@ void CWallet::ResendWalletTransactions(bool fForce)
             CWalletTx& wtx = item.second;
             // Don't rebroadcast until it's had plenty of time that
             // it should have gotten in already by now.
-            if (fForce || nTimeBestReceived - (int64_t)wtx.nTimeReceived > 5 * 60)
+            if (fForce || nTimeBestReceived - static_cast<int64_t>(wtx.nTimeReceived) > 5 * 60)
                 mapSorted.insert(make_pair(wtx.nTimeReceived, &wtx));
         }
         for (auto& item : mapSorted)
@@ -1558,7 +1558,7 @@ bool CWallet::CreateTransaction(const vector<pair<CScript, int64_t> >& vecSend, 
                 for (auto pcoin : setCoins)
                 {
                     int64_t nCredit = pcoin.first->vout[pcoin.second].nValue;
-                    dPriority += (double)nCredit * pcoin.first->GetDepthInMainChain();
+                    dPriority += static_cast<double>(nCredit) * pcoin.first->GetDepthInMainChain();
 					//use this address to send change back
 					//note that this will use the last address run through the FOREACH, needs better logic added
 					ExtractDestination(pcoin.first->vout[pcoin.second].scriptPubKey, utxoAddress);
@@ -1641,7 +1641,7 @@ bool CWallet::CreateTransaction(const vector<pair<CScript, int64_t> >& vecSend, 
                 dPriority /= nBytes;
 
                 // Check that enough fee is included
-                int64_t nPayFee = nTransactionFee * (1 + (int64_t)nBytes / 1000);
+                int64_t nPayFee = nTransactionFee * (1 + static_cast<int64_t>(nBytes) / 1000);
                 int64_t nMinFee = wtxNew.GetMinFee(1, GMF_SEND, nBytes);
 
                 if (nFeeRet < max(nPayFee, nMinFee))
@@ -2455,9 +2455,9 @@ bool CWallet::GetStakeWeight(const CKeyStore& keystore, uint64_t& nMinWeight, ui
                 continue;
         }
 
-        bool fFlashStake = (pindexBest->nTime > nTimeV231) && IsFlashStake((unsigned int)GetAdjustedTime());
+        bool fFlashStake = (pindexBest->nTime > nTimeV231) && IsFlashStake(static_cast<unsigned int>(GetAdjustedTime()));
 
-        int64_t nTimeWeight = GetWeight((int64_t)pcoin.first->nTime, (int64_t)GetAdjustedTime(), fFlashStake);
+        int64_t nTimeWeight = GetWeight(static_cast<int64_t>(pcoin.first->nTime), static_cast<int64_t>(GetAdjustedTime()), fFlashStake);
         // CBigNum bnCoinDayWeight = CBigNum(pcoin.first->vout[pcoin.second].nValue) * nTimeWeight / COIN / (24 * 60 * 60);
 
 
@@ -2559,7 +2559,7 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
             continue; // only count coins meeting min age requirement
         
         bool fKernelFound = false;
-        for (unsigned int n=0; n<min(nSearchInterval,(int64_t)nMaxStakeSearchInterval) && !fKernelFound && !fShutdown && pindexPrev == pindexBest; n++)
+        for (unsigned int n=0; n<min(nSearchInterval,static_cast<int64_t>(nMaxStakeSearchInterval)) && !fKernelFound && !fShutdown && pindexPrev == pindexBest; n++)
         {
             // Search backward in time from the given txNew timestamp 
             // Search nSearchInterval seconds back up to nMaxStakeSearchInterval
@@ -2657,9 +2657,9 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
         if (txNew.vout.size() == 2 && ((pcoin.first->vout[pcoin.second].scriptPubKey == scriptPubKeyKernel || pcoin.first->vout[pcoin.second].scriptPubKey == txNew.vout[1].scriptPubKey))
             && pcoin.first->GetHash() != txNew.vin[0].prevout.hash)
         {
-            bool fFlashStake = (pindexBest->nTime > nTimeV231) && IsFlashStake((unsigned int)GetAdjustedTime());
+            bool fFlashStake = (pindexBest->nTime > nTimeV231) && IsFlashStake(static_cast<unsigned int>(GetAdjustedTime()));
 
-            int64_t nTimeWeight = GetWeight((int64_t)pcoin.first->nTime, (int64_t)txNew.nTime, fFlashStake);
+            int64_t nTimeWeight = GetWeight(static_cast<int64_t>(pcoin.first->nTime), static_cast<int64_t>(txNew.nTime), fFlashStake);
 
             // Stop adding more inputs if already too many inputs
             if (txNew.vin.size() >= 100)
@@ -2706,7 +2706,7 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
 
     nCredit += nReward - stakeOutReward;
     // Set output amount
-    if (txNew.vout.size() == (uint64_t)(3 + stakeOutCount))
+    if (txNew.vout.size() == static_cast<uint64_t>(3 + stakeOutCount))
     {
         txNew.vout[1].nValue = ((nCredit) / 2 / CENT) * CENT;
         txNew.vout[2].nValue = (nCredit) - txNew.vout[1].nValue;
@@ -3097,7 +3097,7 @@ bool CWallet::NewKeyPool()
         if (IsLocked())
             return false;
 
-        int64_t nKeys = max(GetArg("-keypool", 100), (int64_t)0);
+        int64_t nKeys = max(GetArg("-keypool", 100), static_cast<int64_t>(0));
         for (int i = 0; i < nKeys; i++)
         {
             int64_t nIndex = i+1;
@@ -3124,7 +3124,7 @@ bool CWallet::TopUpKeyPool(unsigned int nSize)
         if (nSize > 0)
             nTargetSize = nSize;
         else
-            nTargetSize = max(GetArg("-keypool", 100), (int64_t)0);
+            nTargetSize = max(GetArg("-keypool", 100), static_cast<int64_t>(0));
 
         while (setKeyPool.size() < (nTargetSize + 1))
         {

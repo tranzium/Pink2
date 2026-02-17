@@ -158,8 +158,8 @@ public:
     }
 
     IMPLEMENT_SERIALIZE( READWRITE(FLATDATA(*this)); )
-    void SetNull() { nFile = (unsigned int) -1; nBlockPos = 0; nTxPos = 0; }
-    bool IsNull() const { return (nFile == (unsigned int) -1); }
+    void SetNull() { nFile = static_cast<unsigned int>(-1); nBlockPos = 0; nTxPos = 0; }
+    bool IsNull() const { return (nFile == static_cast<unsigned int>(-1)); }
 
     friend bool operator==(const CDiskTxPos& a, const CDiskTxPos& b)
     {
@@ -199,8 +199,8 @@ public:
 
     CInPoint() { SetNull(); }
     CInPoint(CTransaction* ptxIn, unsigned int nIn) { ptx = ptxIn; n = nIn; }
-    void SetNull() { ptx = nullptr; n = (unsigned int) -1; }
-    bool IsNull() const { return (ptx == nullptr && n == (unsigned int) -1); }
+    void SetNull() { ptx = nullptr; n = static_cast<unsigned int>(-1); }
+    bool IsNull() const { return (ptx == nullptr && n == static_cast<unsigned int>(-1)); }
 };
 
 
@@ -215,8 +215,8 @@ public:
     COutPoint() { SetNull(); }
     COutPoint(uint256 hashIn, unsigned int nIn) { hash = hashIn; n = nIn; }
     IMPLEMENT_SERIALIZE( READWRITE(FLATDATA(*this)); )
-    void SetNull() { hash = 0; n = (unsigned int) -1; }
-    bool IsNull() const { return (hash == 0 && n == (unsigned int) -1); }
+    void SetNull() { hash = 0; n = static_cast<unsigned int>(-1); }
+    bool IsNull() const { return (hash == 0 && n == static_cast<unsigned int>(-1)); }
 
     friend bool operator<(const COutPoint& a, const COutPoint& b)
     {
@@ -488,7 +488,7 @@ public:
             nBlockHeight = nBestHeight;
         if (nBlockTime == 0)
             nBlockTime = GetAdjustedTime();
-        if ((int64_t)nLockTime < ((int64_t)nLockTime < LOCKTIME_THRESHOLD ? (int64_t)nBlockHeight : nBlockTime))
+        if (static_cast<int64_t>(nLockTime) < (static_cast<int64_t>(nLockTime) < LOCKTIME_THRESHOLD ? static_cast<int64_t>(nBlockHeight) : nBlockTime))
             return true;
         for (const CTxIn& txin : vin)
             if (!txin.IsFinal())
@@ -644,7 +644,7 @@ public:
         str += strprintf("(hash=%s, nTime=%d, currentTime=%d, ver=%d, vin.size=%" PRIszu ", vout.size=%" PRIszu ", nLockTime=%d)\n",
             GetHash().ToString().substr(0,10).c_str(),
             nTime,
-            (unsigned int)GetAdjustedTime(),
+            static_cast<unsigned int>(GetAdjustedTime()),
             nVersion,
             vin.size(),
             vout.size(),
@@ -939,7 +939,7 @@ public:
 
     int64_t GetBlockTime() const
     {
-        return (int64_t)nTime;
+        return static_cast<int64_t>(nTime);
     }
 
     void UpdateTime(const CBlockIndex* pindexPrev);
@@ -948,7 +948,7 @@ public:
     unsigned int GetStakeEntropyBit() const
     {
         // Take last bit of block hash as entropy bit
-        unsigned int nEntropyBit = ((GetHash(true).Get64()) & (long long unsigned int)1); // 1llu);
+        unsigned int nEntropyBit = ((GetHash(true).Get64()) & static_cast<unsigned long long>(1)); // 1llu);
         if (fDebug && GetBoolArg("-printstakemodifier"))
             printf("GetStakeEntropyBit: hashBlock=%s nEntropyBit=%u\n", GetHash(true).ToString().c_str(), nEntropyBit);
         return nEntropyBit;
@@ -967,7 +967,7 @@ public:
 
     std::pair<COutPoint, unsigned int> GetProofOfStake() const
     {
-        return IsProofOfStake()? std::make_pair(vtx[1].vin[0].prevout, vtx[1].nTime) : std::make_pair(COutPoint(), (unsigned int)0);
+        return IsProofOfStake()? std::make_pair(vtx[1].vin[0].prevout, vtx[1].nTime) : std::make_pair(COutPoint(), static_cast<unsigned int>(0));
     }
 
     // ppcoin: get max transaction timestamp
@@ -975,7 +975,7 @@ public:
     {
         int64_t maxTransactionTime = 0;
         for (const CTransaction& tx : vtx)
-            maxTransactionTime = std::max(maxTransactionTime, (int64_t)tx.nTime);
+            maxTransactionTime = std::max(maxTransactionTime, static_cast<int64_t>(tx.nTime));
         return maxTransactionTime;
     }
 
@@ -1248,7 +1248,7 @@ public:
 
     int64_t GetBlockTime() const
     {
-        return (int64_t)nTime;
+        return static_cast<int64_t>(nTime);
     }
 
     uint256 GetBlockTrust(bool isNew = false) const;

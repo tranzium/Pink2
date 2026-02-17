@@ -14,7 +14,7 @@ using namespace std;
 
 int static FormatHashBlocks(void* pbuffer, unsigned int len)
 {
-    unsigned char* pdata = (unsigned char*)pbuffer;
+    unsigned char* pdata = reinterpret_cast<unsigned char*>(pbuffer);
     unsigned int blocks = 1 + ((len + 8) / 64);
     unsigned char* pend = pdata + 64 * blocks;
     memset(pdata + len, 0, 64 * blocks - len);
@@ -44,14 +44,14 @@ void SHA256Transform(void* pstate, void* pinput, const void* pinit)
     SHA256_Init(&ctx);
 
     for (int i = 0; i < 16; i++)
-        ((uint32_t*)data)[i] = ByteReverse(((uint32_t*)pinput)[i]);
+        reinterpret_cast<uint32_t*>(data)[i] = ByteReverse(reinterpret_cast<uint32_t*>(pinput)[i]);
 
     for (int i = 0; i < 8; i++)
-        ctx.h[i] = ((uint32_t*)pinit)[i];
+        ctx.h[i] = reinterpret_cast<const uint32_t*>(pinit)[i];
 
     SHA256_Update(&ctx, data, sizeof(data));
     for (int i = 0; i < 8; i++)
-        ((uint32_t*)pstate)[i] = ctx.h[i];
+        reinterpret_cast<uint32_t*>(pstate)[i] = ctx.h[i];
 }
 #pragma GCC diagnostic pop
 

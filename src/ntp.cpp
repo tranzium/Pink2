@@ -82,12 +82,12 @@ bool GetNTPTime(const char *addrConnect, uint64_t& timeRet)
         // Set our timeout to 2 seconds.
 #ifdef WIN32
         DWORD timeout = 2000;
-        setsockopt(socketNTP, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeout, sizeof(timeout));
+        setsockopt(socketNTP, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<const char*>(&timeout), sizeof(timeout));
 #else
         struct timeval tv;
         tv.tv_sec = 2;
         tv.tv_usec = 0;
-        setsockopt(socketNTP, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv));
+        setsockopt(socketNTP, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<const char*>(&tv), sizeof(tv));
 #endif
 
         if (connect(socketNTP, (struct sockaddr*) aiRes->ai_addr, aiRes->ai_addrlen) < 0)
@@ -122,14 +122,14 @@ bool GetNTPTime(const char *addrConnect, uint64_t& timeRet)
 
     // Time we send our request
     startMicros = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-    int n = send(socketNTP, (char*)&bTimeReq, 48, 0);
+    int n = send(socketNTP, reinterpret_cast<char*>(&bTimeReq), 48, 0);
 
     if (n < 0) {
         close(socketNTP);
         return false;
     }
 
-    n = recv(socketNTP, (char*)&bTimeReq, 48, 0);
+    n = recv(socketNTP, reinterpret_cast<char*>(&bTimeReq), 48, 0);
     // Time we got it
     endMicros = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
@@ -165,7 +165,7 @@ bool GetNTPTime(const char *addrConnect, uint64_t& timeRet)
     // Get our NTP time down to the microsecond.
     // We have to convert NTP fractional time to Micros.
     uint64_t ntpMicros = 0;
-    uint64_t nMax = (uint64_t)std::numeric_limits<uint32_t>::max();
+    uint64_t nMax = static_cast<uint64_t>(std::numeric_limits<uint32_t>::max());
     ntpMicros = (nEpoch * 1000000UL);
     ntpMicros += (tMicros * 1000000UL / nMax); // ((double)tMicros / std::numeric_limits<uint32_t>::max()) * 1000000;
 
@@ -265,7 +265,7 @@ bool SetNTPOffset(const string &strPool)
             // Make sure we actually got the time. NTP servers that respond but aren't able
             // to give us an accurate time as requested instead send us the uint32 max.
             // We tolerate 10 seconds here to accomodate our internal adjustments.
-            if (ntpTime[i] > 0 && abs((int64_t)(ntpTime[i] / 1000000) + (int64_t)nNTPUnix - (int64_t)std::numeric_limits<uint32_t>::max()) > 10)
+            if (ntpTime[i] > 0 && abs(static_cast<int64_t>(ntpTime[i] / 1000000) + static_cast<int64_t>(nNTPUnix) - static_cast<int64_t>(std::numeric_limits<uint32_t>::max())) > 10)
             {
                 // Account for our wait time.
                 ntpTime[i] += (500000 * nWait);
@@ -334,16 +334,16 @@ void *threadNTPUpdate(const string &strNTPool)
         uint64_t tNow = GetAdjustedTime();
 
         // Our clock changed in the last second.
-        if (abs((int64_t)tNow - ((int64_t)tTrack + 1)) > 1)
+        if (abs(static_cast<int64_t>(tNow) - (static_cast<int64_t>(tTrack) + 1)) > 1)
         {
             // We'll do this internally so we don't have to bug NTP
             int64_t nOffset = GetTimeOffset();
-            nOffset += ((int64_t)tTrack + 1) - (int64_t)tNow;
+            nOffset += (static_cast<int64_t>(tTrack) + 1) - static_cast<int64_t>(tNow);
             SetTimeOffset(nOffset);
 
             // Update tNow directly instead of from GetTimeOffset
             // in case the system time changes since we set it.
-            tNow += ((int64_t)tTrack + 1) - (int64_t)tNow;
+            tNow += (static_cast<int64_t>(tTrack) + 1) - static_cast<int64_t>(tNow);
 
             // Update our refresh time sooner from NTP though, just in case
             nRefreshTime = (nRefreshTime < 3600) ? nRefreshTime + 400 : 3600;

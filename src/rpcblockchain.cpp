@@ -27,7 +27,7 @@ double GetDifficulty(const CBlockIndex* blockindex)
     int nShift = (blockindex->nBits >> 24) & 0xff;
 
     double dDiff =
-        (double)0x0000ffff / (double)(blockindex->nBits & 0x00ffffff);
+        static_cast<double>(0x0000ffff) / static_cast<double>(blockindex->nBits & 0x00ffffff);
 
     while (nShift < 29)
     {
@@ -102,13 +102,13 @@ Object blockToJSON(const CBlock& block, const CBlockIndex* blockindex, bool fPri
     if (blockindex->IsInMainChain())
         confirmations = nBestHeight - blockindex->nHeight + 1;
     result.push_back(Pair("confirmations", confirmations));
-    result.push_back(Pair("size", (int)::GetSerializeSize(block, SER_NETWORK, PROTOCOL_VERSION)));
+    result.push_back(Pair("size", static_cast<int>(::GetSerializeSize(block, SER_NETWORK, PROTOCOL_VERSION))));
     result.push_back(Pair("height", blockindex->nHeight));
     result.push_back(Pair("version", block.nVersion));
     result.push_back(Pair("merkleroot", block.hashMerkleRoot.GetHex()));
     result.push_back(Pair("mint", ValueFromAmount(blockindex->nMint)));
-    result.push_back(Pair("time", (int64_t)block.GetBlockTime()));
-    result.push_back(Pair("nonce", (uint64_t)block.nNonce));
+    result.push_back(Pair("time", static_cast<int64_t>(block.GetBlockTime())));
+    result.push_back(Pair("nonce", static_cast<uint64_t>(block.nNonce)));
     result.push_back(Pair("bits", HexBits(block.nBits)));
     result.push_back(Pair("difficulty", GetDifficulty(blockindex)));
     result.push_back(Pair("blocktrust", leftTrim(blockindex->GetBlockTrust().GetHex(), '0')));
@@ -120,7 +120,7 @@ Object blockToJSON(const CBlock& block, const CBlockIndex* blockindex, bool fPri
 
     result.push_back(Pair("flags", strprintf("%s%s", blockindex->IsProofOfStake()? "proof-of-stake" : "proof-of-work", blockindex->GeneratedStakeModifier()? " stake-modifier": "")));
     result.push_back(Pair("proofhash", blockindex->hashProof.GetHex()));
-    result.push_back(Pair("entropybit", (int)blockindex->GetStakeEntropyBit()));
+    result.push_back(Pair("entropybit", static_cast<int>(blockindex->GetStakeEntropyBit())));
     result.push_back(Pair("modifier", strprintf("%016" PRIx64, blockindex->nStakeModifier)));
     Array txinfo;
     for (const CTransaction& tx : block.vtx)
@@ -178,7 +178,7 @@ Value getdifficulty(const Array& params, bool fHelp)
     obj.push_back(Pair("proof-of-work",        GetDifficulty()));
     obj.push_back(Pair("proof-of-stake",       GetDifficulty(GetLastBlockIndex2(GetLastBlockIndex(pindexBest, true), false))));
     obj.push_back(Pair("proof-of-stake (flash)",       GetDifficulty(GetLastBlockIndex2(pindexBest, true))));
-    obj.push_back(Pair("search-interval",      (int)nLastCoinStakeSearchInterval));
+    obj.push_back(Pair("search-interval",      static_cast<int>(nLastCoinStakeSearchInterval)));
     return obj;
 }
 

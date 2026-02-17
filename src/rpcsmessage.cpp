@@ -642,7 +642,7 @@ Value smsginbox(const Array& params, bool fHelp)
                     objM.push_back(Pair("sent", getTimeString(msg.timestamp, cbuf, sizeof(cbuf))));
                     objM.push_back(Pair("from", msg.sFromAddress));
                     objM.push_back(Pair("to", smsgStored.sAddrTo));
-                    objM.push_back(Pair("text", std::string((char*)&msg.vchMessage[0]))); // ugh
+                    objM.push_back(Pair("text", std::string(reinterpret_cast<char*>(&msg.vchMessage[0])))); // ugh
                     
                     result.push_back(Pair("message", objM));
                 } else
@@ -743,7 +743,7 @@ Value smsgoutbox(const Array& params, bool fHelp)
                     objM.push_back(Pair("sent", getTimeString(msg.timestamp, cbuf, sizeof(cbuf))));
                     objM.push_back(Pair("from", msg.sFromAddress));
                     objM.push_back(Pair("to", smsgStored.sAddrTo));
-                    objM.push_back(Pair("text", std::string((char*)&msg.vchMessage[0]))); // ugh
+                    objM.push_back(Pair("text", std::string(reinterpret_cast<char*>(&msg.vchMessage[0])))); // ugh
                     
                     result.push_back(Pair("message", objM));
                 } else

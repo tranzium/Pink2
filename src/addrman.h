@@ -120,46 +120,46 @@ public:
 //      consistency checks for the entire data structure.
 
 // total number of buckets for tried addresses
-#define ADDRMAN_TRIED_BUCKET_COUNT 64
+constexpr unsigned int ADDRMAN_TRIED_BUCKET_COUNT = 64;
 
 // maximum allowed number of entries in buckets for tried addresses
-#define ADDRMAN_TRIED_BUCKET_SIZE 64
+constexpr unsigned int ADDRMAN_TRIED_BUCKET_SIZE = 64;
 
 // total number of buckets for new addresses
-#define ADDRMAN_NEW_BUCKET_COUNT 256
+constexpr unsigned int ADDRMAN_NEW_BUCKET_COUNT = 256;
 
 // maximum allowed number of entries in buckets for new addresses
-#define ADDRMAN_NEW_BUCKET_SIZE 64
+constexpr unsigned int ADDRMAN_NEW_BUCKET_SIZE = 64;
 
 // over how many buckets entries with tried addresses from a single group (/16 for IPv4) are spread
-#define ADDRMAN_TRIED_BUCKETS_PER_GROUP 4
+constexpr unsigned int ADDRMAN_TRIED_BUCKETS_PER_GROUP = 4;
 
 // over how many buckets entries with new addresses originating from a single group are spread
-#define ADDRMAN_NEW_BUCKETS_PER_SOURCE_GROUP 32
+constexpr unsigned int ADDRMAN_NEW_BUCKETS_PER_SOURCE_GROUP = 32;
 
 // in how many buckets for entries with new addresses a single address may occur
-#define ADDRMAN_NEW_BUCKETS_PER_ADDRESS 4
+constexpr unsigned int ADDRMAN_NEW_BUCKETS_PER_ADDRESS = 4;
 
 // how many entries in a bucket with tried addresses are inspected, when selecting one to replace
-#define ADDRMAN_TRIED_ENTRIES_INSPECT_ON_EVICT 4
+constexpr unsigned int ADDRMAN_TRIED_ENTRIES_INSPECT_ON_EVICT = 4;
 
 // how old addresses can maximally be
-#define ADDRMAN_HORIZON_DAYS 30
+constexpr unsigned int ADDRMAN_HORIZON_DAYS = 30;
 
 // after how many failed attempts we give up on a new node
-#define ADDRMAN_RETRIES 3
+constexpr unsigned int ADDRMAN_RETRIES = 3;
 
 // how many successive failures are allowed ...
-#define ADDRMAN_MAX_FAILURES 10
+constexpr unsigned int ADDRMAN_MAX_FAILURES = 10;
 
 // ... in at least this many days
-#define ADDRMAN_MIN_FAIL_DAYS 7
+constexpr unsigned int ADDRMAN_MIN_FAIL_DAYS = 7;
 
 // the maximum percentage of nodes to return in a getaddr call
-#define ADDRMAN_GETADDR_MAX_PCT 23
+constexpr unsigned int ADDRMAN_GETADDR_MAX_PCT = 23;
 
 // the maximum number of nodes to return in a getaddr call
-#define ADDRMAN_GETADDR_MAX 2500
+constexpr unsigned int ADDRMAN_GETADDR_MAX = 2500;
 
 /** Stochastical (IP) address manager */
 class CAddrMan

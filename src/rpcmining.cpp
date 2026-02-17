@@ -29,7 +29,7 @@ Value getsubsidy(const Array& params, bool fHelp)
     else
         nShowHeight = nBestHeight+1; // block currently being solved
     
-    return (uint64_t)GetProofOfWorkReward(nShowHeight, 0);
+    return static_cast<uint64_t>(GetProofOfWorkReward(nShowHeight, 0));
 }
 
 Value getmininginfo(const Array& params, bool fHelp)
@@ -50,31 +50,31 @@ Value getmininginfo(const Array& params, bool fHelp)
     bool staking_status = nLastCoinStakeSearchInterval && nWeight;
     unsigned int block_target_spacing = is_pow_disabled && is_flash_stake ? nTargetSpacing_FlashStaking : nTargetSpacing;
     int staking_estimated_time = staking_status ? (block_target_spacing * GetPoSKernelPS() / nWeight) : -1;
-    bool is_targeting_fpos = (int64_t)nSplitThreshold >= 100000; 
+    bool is_targeting_fpos = static_cast<int64_t>(nSplitThreshold) >= 100000;
     
     Object obj, obj_staking_info, obj_staking_weight, obj_diff;
 
-    obj.push_back(Pair("blocks", (int)nBestHeight));
+    obj.push_back(Pair("blocks", static_cast<int>(nBestHeight)));
     obj.push_back(Pair("next-block-value-pos", ValueFromAmount(GetProofOfStakeReward(0, 0, nBestHeight+1, 0))));
     if(!is_pow_disabled)
         obj.push_back(Pair("next-block-value-pow", ValueFromAmount(GetProofOfWorkReward(nBestHeight+1, 0))));
-    obj.push_back(Pair("last-block-size", (uint64_t)nLastBlockSize));
-    obj.push_back(Pair("last-block-tx", (uint64_t)nLastBlockTx));
-    obj.push_back(Pair("pooledtx", (uint64_t)mempool.size()));
-    obj.push_back(Pair("tx-fee", ValueFromAmount((int64_t)MIN_TX_FEE)));
+    obj.push_back(Pair("last-block-size", static_cast<uint64_t>(nLastBlockSize)));
+    obj.push_back(Pair("last-block-tx", static_cast<uint64_t>(nLastBlockTx)));
+    obj.push_back(Pair("pooledtx", static_cast<uint64_t>(mempool.size())));
+    obj.push_back(Pair("tx-fee", ValueFromAmount(static_cast<int64_t>(MIN_TX_FEE))));
 
     obj_staking_info.push_back(Pair("enabled", staking_status));
     obj_staking_info.push_back(Pair("targeting-fpos", is_targeting_fpos));
     obj_staking_info.push_back(Pair("estimated-time", staking_estimated_time));
-    obj_staking_info.push_back(Pair("search-interval", (int)nLastCoinStakeSearchInterval));
-    obj_staking_info.push_back(Pair("utxo-combine-threshold", (int64_t)nCombineThreshold));
-    obj_staking_info.push_back(Pair("utxo-split-threshold", (int64_t)nSplitThreshold));
+    obj_staking_info.push_back(Pair("search-interval", static_cast<int>(nLastCoinStakeSearchInterval)));
+    obj_staking_info.push_back(Pair("utxo-combine-threshold", static_cast<int64_t>(nCombineThreshold)));
+    obj_staking_info.push_back(Pair("utxo-split-threshold", static_cast<int64_t>(nSplitThreshold)));
     obj.push_back(Pair("staking", obj_staking_info));
     
-    obj_staking_weight.push_back(Pair("minimum", (uint64_t)nMinWeight));
-    obj_staking_weight.push_back(Pair("maximum", (uint64_t)nMaxWeight));
-    obj_staking_weight.push_back(Pair("combined", (uint64_t)nWeight));
-    obj_staking_weight.push_back(Pair("network", (uint64_t)GetPoSKernelPS()));
+    obj_staking_weight.push_back(Pair("minimum", static_cast<uint64_t>(nMinWeight)));
+    obj_staking_weight.push_back(Pair("maximum", static_cast<uint64_t>(nMaxWeight)));
+    obj_staking_weight.push_back(Pair("combined", static_cast<uint64_t>(nWeight)));
+    obj_staking_weight.push_back(Pair("network", static_cast<uint64_t>(GetPoSKernelPS())));
     obj.push_back(Pair("stakeweight", obj_staking_weight));
 
     if(!is_pow_disabled)
@@ -83,7 +83,7 @@ Value getmininginfo(const Array& params, bool fHelp)
     obj_diff.push_back(Pair("proof-of-stake(flash)", GetDifficulty(GetLastBlockIndex2(pindexBest, true))));
     obj.push_back(Pair("difficulty", obj_diff));
 
-    obj.push_back(Pair("netstakeweight", (uint64_t)GetPoSKernelPS()));
+    obj.push_back(Pair("netstakeweight", static_cast<uint64_t>(GetPoSKernelPS())));
     if(!is_pow_disabled)
         obj.push_back(Pair("netmhashps", GetPoWMHashPS()));
     obj.push_back(Pair("testnet", fTestNet));
@@ -121,16 +121,16 @@ Value getstakinginfo(const Array& params, bool fHelp)
     obj.push_back(Pair("staking", staking));
     obj.push_back(Pair("errors", GetWarnings("statusbar")));
 
-    obj.push_back(Pair("currentblocksize", (uint64_t)nLastBlockSize));
-    obj.push_back(Pair("currentblocktx", (uint64_t)nLastBlockTx));
-    obj.push_back(Pair("pooledtx", (uint64_t)mempool.size()));
+    obj.push_back(Pair("currentblocksize", static_cast<uint64_t>(nLastBlockSize)));
+    obj.push_back(Pair("currentblocktx", static_cast<uint64_t>(nLastBlockTx)));
+    obj.push_back(Pair("pooledtx", static_cast<uint64_t>(mempool.size())));
 
     obj.push_back(Pair("difficulty", GetDifficulty(GetLastBlockIndex2(GetLastBlockIndex(pindexBest, true), false))));
     obj.push_back(Pair("difficulty (flash)", GetDifficulty(GetLastBlockIndex2(pindexBest, true))));
-    obj.push_back(Pair("search-interval", (int)nLastCoinStakeSearchInterval));
+    obj.push_back(Pair("search-interval", static_cast<int>(nLastCoinStakeSearchInterval)));
 
-    obj.push_back(Pair("weight", (uint64_t)nWeight));
-    obj.push_back(Pair("netstakeweight", (uint64_t)nNetworkWeight));
+    obj.push_back(Pair("weight", static_cast<uint64_t>(nWeight)));
+    obj.push_back(Pair("netstakeweight", static_cast<uint64_t>(nNetworkWeight)));
 
     obj.push_back(Pair("expectedtime", nExpectedTime));
 
@@ -238,11 +238,11 @@ Value getworkex(const Array& params, bool fHelp)
         if (vchData.size() != 128)
             throw JSONRPCError(-8, "Invalid parameter");
 
-        CBlock* pdata = (CBlock*)&vchData[0];
+        CBlock* pdata = reinterpret_cast<CBlock*>(&vchData[0]);
 
         // Byte reverse
         for (int i = 0; i < 128/4; i++)
-            ((unsigned int*)pdata)[i] = ByteReverse(((unsigned int*)pdata)[i]);
+            reinterpret_cast<unsigned int*>(pdata)[i] = ByteReverse(reinterpret_cast<unsigned int*>(pdata)[i]);
 
         // Get saved block
         if (!mapNewBlock.count(pdata->hashMerkleRoot))
@@ -356,11 +356,11 @@ Value getwork(const Array& params, bool fHelp)
         vector<unsigned char> vchData = ParseHex(params[0].get_str());
         if (vchData.size() != 128)
             throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid parameter");
-        CBlock* pdata = (CBlock*)&vchData[0];
+        CBlock* pdata = reinterpret_cast<CBlock*>(&vchData[0]);
 
         // Byte reverse
         for (int i = 0; i < 128/4; i++)
-            ((unsigned int*)pdata)[i] = ByteReverse(((unsigned int*)pdata)[i]);
+            reinterpret_cast<unsigned int*>(pdata)[i] = ByteReverse(reinterpret_cast<unsigned int*>(pdata)[i]);
 
         // Get saved block
         if (!mapNewBlock.count(pdata->hashMerkleRoot))
@@ -484,7 +484,7 @@ Value getblocktemplate(const Array& params, bool fHelp)
         bool fInvalid = false;
         if (tx.FetchInputs(txdb, mapUnused, false, false, mapInputs, fInvalid))
         {
-            entry.push_back(Pair("fee", (int64_t)(tx.GetValueIn(mapInputs) - tx.GetValueOut())));
+            entry.push_back(Pair("fee", static_cast<int64_t>(tx.GetValueIn(mapInputs) - tx.GetValueOut())));
 
             Array deps;
             for (MapPrevTx::value_type& inp : mapInputs)
@@ -520,16 +520,16 @@ Value getblocktemplate(const Array& params, bool fHelp)
     result.push_back(Pair("previousblockhash", pblock->hashPrevBlock.GetHex()));
     result.push_back(Pair("transactions", transactions));
     result.push_back(Pair("coinbaseaux", aux));
-    result.push_back(Pair("coinbasevalue", (int64_t)pblock->vtx[0].vout[0].nValue));
+    result.push_back(Pair("coinbasevalue", static_cast<int64_t>(pblock->vtx[0].vout[0].nValue)));
     result.push_back(Pair("target", hashTarget.GetHex()));
-    result.push_back(Pair("mintime", (int64_t)pindexPrev->GetPastTimeLimit()+1));
+    result.push_back(Pair("mintime", static_cast<int64_t>(pindexPrev->GetPastTimeLimit()+1)));
     result.push_back(Pair("mutable", aMutable));
     result.push_back(Pair("noncerange", "00000000ffffffff"));
-    result.push_back(Pair("sigoplimit", (int64_t)MAX_BLOCK_SIGOPS));
-    result.push_back(Pair("sizelimit", (int64_t)MAX_BLOCK_SIZE));
-    result.push_back(Pair("curtime", (int64_t)pblock->nTime));
+    result.push_back(Pair("sigoplimit", static_cast<int64_t>(MAX_BLOCK_SIGOPS)));
+    result.push_back(Pair("sizelimit", static_cast<int64_t>(MAX_BLOCK_SIZE)));
+    result.push_back(Pair("curtime", static_cast<int64_t>(pblock->nTime)));
     result.push_back(Pair("bits", HexBits(pblock->nBits)));
-    result.push_back(Pair("height", (int64_t)(pindexPrev->nHeight+1)));
+    result.push_back(Pair("height", static_cast<int64_t>(pindexPrev->nHeight+1)));
 
     return result;
 }

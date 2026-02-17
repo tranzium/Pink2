@@ -467,14 +467,14 @@ public:
 
         // Set the size
         unsigned int nSize = ssSend.size() - CMessageHeader::HEADER_SIZE;
-        memcpy((char*)&ssSend[CMessageHeader::MESSAGE_SIZE_OFFSET], &nSize, sizeof(nSize));
+        memcpy(reinterpret_cast<char*>(&ssSend[CMessageHeader::MESSAGE_SIZE_OFFSET]), &nSize, sizeof(nSize));
 
         // Set the checksum
         uint256 hash = Hash(ssSend.begin() + CMessageHeader::HEADER_SIZE, ssSend.end());
         unsigned int nChecksum = 0;
         memcpy(&nChecksum, &hash, sizeof(nChecksum));
         assert(ssSend.size () >= CMessageHeader::CHECKSUM_OFFSET + sizeof(nChecksum));
-        memcpy((char*)&ssSend[CMessageHeader::CHECKSUM_OFFSET], &nChecksum, sizeof(nChecksum));
+        memcpy(reinterpret_cast<char*>(&ssSend[CMessageHeader::CHECKSUM_OFFSET]), &nChecksum, sizeof(nChecksum));
 
         if (fDebug) {
             printf("(%d bytes)\n", nSize);

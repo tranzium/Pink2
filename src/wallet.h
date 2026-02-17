@@ -552,7 +552,7 @@ public:
 
             ReadOrderPos(pthis->nOrderPos, pthis->mapValue);
 
-            pthis->nTimeSmart = mapValue.count("timesmart") ? (unsigned int)atoi64(pthis->mapValue["timesmart"]) : 0;
+            pthis->nTimeSmart = mapValue.count("timesmart") ? static_cast<unsigned int>(atoi64(pthis->mapValue["timesmart"])) : 0;
         }
 
         pthis->mapValue.erase("fromaccount");
