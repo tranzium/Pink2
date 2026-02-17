@@ -13,6 +13,7 @@
 #include "main.h"
 #include "script.h"
 #include "util.h"
+#include "test_framework.h"
 
 using namespace std;
 using namespace json_spirit;
@@ -675,6 +676,397 @@ BOOST_AUTO_TEST_CASE(getdifficulty_minimum_nbits)
     // dDiff = 0x0000ffff / 0x00ffff = 1.0
     // nShift == 29, no loop → diff = 1.0
     BOOST_CHECK_CLOSE(diff, 1.0, 0.001);
+}
+
+// ============================================================================
+// getnewaddress / getnewpubkey tests
+// ============================================================================
+
+BOOST_AUTO_TEST_CASE(getnewaddress_default)
+{
+    Array params;
+    Value result = getnewaddress(params, false);
+    string addr = result.get_str();
+    BOOST_CHECK(!addr.empty());
+    BOOST_CHECK_EQUAL(addr[0], '2');  // Pinkcoin P2PKH prefix
+    CBitcoinAddress address(addr);
+    BOOST_CHECK(address.IsValid());
+}
+
+BOOST_AUTO_TEST_CASE(getnewaddress_with_account)
+{
+    Array params;
+    params.push_back(string("testaccount"));
+    Value result = getnewaddress(params, false);
+    string addr = result.get_str();
+    BOOST_CHECK(!addr.empty());
+    CBitcoinAddress address(addr);
+    BOOST_CHECK(address.IsValid());
+}
+
+BOOST_AUTO_TEST_CASE(getnewpubkey_returns_hex)
+{
+    Array params;
+    Value result = getnewpubkey(params, false);
+    string pubkeyHex = result.get_str();
+    BOOST_CHECK(!pubkeyHex.empty());
+    BOOST_CHECK(IsHex(pubkeyHex));
+
+    vector<unsigned char> vchPubKey = ParseHex(pubkeyHex);
+    CPubKey pubkey(vchPubKey);
+    BOOST_CHECK(pubkey.IsValid());
+}
+
+// ============================================================================
+// getaccount / setaccount / getaddressesbyaccount tests
+// ============================================================================
+
+BOOST_AUTO_TEST_CASE(getaccount_valid_address)
+{
+    // Create a new address with an account
+    Array newAddr;
+    newAddr.push_back(string("test_getaccount"));
+    string addr = getnewaddress(newAddr, false).get_str();
+
+    Array params;
+    params.push_back(addr);
+    Value result = getaccount(params, false);
+    BOOST_CHECK_EQUAL(result.get_str(), "test_getaccount");
+}
+
+BOOST_AUTO_TEST_CASE(getaccount_invalid_address)
+{
+    Array params;
+    params.push_back(string("invalid_address_here"));
+    BOOST_CHECK_THROW(getaccount(params, false), Object);
+}
+
+BOOST_AUTO_TEST_CASE(setaccount_assigns_account)
+{
+    // Get a new address
+    Array empty;
+    string addr = getnewaddress(empty, false).get_str();
+
+    // Set its account
+    Array params;
+    params.push_back(addr);
+    params.push_back(string("newlabel"));
+    setaccount(params, false);
+
+    // Verify
+    Array getParams;
+    getParams.push_back(addr);
+    BOOST_CHECK_EQUAL(getaccount(getParams, false).get_str(), "newlabel");
+}
+
+BOOST_AUTO_TEST_CASE(getaddressesbyaccount_populated)
+{
+    // Create address with specific account
+    Array newAddr;
+    newAddr.push_back(string("addrbyacct_test"));
+    string addr = getnewaddress(newAddr, false).get_str();
+
+    Array params;
+    params.push_back(string("addrbyacct_test"));
+    Value result = getaddressesbyaccount(params, false);
+    Array addrs = result.get_array();
+    BOOST_CHECK(!addrs.empty());
+
+    // The address we created should be in the list
+    bool found = false;
+    for (const Value& v : addrs) {
+        if (v.get_str() == addr) {
+            found = true;
+            break;
+        }
+    }
+    BOOST_CHECK(found);
+}
+
+// ============================================================================
+// getbalance tests
+// ============================================================================
+
+BOOST_AUTO_TEST_CASE(getbalance_default)
+{
+    Array params;
+    Value result = getbalance(params, false);
+    // Balance is a real number (may be 0 in test env)
+    BOOST_CHECK(result.type() == real_type);
+    BOOST_CHECK(result.get_real() >= 0.0);
+}
+
+BOOST_AUTO_TEST_CASE(getbalance_with_star)
+{
+    // "*" returns total balance across all accounts
+    Array params;
+    params.push_back(string("*"));
+    Value result = getbalance(params, false);
+    BOOST_CHECK(result.type() == real_type);
+    BOOST_CHECK(result.get_real() >= 0.0);
+}
+
+// ============================================================================
+// validateaddress / validatepubkey tests
+// ============================================================================
+
+BOOST_AUTO_TEST_CASE(validateaddress_valid)
+{
+    // Generate a known address
+    Array empty;
+    string addr = getnewaddress(empty, false).get_str();
+
+    Array params;
+    params.push_back(addr);
+    Value result = validateaddress(params, false);
+    Object obj = result.get_obj();
+
+    BOOST_CHECK_EQUAL(find_value(obj, "isvalid").get_bool(), true);
+    BOOST_CHECK(find_value(obj, "address").type() == str_type);
+    BOOST_CHECK(find_value(obj, "ismine").type() == bool_type);
+    BOOST_CHECK_EQUAL(find_value(obj, "ismine").get_bool(), true);
+}
+
+BOOST_AUTO_TEST_CASE(validateaddress_invalid)
+{
+    Array params;
+    params.push_back(string("not_a_valid_address"));
+    Value result = validateaddress(params, false);
+    Object obj = result.get_obj();
+
+    BOOST_CHECK_EQUAL(find_value(obj, "isvalid").get_bool(), false);
+}
+
+BOOST_AUTO_TEST_CASE(validatepubkey_valid)
+{
+    // Get a pubkey from the wallet
+    Array empty;
+    string pubkeyHex = getnewpubkey(empty, false).get_str();
+
+    Array params;
+    params.push_back(pubkeyHex);
+    Value result = validatepubkey(params, false);
+    Object obj = result.get_obj();
+
+    BOOST_CHECK_EQUAL(find_value(obj, "isvalid").get_bool(), true);
+    BOOST_CHECK(find_value(obj, "address").type() == str_type);
+    BOOST_CHECK(find_value(obj, "iscompressed").type() == bool_type);
+}
+
+BOOST_AUTO_TEST_CASE(validatepubkey_invalid)
+{
+    Array params;
+    params.push_back(string("deadbeef"));
+    Value result = validatepubkey(params, false);
+    Object obj = result.get_obj();
+
+    BOOST_CHECK_EQUAL(find_value(obj, "isvalid").get_bool(), false);
+}
+
+// ============================================================================
+// listaccounts / listreceivedbyaddress tests
+// ============================================================================
+
+BOOST_AUTO_TEST_CASE(listaccounts_returns_map)
+{
+    Array params;
+    Value result = listaccounts(params, false);
+    Object obj = result.get_obj();
+    // Should have at least the default "" account
+    BOOST_CHECK(obj.size() >= 1);
+}
+
+BOOST_AUTO_TEST_CASE(listreceivedbyaddress_default)
+{
+    Array params;
+    Value result = listreceivedbyaddress(params, false);
+    BOOST_CHECK(result.type() == array_type);
+}
+
+// ============================================================================
+// getwalletinfo / getstakesplitthreshold tests
+// ============================================================================
+
+BOOST_AUTO_TEST_CASE(getwalletinfo_returns_object)
+{
+    Array params;
+    Value result = getwalletinfo(params, false);
+    Object obj = result.get_obj();
+
+    BOOST_CHECK(find_value(obj, "walletversion").type() == int_type);
+    BOOST_CHECK(find_value(obj, "balance").type() == real_type);
+    BOOST_CHECK(find_value(obj, "txcount").type() == int_type);
+    BOOST_CHECK(find_value(obj, "keypoololdest").type() == int_type);
+    BOOST_CHECK(find_value(obj, "keypoolsize").type() == int_type);
+}
+
+BOOST_AUTO_TEST_CASE(getstakesplitthreshold_returns_object)
+{
+    Array params;
+    Value result = getstakesplitthreshold(params, false);
+    Object obj = result.get_obj();
+    BOOST_CHECK(find_value(obj, "split threshold").type() == real_type);
+}
+
+// ============================================================================
+// keypoolrefill tests
+// ============================================================================
+
+BOOST_AUTO_TEST_CASE(keypoolrefill_default)
+{
+    Array params;
+    // Should not throw — refills keypool
+    BOOST_CHECK_NO_THROW(keypoolrefill(params, false));
+}
+
+// ============================================================================
+// reservebalance tests
+// ============================================================================
+
+BOOST_AUTO_TEST_CASE(reservebalance_query)
+{
+    // No params → returns current reserve setting
+    Array params;
+    Value result = reservebalance(params, false);
+    Object obj = result.get_obj();
+    BOOST_CHECK(find_value(obj, "reserve").type() == bool_type);
+    BOOST_CHECK(find_value(obj, "amount").type() == real_type);
+}
+
+BOOST_AUTO_TEST_CASE(reservebalance_set_and_query)
+{
+    // Set reserve on with 10.0
+    Array setParams;
+    setParams.push_back(true);
+    setParams.push_back(10.0);
+    Value result = reservebalance(setParams, false);
+    Object obj = result.get_obj();
+    BOOST_CHECK_EQUAL(find_value(obj, "reserve").get_bool(), true);
+
+    // Disable reserve
+    Array offParams;
+    offParams.push_back(false);
+    reservebalance(offParams, false);
+}
+
+// ============================================================================
+// getreceivedbyaddress tests
+// ============================================================================
+
+BOOST_AUTO_TEST_CASE(getreceivedbyaddress_zero_for_unused)
+{
+    Array empty;
+    string addr = getnewaddress(empty, false).get_str();
+
+    Array params;
+    params.push_back(addr);
+    Value result = getreceivedbyaddress(params, false);
+    BOOST_CHECK_CLOSE(result.get_real(), 0.0, 0.001);
+}
+
+// ============================================================================
+// rpcnet: getconnectioncount / getpeerinfo
+// ============================================================================
+
+BOOST_AUTO_TEST_CASE(getconnectioncount_zero)
+{
+    Array params;
+    Value result = getconnectioncount(params, false);
+    // In test mode, no peers connected
+    BOOST_CHECK_EQUAL(result.get_int(), 0);
+}
+
+BOOST_AUTO_TEST_CASE(getpeerinfo_empty)
+{
+    Array params;
+    Value result = getpeerinfo(params, false);
+    Array arr = result.get_array();
+    BOOST_CHECK(arr.empty());
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
+// ============================================================================
+// Tests requiring a real chain (TestChain fixture)
+// ============================================================================
+BOOST_FIXTURE_TEST_SUITE(rpc_chain_command_tests, TestChain)
+
+BOOST_AUTO_TEST_CASE(getrawtransaction_hex)
+{
+    BOOST_REQUIRE(!coinbaseTxns.empty());
+    string txid = coinbaseTxns[0].GetHash().GetHex();
+
+    Array params;
+    params.push_back(txid);
+    params.push_back(0);  // verbose=0 → hex string
+    Value result = getrawtransaction(params, false);
+    string hex = result.get_str();
+    BOOST_CHECK(!hex.empty());
+    BOOST_CHECK(IsHex(hex));
+}
+
+BOOST_AUTO_TEST_CASE(getrawtransaction_json)
+{
+    BOOST_REQUIRE(!coinbaseTxns.empty());
+    string txid = coinbaseTxns[0].GetHash().GetHex();
+
+    Array params;
+    params.push_back(txid);
+    params.push_back(1);  // verbose=1 → JSON object
+    Value result = getrawtransaction(params, false);
+    Object obj = result.get_obj();
+    BOOST_CHECK(find_value(obj, "txid").type() == str_type);
+    BOOST_CHECK(find_value(obj, "version").type() == int_type);
+}
+
+BOOST_AUTO_TEST_CASE(getrawtransaction_notfound)
+{
+    Array params;
+    params.push_back(string("0000000000000000000000000000000000000000000000000000000000000bad"));
+    params.push_back(0);
+    BOOST_CHECK_THROW(getrawtransaction(params, false), Object);
+}
+
+BOOST_AUTO_TEST_CASE(listunspent_default)
+{
+    Array params;
+    Value result = listunspent(params, false);
+    BOOST_CHECK(result.type() == array_type);
+}
+
+BOOST_AUTO_TEST_CASE(listunspent_with_minconf)
+{
+    Array params;
+    params.push_back(1);   // minconf
+    params.push_back(999); // maxconf
+    Value result = listunspent(params, false);
+    BOOST_CHECK(result.type() == array_type);
+}
+
+BOOST_AUTO_TEST_CASE(decodescript_multisig_2of3)
+{
+    // Build a 2-of-3 multisig script
+    CKey key1, key2, key3;
+    key1.MakeNewKey(true);
+    key2.MakeNewKey(true);
+    key3.MakeNewKey(true);
+
+    CScript script;
+    script << OP_2
+           << key1.GetPubKey().Raw()
+           << key2.GetPubKey().Raw()
+           << key3.GetPubKey().Raw()
+           << OP_3
+           << OP_CHECKMULTISIG;
+    string hex = HexStr(script.begin(), script.end());
+
+    Array params;
+    params.push_back(hex);
+    Value result = decodescript(params, false);
+    Object obj = result.get_obj();
+
+    BOOST_CHECK_EQUAL(find_value(obj, "type").get_str(), "multisig");
+    BOOST_CHECK_EQUAL(find_value(obj, "reqSigs").get_int(), 2);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

@@ -60,6 +60,12 @@ set(PINKCOIN_TEST_SOURCES
     rpc_command_tests.cpp
     net_tests.cpp
     golden_tests.cpp
+    protocol_tests.cpp
+    rpc_blockchain_tests.cpp
+    http_tests.cpp
+    rpc_mining_tests.cpp
+    db_tests.cpp
+    ntp_tests.cpp
 )
 
 #-----------------------------------------

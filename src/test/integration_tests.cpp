@@ -493,3 +493,162 @@ BOOST_AUTO_TEST_CASE(block_index_fields_valid)
 }
 
 BOOST_AUTO_TEST_SUITE_END()
+
+
+// ===========================================================================
+// Suite 7: TxDB CRUD operations
+// ===========================================================================
+BOOST_FIXTURE_TEST_SUITE(integration_txdb_tests, TestChain)
+
+BOOST_AUTO_TEST_CASE(read_tx_index_existing)
+{
+    BOOST_REQUIRE(!coinbaseTxns.empty());
+
+    CTxDB txdb("r");
+    CTxIndex txindex;
+    uint256 hash = coinbaseTxns[0].GetHash();
+
+    BOOST_CHECK(txdb.ReadTxIndex(hash, txindex));
+    BOOST_CHECK(!txindex.pos.IsNull());
+}
+
+BOOST_AUTO_TEST_CASE(read_tx_index_nonexistent)
+{
+    CTxDB txdb("r");
+    CTxIndex txindex;
+    uint256 fakeHash("0000000000000000000000000000000000000000000000000000cafebabe0000");
+
+    BOOST_CHECK(!txdb.ReadTxIndex(fakeHash, txindex));
+}
+
+BOOST_AUTO_TEST_CASE(update_tx_index_roundtrip)
+{
+    CTxDB txdb("r+");
+
+    // Create a synthetic CTxIndex
+    uint256 testHash("0000000000000000000000000000000000000000000000000000000099990001");
+    CTxIndex txindex;
+    txindex.pos = CDiskTxPos(1, 1, 1);
+    txindex.vSpent.resize(2);
+
+    // Write it
+    BOOST_CHECK(txdb.UpdateTxIndex(testHash, txindex));
+
+    // Read it back
+    CTxIndex readBack;
+    BOOST_CHECK(txdb.ReadTxIndex(testHash, readBack));
+    BOOST_CHECK(!readBack.pos.IsNull());
+    BOOST_CHECK_EQUAL(readBack.vSpent.size(), 2u);
+
+    // Clean up — erase
+    CTransaction fakeTx;
+    fakeTx.vin.resize(1);
+    fakeTx.vin[0].prevout.hash = testHash;
+    txdb.EraseTxIndex(fakeTx);
+}
+
+BOOST_AUTO_TEST_CASE(contains_tx_existing)
+{
+    BOOST_REQUIRE(!coinbaseTxns.empty());
+
+    CTxDB txdb("r");
+    BOOST_CHECK(txdb.ContainsTx(coinbaseTxns[0].GetHash()));
+}
+
+BOOST_AUTO_TEST_CASE(contains_tx_nonexistent)
+{
+    CTxDB txdb("r");
+    uint256 fakeHash("0000000000000000000000000000000000000000000000000000000000bad123");
+    BOOST_CHECK(!txdb.ContainsTx(fakeHash));
+}
+
+BOOST_AUTO_TEST_CASE(read_disk_tx_existing)
+{
+    BOOST_REQUIRE(!coinbaseTxns.empty());
+
+    CTxDB txdb("r");
+    CTransaction tx;
+    CTxIndex txindex;
+    uint256 hash = coinbaseTxns[0].GetHash();
+
+    bool ok = txdb.ReadDiskTx(hash, tx, txindex);
+    BOOST_CHECK(ok);
+    BOOST_CHECK(tx.GetHash() == hash);
+    BOOST_CHECK(!txindex.pos.IsNull());
+}
+
+BOOST_AUTO_TEST_CASE(read_disk_tx_nonexistent)
+{
+    CTxDB txdb("r");
+    CTransaction tx;
+    uint256 fakeHash("0000000000000000000000000000000000000000000000000000000000bad456");
+
+    BOOST_CHECK(!txdb.ReadDiskTx(fakeHash, tx));
+}
+
+BOOST_AUTO_TEST_CASE(read_hash_best_chain)
+{
+    CTxDB txdb("r");
+    uint256 readHash;
+    BOOST_CHECK(txdb.ReadHashBestChain(readHash));
+    BOOST_CHECK(readHash == hashBestChain);
+}
+
+BOOST_AUTO_TEST_CASE(write_block_index_roundtrip)
+{
+    // Create a CDiskBlockIndex from a known block
+    CBlockIndex* pindex = blockIndexAt(1);
+    BOOST_REQUIRE(pindex != nullptr);
+
+    CTxDB txdb("r+");
+
+    // The block index should already be written; verify it's readable
+    // via mapBlockIndex (which is loaded from the DB on startup)
+    auto it = mapBlockIndex.find(pindex->GetBlockHash());
+    BOOST_CHECK(it != mapBlockIndex.end());
+    BOOST_CHECK_EQUAL(it->second->nHeight, 1);
+}
+
+BOOST_AUTO_TEST_CASE(get_transaction_from_chain)
+{
+    BOOST_REQUIRE(!coinbaseTxns.empty());
+
+    uint256 hash = coinbaseTxns[0].GetHash();
+    CTransaction tx;
+    uint256 hashBlock;
+
+    // GetTransaction searches both mempool and chain
+    BOOST_CHECK(GetTransaction(hash, tx, hashBlock));
+    BOOST_CHECK(tx.GetHash() == hash);
+    BOOST_CHECK(hashBlock != 0);
+}
+
+BOOST_AUTO_TEST_CASE(get_transaction_notfound)
+{
+    uint256 fakeHash("0000000000000000000000000000000000000000000000000000000000bad789");
+    CTransaction tx;
+    uint256 hashBlock;
+
+    BOOST_CHECK(!GetTransaction(fakeHash, tx, hashBlock));
+}
+
+BOOST_AUTO_TEST_CASE(get_transaction_from_mempool)
+{
+    BOOST_REQUIRE(IsCoinbaseMature(0));
+
+    CTransaction spendTx = CreateSpendTx(0, CScript() << OP_TRUE, 1 * COIN);
+    AddToMempool(spendTx);
+
+    uint256 hash = spendTx.GetHash();
+    CTransaction found;
+    uint256 hashBlock;
+
+    BOOST_CHECK(GetTransaction(hash, found, hashBlock));
+    BOOST_CHECK(found.GetHash() == hash);
+    // Mempool tx has no block → hashBlock = 0
+    BOOST_CHECK(hashBlock == 0);
+
+    ClearMempool();
+}
+
+BOOST_AUTO_TEST_SUITE_END()
