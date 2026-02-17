@@ -196,39 +196,30 @@ static bool DecodePrivKey(const CPrivKey& vchPrivKey, unsigned char secret[32], 
 // with any DER format variant ever produced by any OpenSSL version.
 static bool DecodePrivKeyOpenSSL(const CPrivKey& vchPrivKey, unsigned char secret[32], bool& fCompressed)
 {
-    EC_KEY* eckey = EC_KEY_new_by_curve_name(NID_secp256k1);
+    EC_KEY_ptr eckey(EC_KEY_new_by_curve_name(NID_secp256k1));
     if (!eckey)
         return false;
 
     const unsigned char* pbegin = &vchPrivKey[0];
-    if (!d2i_ECPrivateKey(&eckey, &pbegin, vchPrivKey.size()))
-    {
-        EC_KEY_free(eckey);
+    EC_KEY* eckey_raw = eckey.get();
+    if (!d2i_ECPrivateKey(&eckey_raw, &pbegin, vchPrivKey.size()))
         return false;
-    }
 
-    const BIGNUM* bn = EC_KEY_get0_private_key(eckey);
+    const BIGNUM* bn = EC_KEY_get0_private_key(eckey.get());
     if (!bn)
-    {
-        EC_KEY_free(eckey);
         return false;
-    }
 
     // Extract 32-byte secret with zero-padding
     memset(secret, 0, 32);
     int nBytes = BN_num_bytes(bn);
     if (nBytes <= 0 || nBytes > 32)
-    {
-        EC_KEY_free(eckey);
         return false;
-    }
     BN_bn2bin(bn, secret + 32 - nBytes);
 
     // Detect compression from the EC_KEY's point conversion form
-    point_conversion_form_t form = EC_KEY_get_conv_form(eckey);
+    point_conversion_form_t form = EC_KEY_get_conv_form(eckey.get());
     fCompressed = (form == POINT_CONVERSION_COMPRESSED);
 
-    EC_KEY_free(eckey);
     return true;
 }
 

@@ -280,18 +280,8 @@ public:
 class SecMsgDB
 {
 public:
-    SecMsgDB()
-    {
-        activeBatch = nullptr;
-    };
-    
-    ~SecMsgDB()
-    {
-        // -- deletes only data scoped to this TxDB object.
-        
-        if (activeBatch)
-            delete activeBatch;
-    };
+    SecMsgDB() = default;
+    ~SecMsgDB() = default;
     
     bool Open(const char* pszMode="r+");
     
@@ -313,7 +303,7 @@ public:
     bool EraseSmesg(unsigned char* chKey);
     
     leveldb::DB *pdb;       // points to the global instance
-    leveldb::WriteBatch *activeBatch;
+    std::unique_ptr<leveldb::WriteBatch> activeBatch;
     
 };
 

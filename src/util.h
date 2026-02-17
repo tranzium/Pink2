@@ -25,7 +25,7 @@
 #include <filesystem>
 #include <thread>
 
-#include <openssl/evp.h>
+#include "openssl_ptr.h"
 
 #include "netbase.h" // for AddTimeData
 
@@ -437,34 +437,30 @@ inline uint256 Hash(const T1 pbegin, const T1 pend)
 class CHashWriter
 {
 private:
-    EVP_MD_CTX* ctx;
+    EVP_MD_CTX_ptr ctx;
 
 public:
     int nType;
     int nVersion;
 
     void Init() {
-        ctx = EVP_MD_CTX_new();
-        EVP_DigestInit_ex(ctx, EVP_sha256(), nullptr);
+        ctx.reset(EVP_MD_CTX_new());
+        EVP_DigestInit_ex(ctx.get(), EVP_sha256(), nullptr);
     }
 
     CHashWriter(int nTypeIn, int nVersionIn) : nType(nTypeIn), nVersion(nVersionIn) {
         Init();
     }
 
-    ~CHashWriter() {
-        EVP_MD_CTX_free(ctx);
-    }
-
     CHashWriter& write(const char *pch, size_t size) {
-        EVP_DigestUpdate(ctx, pch, size);
+        EVP_DigestUpdate(ctx.get(), pch, size);
         return (*this);
     }
 
     // invalidates the object
     uint256 GetHash() {
         uint256 hash1;
-        EVP_DigestFinal_ex(ctx, reinterpret_cast<unsigned char*>(&hash1), nullptr);
+        EVP_DigestFinal_ex(ctx.get(), reinterpret_cast<unsigned char*>(&hash1), nullptr);
         uint256 hash2;
         EVP_Digest(reinterpret_cast<const unsigned char*>(&hash1), sizeof(hash1), reinterpret_cast<unsigned char*>(&hash2), nullptr, EVP_sha256(), nullptr);
         return hash2;
@@ -485,12 +481,11 @@ inline uint256 Hash(const T1 p1begin, const T1 p1end,
 {
     static unsigned char pblank[1];
     uint256 hash1;
-    EVP_MD_CTX* ctx = EVP_MD_CTX_new();
-    EVP_DigestInit_ex(ctx, EVP_sha256(), nullptr);
-    EVP_DigestUpdate(ctx, (p1begin == p1end ? pblank : reinterpret_cast<const unsigned char*>(&p1begin[0])), (p1end - p1begin) * sizeof(p1begin[0]));
-    EVP_DigestUpdate(ctx, (p2begin == p2end ? pblank : reinterpret_cast<const unsigned char*>(&p2begin[0])), (p2end - p2begin) * sizeof(p2begin[0]));
-    EVP_DigestFinal_ex(ctx, reinterpret_cast<unsigned char*>(&hash1), nullptr);
-    EVP_MD_CTX_free(ctx);
+    EVP_MD_CTX_ptr ctx(EVP_MD_CTX_new());
+    EVP_DigestInit_ex(ctx.get(), EVP_sha256(), nullptr);
+    EVP_DigestUpdate(ctx.get(), (p1begin == p1end ? pblank : reinterpret_cast<const unsigned char*>(&p1begin[0])), (p1end - p1begin) * sizeof(p1begin[0]));
+    EVP_DigestUpdate(ctx.get(), (p2begin == p2end ? pblank : reinterpret_cast<const unsigned char*>(&p2begin[0])), (p2end - p2begin) * sizeof(p2begin[0]));
+    EVP_DigestFinal_ex(ctx.get(), reinterpret_cast<unsigned char*>(&hash1), nullptr);
     uint256 hash2;
     EVP_Digest(reinterpret_cast<const unsigned char*>(&hash1), sizeof(hash1), reinterpret_cast<unsigned char*>(&hash2), nullptr, EVP_sha256(), nullptr);
     return hash2;
@@ -503,13 +498,12 @@ inline uint256 Hash(const T1 p1begin, const T1 p1end,
 {
     static unsigned char pblank[1];
     uint256 hash1;
-    EVP_MD_CTX* ctx = EVP_MD_CTX_new();
-    EVP_DigestInit_ex(ctx, EVP_sha256(), nullptr);
-    EVP_DigestUpdate(ctx, (p1begin == p1end ? pblank : reinterpret_cast<const unsigned char*>(&p1begin[0])), (p1end - p1begin) * sizeof(p1begin[0]));
-    EVP_DigestUpdate(ctx, (p2begin == p2end ? pblank : reinterpret_cast<const unsigned char*>(&p2begin[0])), (p2end - p2begin) * sizeof(p2begin[0]));
-    EVP_DigestUpdate(ctx, (p3begin == p3end ? pblank : reinterpret_cast<const unsigned char*>(&p3begin[0])), (p3end - p3begin) * sizeof(p3begin[0]));
-    EVP_DigestFinal_ex(ctx, reinterpret_cast<unsigned char*>(&hash1), nullptr);
-    EVP_MD_CTX_free(ctx);
+    EVP_MD_CTX_ptr ctx(EVP_MD_CTX_new());
+    EVP_DigestInit_ex(ctx.get(), EVP_sha256(), nullptr);
+    EVP_DigestUpdate(ctx.get(), (p1begin == p1end ? pblank : reinterpret_cast<const unsigned char*>(&p1begin[0])), (p1end - p1begin) * sizeof(p1begin[0]));
+    EVP_DigestUpdate(ctx.get(), (p2begin == p2end ? pblank : reinterpret_cast<const unsigned char*>(&p2begin[0])), (p2end - p2begin) * sizeof(p2begin[0]));
+    EVP_DigestUpdate(ctx.get(), (p3begin == p3end ? pblank : reinterpret_cast<const unsigned char*>(&p3begin[0])), (p3end - p3begin) * sizeof(p3begin[0]));
+    EVP_DigestFinal_ex(ctx.get(), reinterpret_cast<unsigned char*>(&hash1), nullptr);
     uint256 hash2;
     EVP_Digest(reinterpret_cast<const unsigned char*>(&hash1), sizeof(hash1), reinterpret_cast<unsigned char*>(&hash2), nullptr, EVP_sha256(), nullptr);
     return hash2;

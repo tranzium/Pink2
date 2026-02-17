@@ -125,14 +125,13 @@ bool SecMsgCrypter::Encrypt(unsigned char* chPlaintext, uint32_t nPlain, std::ve
 
     bool fOk = true;
 
-    EVP_CIPHER_CTX *ctx= EVP_CIPHER_CTX_new();
+    EVP_CIPHER_CTX_ptr ctx(EVP_CIPHER_CTX_new());
     if(!ctx)
         throw std::runtime_error("Error allocating cipher context");
 
-    if (fOk) fOk = EVP_EncryptInit_ex(ctx, EVP_aes_256_cbc(), nullptr, &chKey[0], &chIV[0]);
-    if (fOk) fOk = EVP_EncryptUpdate(ctx, &vchCiphertext[0], &nCLen, chPlaintext, nLen);
-    if (fOk) fOk = EVP_EncryptFinal_ex(ctx, (&vchCiphertext[0])+nCLen, &nFLen);
-    EVP_CIPHER_CTX_free(ctx);
+    if (fOk) fOk = EVP_EncryptInit_ex(ctx.get(), EVP_aes_256_cbc(), nullptr, &chKey[0], &chIV[0]);
+    if (fOk) fOk = EVP_EncryptUpdate(ctx.get(), &vchCiphertext[0], &nCLen, chPlaintext, nLen);
+    if (fOk) fOk = EVP_EncryptFinal_ex(ctx.get(), (&vchCiphertext[0])+nCLen, &nFLen);
 
     if (!fOk)
         return false;
@@ -154,14 +153,13 @@ bool SecMsgCrypter::Decrypt(unsigned char* chCiphertext, uint32_t nCipher, std::
 
     bool fOk = true;
 
-    EVP_CIPHER_CTX *ctx= EVP_CIPHER_CTX_new();
+    EVP_CIPHER_CTX_ptr ctx(EVP_CIPHER_CTX_new());
     if(!ctx)
         throw std::runtime_error("Error allocating cipher context");
 
-    if (fOk) fOk = EVP_DecryptInit_ex(ctx, EVP_aes_256_cbc(), nullptr, &chKey[0], &chIV[0]);
-    if (fOk) fOk = EVP_DecryptUpdate(ctx, &vchPlaintext[0], &nPLen, &chCiphertext[0], nCipher);
-    if (fOk) fOk = EVP_DecryptFinal_ex(ctx, (&vchPlaintext[0])+nPLen, &nFLen);
-    EVP_CIPHER_CTX_free(ctx);
+    if (fOk) fOk = EVP_DecryptInit_ex(ctx.get(), EVP_aes_256_cbc(), nullptr, &chKey[0], &chIV[0]);
+    if (fOk) fOk = EVP_DecryptUpdate(ctx.get(), &vchPlaintext[0], &nPLen, &chCiphertext[0], nCipher);
+    if (fOk) fOk = EVP_DecryptFinal_ex(ctx.get(), (&vchPlaintext[0])+nPLen, &nFLen);
 
     if (!fOk)
         return false;
@@ -287,7 +285,7 @@ bool SecMsgDB::TxnBegin()
 {
     if (activeBatch)
         return true;
-    activeBatch = new leveldb::WriteBatch();
+    activeBatch = std::make_unique<leveldb::WriteBatch>();
     return true;
 };
 
@@ -295,26 +293,24 @@ bool SecMsgDB::TxnCommit()
 {
     if (!activeBatch)
         return false;
-    
+
     leveldb::WriteOptions writeOptions;
     writeOptions.sync = true;
-    leveldb::Status status = pdb->Write(writeOptions, activeBatch);
-    delete activeBatch;
-    activeBatch = nullptr;
-    
+    leveldb::Status status = pdb->Write(writeOptions, activeBatch.get());
+    activeBatch.reset();
+
     if (!status.ok())
     {
         printf("SecMsgDB batch commit failure: %s\n", status.ToString().c_str());
         return false;
     };
-    
+
     return true;
 };
 
 bool SecMsgDB::TxnAbort()
 {
-    delete activeBatch;
-    activeBatch = nullptr;
+    activeBatch.reset();
     return true;
 };
 
@@ -711,35 +707,35 @@ void ThreadSecureMsgPow(void* parg)
         // -- sleep at end, then fSecMsgenabled is tested on wake
         
         SecMsgDB dbOutbox;
-        leveldb::Iterator* it;
+        std::unique_ptr<leveldb::Iterator> it;
         {
             LOCK(cs_smsgDB);
-            
+
             if (!dbOutbox.Open("cr+"))
                 continue;
-            
+
             // -- fifo (smallest key first)
-            it = dbOutbox.pdb->NewIterator(leveldb::ReadOptions());
+            it.reset(dbOutbox.pdb->NewIterator(leveldb::ReadOptions()));
         }
         // -- break up lock, SecureMsgSetHash will take long
-        
+
         for (;;)
         {
             {
-                LOCK(cs_smsgDB); 
-                if (!dbOutbox.NextSmesg(it, sPrefix, chKey, smsgStored))
+                LOCK(cs_smsgDB);
+                if (!dbOutbox.NextSmesg(it.get(), sPrefix, chKey, smsgStored))
                     break;
             }
-            
+
             unsigned char* pHeader = &smsgStored.vchMessage[0];
             unsigned char* pPayload = &smsgStored.vchMessage[SMSG_HDR_LEN];
             SecureMessage* psmsg = (SecureMessage*) pHeader;
-            
+
             // -- do proof of work
             rv = SecureMsgSetHash(pHeader, pPayload, psmsg->nPayload);
-            if (rv == 2) 
+            if (rv == 2)
                 break; // /eave message in db, if terminated due to shutdown
-            
+
             // -- message is removed here, no matter what
             {
                 LOCK(cs_smsgDB);
@@ -750,7 +746,7 @@ void ThreadSecureMsgPow(void* parg)
                 printf("SecMsgPow: Could not get proof of work hash, message removed.\n");
                 continue;
             };
-            
+
             // -- add to message store
             {
                 LOCK(cs_smsg);
@@ -760,17 +756,17 @@ void ThreadSecureMsgPow(void* parg)
                     continue;
                 };
             }
-            
+
             // -- test if message was sent to self
             if (SecureMsgScanMessage(pHeader, pPayload, psmsg->nPayload, true) != 0)
             {
                 // message recipient is not this node (or failed)
             };
         };
-        
+
         {
             LOCK(cs_smsg);
-            delete it;
+            it.reset();
         }
         
         // -- shutdown thread waits 5 seconds, this should be less
@@ -3144,19 +3140,19 @@ int SecureMsgValidate(unsigned char *pHeader, unsigned char *pPayload, uint32_t 
         memcpy(civ+i, &nonse, 4);
     
     
-    EVP_MAC *mac = EVP_MAC_fetch(nullptr, "HMAC", nullptr);
-    EVP_MAC_CTX *ctx = EVP_MAC_CTX_new(mac);
+    EVP_MAC_ptr mac(EVP_MAC_fetch(nullptr, "HMAC", nullptr));
+    EVP_MAC_CTX_ptr ctx(EVP_MAC_CTX_new(mac.get()));
     OSSL_PARAM params[] = {
         OSSL_PARAM_construct_utf8_string("digest", const_cast<char*>("SHA256"), 0),
         OSSL_PARAM_construct_end()
     };
     size_t outlen = 0;
     if (!ctx
-        || !EVP_MAC_init(ctx, &civ[0], 32, params)
-        || !EVP_MAC_update(ctx, reinterpret_cast<const unsigned char*>(pHeader)+4, SMSG_HDR_LEN-4)
-        || !EVP_MAC_update(ctx, reinterpret_cast<const unsigned char*>(pPayload), nPayload)
-        || !EVP_MAC_update(ctx, pPayload, nPayload)
-        || !EVP_MAC_final(ctx, sha256Hash, &outlen, sizeof(sha256Hash))
+        || !EVP_MAC_init(ctx.get(), &civ[0], 32, params)
+        || !EVP_MAC_update(ctx.get(), reinterpret_cast<const unsigned char*>(pHeader)+4, SMSG_HDR_LEN-4)
+        || !EVP_MAC_update(ctx.get(), reinterpret_cast<const unsigned char*>(pPayload), nPayload)
+        || !EVP_MAC_update(ctx.get(), pPayload, nPayload)
+        || !EVP_MAC_final(ctx.get(), sha256Hash, &outlen, sizeof(sha256Hash))
         || outlen != 32)
     {
         if (fDebugSmsg)
@@ -3180,8 +3176,6 @@ int SecureMsgValidate(unsigned char *pHeader, unsigned char *pPayload, uint32_t 
             rv = 3; // checksum mismatch
         }
     }
-    EVP_MAC_CTX_free(ctx);
-    EVP_MAC_free(mac);
     
     return rv;
 };
@@ -3210,8 +3204,8 @@ int SecureMsgSetHash(unsigned char *pHeader, unsigned char *pPayload, uint32_t n
     
     bool found = false;
     
-    EVP_MAC *mac = EVP_MAC_fetch(nullptr, "HMAC", nullptr);
-    EVP_MAC_CTX *ctx = EVP_MAC_CTX_new(mac);
+    EVP_MAC_ptr mac(EVP_MAC_fetch(nullptr, "HMAC", nullptr));
+    EVP_MAC_CTX_ptr ctx(EVP_MAC_CTX_new(mac.get()));
     OSSL_PARAM params[] = {
         OSSL_PARAM_construct_utf8_string("digest", const_cast<char*>("SHA256"), 0),
         OSSL_PARAM_construct_end()
@@ -3232,11 +3226,11 @@ int SecureMsgSetHash(unsigned char *pHeader, unsigned char *pPayload, uint32_t n
 
         size_t outlen = 0;
         if (!ctx
-            || !EVP_MAC_init(ctx, &civ[0], 32, params)
-            || !EVP_MAC_update(ctx, reinterpret_cast<const unsigned char*>(pHeader)+4, SMSG_HDR_LEN-4)
-            || !EVP_MAC_update(ctx, reinterpret_cast<const unsigned char*>(pPayload), nPayload)
-            || !EVP_MAC_update(ctx, pPayload, nPayload)
-            || !EVP_MAC_final(ctx, sha256Hash, &outlen, sizeof(sha256Hash))
+            || !EVP_MAC_init(ctx.get(), &civ[0], 32, params)
+            || !EVP_MAC_update(ctx.get(), reinterpret_cast<const unsigned char*>(pHeader)+4, SMSG_HDR_LEN-4)
+            || !EVP_MAC_update(ctx.get(), reinterpret_cast<const unsigned char*>(pPayload), nPayload)
+            || !EVP_MAC_update(ctx.get(), pPayload, nPayload)
+            || !EVP_MAC_final(ctx.get(), sha256Hash, &outlen, sizeof(sha256Hash))
             || outlen != 32)
             break;
 
@@ -3257,9 +3251,6 @@ int SecureMsgSetHash(unsigned char *pHeader, unsigned char *pPayload, uint32_t n
         nonse++;
     };
 
-    EVP_MAC_CTX_free(ctx);
-    EVP_MAC_free(mac);
-    
     if (!fSecMsgenabled)
     {
         if (fDebugSmsg)

@@ -3,7 +3,6 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <openssl/aes.h>
-#include <openssl/evp.h>
 #include <vector>
 #include <string>
 #ifdef WIN32
@@ -72,14 +71,13 @@ bool CCrypter::Encrypt(const CKeyingMaterial& vchPlaintext, std::vector<unsigned
 
     bool fOk = true;
 
-    EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+    EVP_CIPHER_CTX_ptr ctx(EVP_CIPHER_CTX_new());
     if(!ctx)
         throw std::runtime_error("Error allocating cipher context");
 
-    if (fOk) fOk = EVP_EncryptInit_ex(ctx, EVP_aes_256_cbc(), nullptr, chKey, chIV);
-    if (fOk) fOk = EVP_EncryptUpdate(ctx, &vchCiphertext[0], &nCLen, &vchPlaintext[0], nLen);
-    if (fOk) fOk = EVP_EncryptFinal_ex(ctx, (&vchCiphertext[0])+nCLen, &nFLen);
-    EVP_CIPHER_CTX_free(ctx);
+    if (fOk) fOk = EVP_EncryptInit_ex(ctx.get(), EVP_aes_256_cbc(), nullptr, chKey, chIV);
+    if (fOk) fOk = EVP_EncryptUpdate(ctx.get(), &vchCiphertext[0], &nCLen, &vchPlaintext[0], nLen);
+    if (fOk) fOk = EVP_EncryptFinal_ex(ctx.get(), (&vchCiphertext[0])+nCLen, &nFLen);
 
     if (!fOk) return false;
 
@@ -100,14 +98,13 @@ bool CCrypter::Decrypt(const std::vector<unsigned char>& vchCiphertext, CKeyingM
 
     bool fOk = true;
 
-    EVP_CIPHER_CTX *ctx= EVP_CIPHER_CTX_new();
+    EVP_CIPHER_CTX_ptr ctx(EVP_CIPHER_CTX_new());
     if(!ctx)
         throw std::runtime_error("Error allocating cipher context");
 
-    if (fOk) fOk = EVP_DecryptInit_ex(ctx, EVP_aes_256_cbc(), nullptr, chKey, chIV);
-    if (fOk) fOk = EVP_DecryptUpdate(ctx, &vchPlaintext[0], &nPLen, &vchCiphertext[0], nLen);
-    if (fOk) fOk = EVP_DecryptFinal_ex(ctx, (&vchPlaintext[0])+nPLen, &nFLen);
-    EVP_CIPHER_CTX_free(ctx);
+    if (fOk) fOk = EVP_DecryptInit_ex(ctx.get(), EVP_aes_256_cbc(), nullptr, chKey, chIV);
+    if (fOk) fOk = EVP_DecryptUpdate(ctx.get(), &vchPlaintext[0], &nPLen, &vchCiphertext[0], nLen);
+    if (fOk) fOk = EVP_DecryptFinal_ex(ctx.get(), (&vchPlaintext[0])+nPLen, &nFLen);
 
     if (!fOk) return false;
 

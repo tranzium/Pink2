@@ -1384,7 +1384,8 @@ void ThreadCleanWalletPassphrase(void* parg)
     // Make this thread recognisable as the wallet relocking thread
     RenameThread("pinkcoin-lock-wa");
 
-    int64_t nMyWakeTime = GetTimeMillis() + *((int64_t*)parg) * 1000;
+    std::unique_ptr<int64_t> pSleepTime(static_cast<int64_t*>(parg));
+    int64_t nMyWakeTime = GetTimeMillis() + *pSleepTime * 1000;
 
     ENTER_CRITICAL_SECTION(cs_nWalletUnlockTime);
 
@@ -1419,8 +1420,6 @@ void ThreadCleanWalletPassphrase(void* parg)
     }
 
     LEAVE_CRITICAL_SECTION(cs_nWalletUnlockTime);
-
-    delete (int64_t*)parg;
 }
 
 Value walletpassphrase(const Array& params, bool fHelp)

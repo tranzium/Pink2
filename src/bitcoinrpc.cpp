@@ -1047,7 +1047,7 @@ void ThreadRPCServer3(void* parg)
         LOCK(cs_THREAD_RPCHANDLER);
         vnThreadsRunning[THREAD_RPCHANDLER]++;
     }
-    AcceptedConnection *conn = (AcceptedConnection *) parg;
+    std::unique_ptr<AcceptedConnection> conn(static_cast<AcceptedConnection*>(parg));
 
     bool fRun = true;
     while (true)
@@ -1055,7 +1055,7 @@ void ThreadRPCServer3(void* parg)
         if (fShutdown || !fRun)
         {
             conn->close();
-            delete conn;
+            conn.reset();
             {
                 LOCK(cs_THREAD_RPCHANDLER);
                 --vnThreadsRunning[THREAD_RPCHANDLER];
@@ -1134,7 +1134,6 @@ void ThreadRPCServer3(void* parg)
         }
     }
 
-    delete conn;
     {
         LOCK(cs_THREAD_RPCHANDLER);
         vnThreadsRunning[THREAD_RPCHANDLER]--;

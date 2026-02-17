@@ -151,9 +151,9 @@ Value getworkex(const Array& params, bool fHelp)
     if (IsInitialBlockDownload())
         throw JSONRPCError(-10, "Pinkcoin is downloading blocks...");
 
-    typedef map<uint256, pair<CBlock*, CScript> > mapNewBlock_t;
+    using mapNewBlock_t = map<uint256, pair<CBlock*, CScript> >;
     static mapNewBlock_t mapNewBlock;
-    static vector<CBlock*> vNewBlock;
+    static vector<std::unique_ptr<CBlock>> vNewBlock;
     static CReserveKey reservekey(pwalletMain);
 
     if (params.empty())
@@ -170,8 +170,6 @@ Value getworkex(const Array& params, bool fHelp)
             {
                 // Deallocate old blocks since they're obsolete now
                 mapNewBlock.clear();
-                for (CBlock* pblock : vNewBlock)
-                    delete pblock;
                 vNewBlock.clear();
             }
             nTransactionsUpdatedLast = nTransactionsUpdated;
@@ -182,7 +180,7 @@ Value getworkex(const Array& params, bool fHelp)
             pblock = CreateNewBlock(pwalletMain);
             if (!pblock)
                 throw JSONRPCError(-7, "Out of memory");
-            vNewBlock.push_back(pblock);
+            vNewBlock.push_back(std::unique_ptr<CBlock>(pblock));
         }
 
         // Update nTime
@@ -282,9 +280,9 @@ Value getwork(const Array& params, bool fHelp)
     if (IsInitialBlockDownload())
         throw JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD, "Pinkcoin is downloading blocks...");
 
-    typedef map<uint256, pair<CBlock*, CScript> > mapNewBlock_t;
+    using mapNewBlock_t = map<uint256, pair<CBlock*, CScript> >;
     static mapNewBlock_t mapNewBlock;    // FIXME: thread safety
-    static vector<CBlock*> vNewBlock;
+    static vector<std::unique_ptr<CBlock>> vNewBlock;
     static CReserveKey reservekey(pwalletMain);
 
     if (params.empty())
@@ -301,8 +299,6 @@ Value getwork(const Array& params, bool fHelp)
             {
                 // Deallocate old blocks since they're obsolete now
                 mapNewBlock.clear();
-                for (CBlock* pblock : vNewBlock)
-                    delete pblock;
                 vNewBlock.clear();
             }
 
@@ -318,7 +314,7 @@ Value getwork(const Array& params, bool fHelp)
             pblock = CreateNewBlock(pwalletMain);
             if (!pblock)
                 throw JSONRPCError(RPC_OUT_OF_MEMORY, "Out of memory");
-            vNewBlock.push_back(pblock);
+            vNewBlock.push_back(std::unique_ptr<CBlock>(pblock));
 
             // Need to update only after we know CreateNewBlock succeeded
             pindexPrev = pindexPrevNew;
@@ -429,7 +425,7 @@ Value getblocktemplate(const Array& params, bool fHelp)
     static unsigned int nTransactionsUpdatedLast;
     static CBlockIndex* pindexPrev;
     static int64_t nStart;
-    static CBlock* pblock;
+    static std::unique_ptr<CBlock> pblock;
     if (pindexPrev != pindexBest ||
         (nTransactionsUpdated != nTransactionsUpdatedLast && GetAdjustedTime() - nStart > 5))
     {
@@ -442,12 +438,7 @@ Value getblocktemplate(const Array& params, bool fHelp)
         nStart = GetAdjustedTime();
 
         // Create new block
-        if(pblock)
-        {
-            delete pblock;
-            pblock = nullptr;
-        }
-        pblock = CreateNewBlock(pwalletMain);
+        pblock.reset(CreateNewBlock(pwalletMain));
         if (!pblock)
             throw JSONRPCError(RPC_OUT_OF_MEMORY, "Out of memory");
 

@@ -605,13 +605,13 @@ Value smsginbox(const Array& params, bool fHelp)
         {
             dbInbox.TxnBegin();
             
-            leveldb::Iterator* it = dbInbox.pdb->NewIterator(leveldb::ReadOptions());
-            while (dbInbox.NextSmesgKey(it, sPrefix, chKey))
+            std::unique_ptr<leveldb::Iterator> it(dbInbox.pdb->NewIterator(leveldb::ReadOptions()));
+            while (dbInbox.NextSmesgKey(it.get(), sPrefix, chKey))
             {
                 dbInbox.EraseSmesg(chKey);
                 nMessages++;
             };
-            delete it;
+            it.reset();
             dbInbox.TxnCommit();
             
             snprintf(cbuf, sizeof(cbuf), "Deleted %u messages.", nMessages);
@@ -627,13 +627,13 @@ Value smsginbox(const Array& params, bool fHelp)
             
             dbInbox.TxnBegin();
             
-            leveldb::Iterator* it = dbInbox.pdb->NewIterator(leveldb::ReadOptions());
-            while (dbInbox.NextSmesg(it, sPrefix, chKey, smsgStored))
+            std::unique_ptr<leveldb::Iterator> it(dbInbox.pdb->NewIterator(leveldb::ReadOptions()));
+            while (dbInbox.NextSmesg(it.get(), sPrefix, chKey, smsgStored))
             {
                 if (fCheckReadStatus
                     && !(smsgStored.status & SMSG_MASK_UNREAD))
                     continue;
-                
+
                 uint32_t nPayload = smsgStored.vchMessage.size() - SMSG_HDR_LEN;
                 if (SecureMsgDecrypt(false, smsgStored.sAddrTo, &smsgStored.vchMessage[0], &smsgStored.vchMessage[SMSG_HDR_LEN], nPayload, msg) == 0)
                 {
@@ -643,13 +643,13 @@ Value smsginbox(const Array& params, bool fHelp)
                     objM.push_back(Pair("from", msg.sFromAddress));
                     objM.push_back(Pair("to", smsgStored.sAddrTo));
                     objM.push_back(Pair("text", std::string(reinterpret_cast<char*>(&msg.vchMessage[0])))); // ugh
-                    
+
                     result.push_back(Pair("message", objM));
                 } else
                 {
                     result.push_back(Pair("message", "Could not decrypt."));
                 };
-                
+
                 if (fCheckReadStatus)
                 {
                     smsgStored.status &= ~SMSG_MASK_UNREAD;
@@ -657,7 +657,7 @@ Value smsginbox(const Array& params, bool fHelp)
                 };
                 nMessages++;
             };
-            delete it;
+            it.reset();
             dbInbox.TxnCommit();
             
             snprintf(cbuf, sizeof(cbuf), "%u messages shown.", nMessages);
@@ -715,16 +715,16 @@ Value smsgoutbox(const Array& params, bool fHelp)
         {
             dbOutbox.TxnBegin();
             
-            leveldb::Iterator* it = dbOutbox.pdb->NewIterator(leveldb::ReadOptions());
-            while (dbOutbox.NextSmesgKey(it, sPrefix, chKey))
+            std::unique_ptr<leveldb::Iterator> it(dbOutbox.pdb->NewIterator(leveldb::ReadOptions()));
+            while (dbOutbox.NextSmesgKey(it.get(), sPrefix, chKey))
             {
                 dbOutbox.EraseSmesg(chKey);
                 nMessages++;
             };
-            delete it;
+            it.reset();
             dbOutbox.TxnCommit();
-            
-            
+
+
             snprintf(cbuf, sizeof(cbuf), "Deleted %u messages.", nMessages);
             result.push_back(Pair("result", std::string(cbuf)));
         } else
@@ -732,11 +732,11 @@ Value smsgoutbox(const Array& params, bool fHelp)
         {
             SecMsgStored smsgStored;
             MessageData msg;
-            leveldb::Iterator* it = dbOutbox.pdb->NewIterator(leveldb::ReadOptions());
-            while (dbOutbox.NextSmesg(it, sPrefix, chKey, smsgStored))
+            std::unique_ptr<leveldb::Iterator> it(dbOutbox.pdb->NewIterator(leveldb::ReadOptions()));
+            while (dbOutbox.NextSmesg(it.get(), sPrefix, chKey, smsgStored))
             {
                 uint32_t nPayload = smsgStored.vchMessage.size() - SMSG_HDR_LEN;
-                
+
                 if (SecureMsgDecrypt(false, smsgStored.sAddrOutbox, &smsgStored.vchMessage[0], &smsgStored.vchMessage[SMSG_HDR_LEN], nPayload, msg) == 0)
                 {
                     Object objM;
@@ -744,7 +744,7 @@ Value smsgoutbox(const Array& params, bool fHelp)
                     objM.push_back(Pair("from", msg.sFromAddress));
                     objM.push_back(Pair("to", smsgStored.sAddrTo));
                     objM.push_back(Pair("text", std::string(reinterpret_cast<char*>(&msg.vchMessage[0])))); // ugh
-                    
+
                     result.push_back(Pair("message", objM));
                 } else
                 {
@@ -752,7 +752,6 @@ Value smsgoutbox(const Array& params, bool fHelp)
                 };
                 nMessages++;
             };
-            delete it;
             
             snprintf(cbuf, sizeof(cbuf), "%u sent messages shown.", nMessages);
             result.push_back(Pair("result", std::string(cbuf)));

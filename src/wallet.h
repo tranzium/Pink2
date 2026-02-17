@@ -79,7 +79,7 @@ private:
     bool SelectCoinsForStaking(int64_t nTargetValue, unsigned int nSpendTime, std::set<std::pair<const CWalletTx*,unsigned int> >& setCoinsRet, int64_t& nValueRet) const;
     bool SelectCoins(int64_t nTargetValue, unsigned int nSpendTime, std::set<std::pair<const CWalletTx*,unsigned int> >& setCoinsRet, int64_t& nValueRet, const CCoinControl *coinControl=nullptr) const;
 
-    CWalletDB *pwalletdbEncryption;
+    std::unique_ptr<CWalletDB> pwalletdbEncryption;
 
     // the current wallet version: clients below this version are not able to load the wallet
     int nWalletVersion;
