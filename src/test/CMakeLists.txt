@@ -66,6 +66,7 @@ set(PINKCOIN_TEST_SOURCES
     rpc_mining_tests.cpp
     db_tests.cpp
     ntp_tests.cpp
+    rpc_coverage_tests.cpp
 )
 
 #-----------------------------------------
