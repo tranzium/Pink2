@@ -8,10 +8,9 @@
 # Core source files (shared between daemon and GUI)
 #-----------------------------------------
 set(PINKCOIN_CORE_SOURCES
+    # Root sources
     addrman.cpp
     alert.cpp
-    bitcoinrpc.cpp
-    blockprocessing.cpp
     checkpoints.cpp
     crypter.cpp
     db.cpp
@@ -19,25 +18,10 @@ set(PINKCOIN_CORE_SOURCES
     key.cpp
     keystore.cpp
     main.cpp
-    mempool.cpp
-    rewards.cpp
     miner.cpp
-    net.cpp
-    netbase.cpp
     ntp.cpp
     pbkdf2.cpp
     protocol.cpp
-    rpcblockchain.cpp
-    rpcdump.cpp
-    rpcmining.cpp
-    rpcnet.cpp
-    rpcrawtransaction.cpp
-    rpcsmessage.cpp
-    rpc_wallet_keys.cpp
-    rpc_wallet_mgmt.cpp
-    rpc_wallet_query.cpp
-    rpc_wallet_send.cpp
-    rpcwallet.cpp
     script.cpp
     scrypt.cpp
     smessage.cpp
@@ -46,10 +30,35 @@ set(PINKCOIN_CORE_SOURCES
     sync.cpp
     txdb-leveldb.cpp
     util.cpp
-    validation.cpp
     version.cpp
-    wallet.cpp
-    walletdb.cpp
+
+    # Consensus: block/transaction validation and rewards
+    consensus/blockprocessing.cpp
+    consensus/mempool.cpp
+    consensus/rewards.cpp
+    consensus/validation.cpp
+
+    # RPC: JSON-RPC server and command handlers
+    rpc/bitcoinrpc.cpp
+    rpc/rpcblockchain.cpp
+    rpc/rpcdump.cpp
+    rpc/rpcmining.cpp
+    rpc/rpcnet.cpp
+    rpc/rpcrawtransaction.cpp
+    rpc/rpcsmessage.cpp
+    rpc/rpcwallet.cpp
+    rpc/rpc_wallet_keys.cpp
+    rpc/rpc_wallet_mgmt.cpp
+    rpc/rpc_wallet_query.cpp
+    rpc/rpc_wallet_send.cpp
+
+    # Wallet: wallet storage and management
+    wallet/wallet.cpp
+    wallet/walletdb.cpp
+
+    # Net: peer-to-peer networking
+    net/net.cpp
+    net/netbase.cpp
 )
 
 set(PINKCOIN_CORE_HEADERS

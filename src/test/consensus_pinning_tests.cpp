@@ -801,11 +801,14 @@ BOOST_AUTO_TEST_CASE(pos_reward_height_16240_regular)
 {
     // First height with PoS subsidy
     // Pre-v231: nHalving = 16240 / 2 / 423400 = 0 → 100 COIN
+    // Use fixed timestamp at 10:00 UTC (NOT a flash-stake hour: 1,6,15,20)
+    // so IsFlashStake() returns false and we test the regular reward path.
+    unsigned int nNonFlashTime = 1700128800; // 2023-11-16 10:00:00 UTC
     unsigned int savedBestTime = pindexBest ? pindexBest->nTime : 0;
     // Ensure pindexBest->nTime < nTimeV231 for pre-v231 path
     if (pindexBest) pindexBest->nTime = nTimeV231 - 1;
 
-    int64_t reward = GetProofOfStakeReward(100, 0, 16240, GetAdjustedTime());
+    int64_t reward = GetProofOfStakeReward(100, 0, 16240, nNonFlashTime);
     BOOST_CHECK_EQUAL(reward, 100 * COIN);
 
     if (pindexBest) pindexBest->nTime = savedBestTime;
@@ -816,10 +819,12 @@ BOOST_AUTO_TEST_CASE(pos_reward_integer_division_bug_golden)
     // Post-v231 regular stake: nSubsidy = (100 * COIN) / 3
     // Then nSubsidy *= 16 / 10 → 16/10 = 1 in integer division → no-op
     // This is THE consensus bug that must never be fixed.
+    // Use fixed timestamp at 10:00 UTC (NOT a flash-stake hour: 1,6,15,20)
+    unsigned int nNonFlashTime = 1700128800; // 2023-11-16 10:00:00 UTC
     unsigned int savedBestTime = pindexBest ? pindexBest->nTime : 0;
     if (pindexBest) pindexBest->nTime = nTimeV231 + 1;
 
-    int64_t reward = GetProofOfStakeReward(100, 0, 16240, GetAdjustedTime());
+    int64_t reward = GetProofOfStakeReward(100, 0, 16240, nNonFlashTime);
     // 100 COIN / 3 = 3333333333 satoshis (integer division)
     // Then *= 1 (16/10 in integer math) = 3333333333
     BOOST_CHECK_EQUAL(reward, 3333333333LL);
