@@ -33,6 +33,10 @@ set(PINKCOIN_CORE_SOURCES
     rpcnet.cpp
     rpcrawtransaction.cpp
     rpcsmessage.cpp
+    rpc_wallet_keys.cpp
+    rpc_wallet_mgmt.cpp
+    rpc_wallet_query.cpp
+    rpc_wallet_send.cpp
     rpcwallet.cpp
     script.cpp
     scrypt.cpp
@@ -73,6 +77,7 @@ set(PINKCOIN_CORE_HEADERS
     ntp.h
     pbkdf2.h
     protocol.h
+    rpcwallet_util.h
     script.h
     scrypt.h
     serialize.h
