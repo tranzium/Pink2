@@ -20,7 +20,11 @@
 
 #include <ctime>
 
-using namespace json_spirit;
+using json_spirit::Array;
+using json_spirit::Value;
+using json_spirit::obj_type;
+using json_spirit::str_type;
+using json_spirit::array_type;
 
 extern CWallet* pwalletMain;
 extern CWallet* pstakeDB;

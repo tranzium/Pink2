@@ -429,8 +429,8 @@ BOOST_AUTO_TEST_CASE(repairwallet_help_throws)
 }
 
 // ---------------------------------------------------------------------------
-// stakeout commands — pstakeDB not initialized in test mode, so we can
-// only test help text (which throws before dereferencing pstakeDB).
+// stakeout commands — help text (throws before logic).
+// Full functional coverage in staking_tests.cpp (rpc_staking_tests suite).
 // ---------------------------------------------------------------------------
 
 BOOST_AUTO_TEST_CASE(liststakeout_help_throws)
@@ -1055,7 +1055,7 @@ BOOST_AUTO_TEST_CASE(getworkex_no_connections_throws)
 
 // ===========================================================================
 // Stakeout (pstakeDB-dependent): addstakeout, delstakeout
-// pstakeDB is null in test mode — only help tests are safe
+// Full functional coverage in staking_tests.cpp (rpc_staking_tests suite)
 // ===========================================================================
 
 BOOST_AUTO_TEST_CASE(addstakeout_help_throws)
