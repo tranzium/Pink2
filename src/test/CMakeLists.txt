@@ -69,6 +69,7 @@ set(PINKCOIN_TEST_SOURCES
     rpc_coverage_tests.cpp
     consensus_pinning_tests.cpp
     edge_case_tests.cpp
+    staking_tests.cpp
 )
 
 #-----------------------------------------

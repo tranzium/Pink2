@@ -47,9 +47,14 @@ struct TestingSetup {
         pwalletMain = new CWallet("wallet.dat");
         pwalletMain->LoadWallet(fFirstRun);
         RegisterWallet(pwalletMain);
+
+        // Initialize pstakeDB for staking tests (file-backed for RPC tests)
+        pstakeDB = new CWallet("stake.dat");
     }
     ~TestingSetup()
     {
+        delete pstakeDB;
+        pstakeDB = NULL;
         delete pwalletMain;
         pwalletMain = NULL;
         bitdb.Flush(true);
