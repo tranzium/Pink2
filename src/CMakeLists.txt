@@ -11,6 +11,7 @@ set(PINKCOIN_CORE_SOURCES
     addrman.cpp
     alert.cpp
     bitcoinrpc.cpp
+    blockprocessing.cpp
     checkpoints.cpp
     crypter.cpp
     db.cpp
@@ -18,6 +19,8 @@ set(PINKCOIN_CORE_SOURCES
     key.cpp
     keystore.cpp
     main.cpp
+    mempool.cpp
+    rewards.cpp
     miner.cpp
     net.cpp
     netbase.cpp
@@ -39,6 +42,7 @@ set(PINKCOIN_CORE_SOURCES
     sync.cpp
     txdb-leveldb.cpp
     util.cpp
+    validation.cpp
     version.cpp
     wallet.cpp
     walletdb.cpp
