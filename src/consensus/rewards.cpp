@@ -12,18 +12,8 @@
 
 #include <ctime>
 
-using namespace std;
-
-// Flash stake hours (UTC)
-static const unsigned int nHour1 = 15;  // 7am UTC-8
-static const unsigned int nHour2 = 20;  // 12pm UTC-8
-static const unsigned int nHour3 = 1;   // 5pm UTC-8
-static const unsigned int nHour4 = 6;   // 10pm UTC-8
-
-// Retargeting timespans
-static const int64_t nTargetTimespan = 60 * 60;              // 60 mins
-static const int64_t nStakeTargetTimespan = 2 * 60 * 60;     // 2 Hours
-static const int64_t nFlashStakeTargetTimespan = 10 * 60;    // 10 mins
+// Flash stake hours and retargeting timespans are now in main.h
+// as inline constexpr for cross-TU visibility and testability.
 
 int64_t GetProofOfWorkReward(int nHeight, int64_t nFees)
 {
@@ -325,30 +315,14 @@ unsigned int GetNextTargetRequiredV2(const CBlockIndex* pindexLast, bool fProofO
 
 bool IsFlashStake(unsigned int nTime)
 {
-
-    time_t rawtime;
-    struct tm * ptm;
-
-    bool bIsFlash = false;
-
-    rawtime = nTime;
-    ptm = gmtime ( &rawtime );
-    int nHour = ptm->tm_hour ;
-    switch(nHour)
-    {
-        case nHour1:
-        bIsFlash = true;
-        break;
-        case nHour2:
-        bIsFlash = true;
-        break;
-        case nHour3:
-        bIsFlash = true;
-        break;
-        case nHour4:
-        bIsFlash = true;
-        break;
-    }
-
-    return bIsFlash;
+    time_t rawtime = nTime;
+    struct tm ptm;
+#ifdef WIN32
+    gmtime_s(&ptm, &rawtime);  // thread-safe (Windows): dst, src
+#else
+    gmtime_r(&rawtime, &ptm);  // thread-safe (POSIX): src, dst
+#endif
+    int nHour = ptm.tm_hour;
+    return (nHour == nFlashStakeHour1 || nHour == nFlashStakeHour2 ||
+            nHour == nFlashStakeHour3 || nHour == nFlashStakeHour4);
 }

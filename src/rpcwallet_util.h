@@ -13,6 +13,8 @@
 class CWalletTx;
 class CWalletDB;
 
+extern int64_t nWalletUnlockTime;
+
 void WalletTxToJSON(const CWalletTx& wtx, json_spirit::Object& entry);
 std::string AccountFromValue(const json_spirit::Value& value);
 void accountingDeprecationCheck();

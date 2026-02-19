@@ -13,20 +13,19 @@
 #include "init.h"
 
 using namespace json_spirit;
-using namespace std;
 
 int64_t nWalletUnlockTime;
 
 void accountingDeprecationCheck()
 {
     if (!GetBoolArg("-enableaccounts", false))
-        throw runtime_error(
+        throw std::runtime_error(
             "Accounting API is deprecated and will be removed in future.\n"
             "It can easily result in negative or odd balances if misused or misunderstood, which has happened in the field.\n"
             "If you still want to enable it, add to your config file enableaccounts=1\n");
 
     if (GetBoolArg("-staking", true))
-        throw runtime_error("If you want to use accounting API, staking must be disabled, add to your config file staking=0\n");
+        throw std::runtime_error("If you want to use accounting API, staking must be disabled, add to your config file staking=0\n");
 }
 
 std::string HelpRequiringPassphrase()
@@ -64,15 +63,15 @@ void WalletTxToJSON(const CWalletTx& wtx, Object& entry)
         entry.push_back(Pair(item.first, item.second));
 }
 
-string AccountFromValue(const Value& value)
+std::string AccountFromValue(const Value& value)
 {
-    string strAccount = value.get_str();
+    std::string strAccount = value.get_str();
     if (strAccount == "*")
         throw JSONRPCError(RPC_WALLET_INVALID_ACCOUNT_NAME, "Invalid account name");
     return strAccount;
 }
 
-int64_t GetAccountBalance(CWalletDB& walletdb, const string& strAccount, int nMinDepth)
+int64_t GetAccountBalance(CWalletDB& walletdb, const std::string& strAccount, int nMinDepth)
 {
     int64_t nBalance = 0;
 
@@ -97,7 +96,7 @@ int64_t GetAccountBalance(CWalletDB& walletdb, const string& strAccount, int nMi
     return nBalance;
 }
 
-int64_t GetAccountBalance(const string& strAccount, int nMinDepth)
+int64_t GetAccountBalance(const std::string& strAccount, int nMinDepth)
 {
     CWalletDB walletdb(pwalletMain->strWalletFile);
     return GetAccountBalance(walletdb, strAccount, nMinDepth);

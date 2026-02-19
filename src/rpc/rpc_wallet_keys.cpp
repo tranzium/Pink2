@@ -13,17 +13,16 @@
 #include "stealth.h"
 
 using namespace json_spirit;
-using namespace std;
 
 Value getnewpubkey(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() > 1)
-        throw runtime_error(
+        throw std::runtime_error(
             "getnewpubkey [account]\n"
             "Returns new public key for coinbase generation.");
 
     // Parse the account first so we don't generate a key if there's an error
-    string strAccount;
+    std::string strAccount;
     if (!params.empty())
         strAccount = AccountFromValue(params[0]);
 
@@ -37,7 +36,7 @@ Value getnewpubkey(const Array& params, bool fHelp)
     CKeyID keyID = newKey.GetID();
 
     pwalletMain->SetAddressBookName(keyID, strAccount);
-    vector<unsigned char> vchPubKey = newKey.Raw();
+    std::vector<unsigned char> vchPubKey = newKey.Raw();
 
     return HexStr(vchPubKey.begin(), vchPubKey.end());
 }
@@ -46,14 +45,14 @@ Value getnewpubkey(const Array& params, bool fHelp)
 Value getnewaddress(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() > 1)
-        throw runtime_error(
+        throw std::runtime_error(
             "getnewaddress [account]\n"
             "Returns a new Pinkcoin address for receiving payments.  "
             "If [account] is specified, it is added to the address book "
             "so payments received with the address will be credited to [account].");
 
     // Parse the account first so we don't generate a key if there's an error
-    string strAccount;
+    std::string strAccount;
     if (!params.empty())
         strAccount = AccountFromValue(params[0]);
 
@@ -74,14 +73,14 @@ Value getnewaddress(const Array& params, bool fHelp)
 Value signmessage(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() != 2)
-        throw runtime_error(
+        throw std::runtime_error(
             "signmessage <pinkcoinaddress> <message>\n"
             "Sign a message with the private key of an address");
 
     EnsureWalletIsUnlocked();
 
-    string strAddress = params[0].get_str();
-    string strMessage = params[1].get_str();
+    std::string strAddress = params[0].get_str();
+    std::string strMessage = params[1].get_str();
 
     CBitcoinAddress addr(strAddress);
     if (!addr.IsValid())
@@ -99,7 +98,7 @@ Value signmessage(const Array& params, bool fHelp)
     ss << strMessageMagic;
     ss << strMessage;
 
-    vector<unsigned char> vchSig;
+    std::vector<unsigned char> vchSig;
     if (!key.SignCompact(Hash(ss.begin(), ss.end()), vchSig))
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Sign failed");
 
@@ -109,13 +108,13 @@ Value signmessage(const Array& params, bool fHelp)
 Value verifymessage(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() != 3)
-        throw runtime_error(
+        throw std::runtime_error(
             "verifymessage <pinkcoinaddress> <signature> <message>\n"
             "Verify a signed message");
 
-    string strAddress  = params[0].get_str();
-    string strSign     = params[1].get_str();
-    string strMessage  = params[2].get_str();
+    std::string strAddress  = params[0].get_str();
+    std::string strSign     = params[1].get_str();
+    std::string strMessage  = params[2].get_str();
 
     CBitcoinAddress addr(strAddress);
     if (!addr.IsValid())
@@ -126,7 +125,7 @@ Value verifymessage(const Array& params, bool fHelp)
         throw JSONRPCError(RPC_TYPE_ERROR, "Address does not refer to key");
 
     bool fInvalid = false;
-    vector<unsigned char> vchSig = DecodeBase64(strSign.c_str(), &fInvalid);
+    std::vector<unsigned char> vchSig = DecodeBase64(strSign.c_str(), &fInvalid);
 
     if (fInvalid)
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Malformed base64 encoding");
@@ -146,24 +145,24 @@ Value addmultisigaddress(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() < 2 || params.size() > 3)
     {
-        string msg = "addmultisigaddress <nrequired> <'[\"key\",\"key\"]'> [account]\n"
+        std::string msg = "addmultisigaddress <nrequired> <'[\"key\",\"key\"]'> [account]\n"
             "Add a nrequired-to-sign multisignature address to the wallet\"\n"
             "each key is a Pinkcoin address or hex-encoded public key\n"
             "If [account] is specified, assign address to [account].";
-        throw runtime_error(msg);
+        throw std::runtime_error(msg);
     }
 
     int nRequired = params[0].get_int();
     const Array& keys = params[1].get_array();
-    string strAccount;
+    std::string strAccount;
     if (params.size() > 2)
         strAccount = AccountFromValue(params[2]);
 
     // Gather public keys
     if (nRequired < 1)
-        throw runtime_error("a multisignature address must require at least one key to redeem");
+        throw std::runtime_error("a multisignature address must require at least one key to redeem");
     if (static_cast<int>(keys.size()) < nRequired)
-        throw runtime_error(
+        throw std::runtime_error(
             strprintf("not enough keys supplied "
                       "(got %" PRIszu " keys, but need at least %d to redeem)", keys.size(), nRequired));
     std::vector<CKey> pubkeys;
@@ -178,14 +177,14 @@ Value addmultisigaddress(const Array& params, bool fHelp)
         {
             CKeyID keyID;
             if (!address.GetKeyID(keyID))
-                throw runtime_error(
+                throw std::runtime_error(
                     strprintf("%s does not refer to a key",ks.c_str()));
             CPubKey vchPubKey;
             if (!pwalletMain->GetPubKey(keyID, vchPubKey))
-                throw runtime_error(
+                throw std::runtime_error(
                     strprintf("no full public key for address %s",ks.c_str()));
             if (!vchPubKey.IsValid() || !pubkeys[i].SetPubKey(vchPubKey))
-                throw runtime_error(" Invalid public key: "+ks);
+                throw std::runtime_error(" Invalid public key: "+ks);
         }
 
         // Case 2: hex public key
@@ -193,11 +192,11 @@ Value addmultisigaddress(const Array& params, bool fHelp)
         {
             CPubKey vchPubKey(ParseHex(ks));
             if (!vchPubKey.IsValid() || !pubkeys[i].SetPubKey(vchPubKey))
-                throw runtime_error(" Invalid public key: "+ks);
+                throw std::runtime_error(" Invalid public key: "+ks);
         }
         else
         {
-            throw runtime_error(" Invalid public key: "+ks);
+            throw std::runtime_error(" Invalid public key: "+ks);
         }
     }
 
@@ -206,7 +205,7 @@ Value addmultisigaddress(const Array& params, bool fHelp)
     inner.SetMultisig(nRequired, pubkeys);
     CScriptID innerID = inner.GetID();
     if (!pwalletMain->AddCScript(inner))
-        throw runtime_error("AddCScript() failed");
+        throw std::runtime_error("AddCScript() failed");
 
     pwalletMain->SetAddressBookName(innerID, strAccount);
     return CBitcoinAddress(innerID).ToString();
@@ -216,22 +215,22 @@ Value addredeemscript(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() < 1 || params.size() > 2)
     {
-        string msg = "addredeemscript <redeemScript> [account]\n"
+        std::string msg = "addredeemscript <redeemScript> [account]\n"
             "Add a P2SH address with a specified redeemScript to the wallet.\n"
             "If [account] is specified, assign address to [account].";
-        throw runtime_error(msg);
+        throw std::runtime_error(msg);
     }
 
-    string strAccount;
+    std::string strAccount;
     if (params.size() > 1)
         strAccount = AccountFromValue(params[1]);
 
     // Construct using pay-to-script-hash:
-    vector<unsigned char> innerData = ParseHexV(params[0], "redeemScript");
+    std::vector<unsigned char> innerData = ParseHexV(params[0], "redeemScript");
     CScript inner(innerData.begin(), innerData.end());
     CScriptID innerID = inner.GetID();
     if (!pwalletMain->AddCScript(inner))
-        throw runtime_error("AddCScript() failed");
+        throw std::runtime_error("AddCScript() failed");
 
     pwalletMain->SetAddressBookName(innerID, strAccount);
     return CBitcoinAddress(innerID).ToString();
@@ -282,7 +281,7 @@ public:
 Value validateaddress(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() != 1)
-        throw runtime_error(
+        throw std::runtime_error(
             "validateaddress <pinkcoinaddress>\n"
             "Return information about <pinkcoinaddress>.");
 
@@ -294,7 +293,7 @@ Value validateaddress(const Array& params, bool fHelp)
     if (isValid)
     {
         CTxDestination dest = address.Get();
-        string currentAddress = address.ToString();
+        std::string currentAddress = address.ToString();
         ret.push_back(Pair("address", currentAddress));
         bool fMine = IsMine(*pwalletMain, dest);
         ret.push_back(Pair("ismine", fMine));
@@ -311,7 +310,7 @@ Value validateaddress(const Array& params, bool fHelp)
 Value validatepubkey(const Array& params, bool fHelp)
 {
     if (fHelp || !params.size() || params.size() > 2)
-        throw runtime_error(
+        throw std::runtime_error(
             "validatepubkey <pinkcoinpubkey>\n"
             "Return information about <pinkcoinpubkey>.");
 
@@ -330,7 +329,7 @@ Value validatepubkey(const Array& params, bool fHelp)
     if (isValid)
     {
         CTxDestination dest = address.Get();
-        string currentAddress = address.ToString();
+        std::string currentAddress = address.ToString();
         ret.push_back(Pair("address", currentAddress));
         bool fMine = IsMine(*pwalletMain, dest);
         ret.push_back(Pair("ismine", fMine));
@@ -349,12 +348,12 @@ Value validatepubkey(const Array& params, bool fHelp)
 Value makekeypair(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() > 1)
-        throw runtime_error(
+        throw std::runtime_error(
             "makekeypair [prefix]\n"
             "Make a public/private key pair.\n"
             "[prefix] is optional preferred prefix for the public key.\n");
 
-    string strPrefix = "";
+    std::string strPrefix = "";
     if (!params.empty())
         strPrefix = params[0].get_str();
 
@@ -373,12 +372,12 @@ Value makekeypair(const Array& params, bool fHelp)
 Value getnewstealthaddress(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() > 1)
-        throw runtime_error(
+        throw std::runtime_error(
             "getnewstealthaddress [label]\n"
             "Returns a new Pinkcoin stealth address for receiving payments anonymously.  ");
 
     if (pwalletMain->IsLocked())
-        throw runtime_error("Failed: Wallet must be unlocked.");
+        throw std::runtime_error("Failed: Wallet must be unlocked.");
 
     std::string sLabel;
     if (!params.empty())
@@ -387,10 +386,10 @@ Value getnewstealthaddress(const Array& params, bool fHelp)
     CStealthAddress sxAddr;
     std::string sError;
     if (!pwalletMain->NewStealthAddress(sError, sLabel, sxAddr))
-        throw runtime_error(std::string("Could get new stealth address: ") + sError);
+        throw std::runtime_error(std::string("Could get new stealth address: ") + sError);
 
     if (!pwalletMain->AddStealthAddress(sxAddr))
-        throw runtime_error("Could not save to wallet.");
+        throw std::runtime_error("Could not save to wallet.");
 
     return sxAddr.Encoded();
 }
@@ -398,7 +397,7 @@ Value getnewstealthaddress(const Array& params, bool fHelp)
 Value liststealthaddresses(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() > 1)
-        throw runtime_error(
+        throw std::runtime_error(
             "liststealthaddresses [show_secrets=0]\n"
             "List owned stealth addresses.");
 
@@ -417,7 +416,7 @@ Value liststealthaddresses(const Array& params, bool fHelp)
     if (fShowSecrets)
     {
         if (pwalletMain->IsLocked())
-            throw runtime_error("Failed: Wallet must be unlocked.");
+            throw std::runtime_error("Failed: Wallet must be unlocked.");
     };
 
     Array result;
@@ -451,7 +450,7 @@ Value liststealthaddresses(const Array& params, bool fHelp)
 Value importstealthaddress(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() < 2)
-        throw runtime_error(
+        throw std::runtime_error(
             "importstealthaddress <scan_secret> <spend_secret> [label]\n"
             "Import an owned stealth addresses.");
 
@@ -474,7 +473,7 @@ Value importstealthaddress(const Array& params, bool fHelp)
     } else
     {
         if (!DecodeBase58(sScanSecret, vchScanSecret))
-            throw runtime_error("Could not decode scan secret as hex or base58.");
+            throw std::runtime_error("Could not decode scan secret as hex or base58.");
     };
 
     if (IsHex(sSpendSecret))
@@ -483,13 +482,13 @@ Value importstealthaddress(const Array& params, bool fHelp)
     } else
     {
         if (!DecodeBase58(sSpendSecret, vchSpendSecret))
-            throw runtime_error("Could not decode spend secret as hex or base58.");
+            throw std::runtime_error("Could not decode spend secret as hex or base58.");
     };
 
     if (vchScanSecret.size() != 32)
-        throw runtime_error("Scan secret is not 32 bytes.");
+        throw std::runtime_error("Scan secret is not 32 bytes.");
     if (vchSpendSecret.size() != 32)
-        throw runtime_error("Spend secret is not 32 bytes.");
+        throw std::runtime_error("Spend secret is not 32 bytes.");
 
 
     ec_secret scan_secret;
@@ -500,10 +499,10 @@ Value importstealthaddress(const Array& params, bool fHelp)
 
     ec_point scan_pubkey, spend_pubkey;
     if (SecretToPublicKey(scan_secret, scan_pubkey) != 0)
-        throw runtime_error("Could not get scan public key.");
+        throw std::runtime_error("Could not get scan public key.");
 
     if (SecretToPublicKey(spend_secret, spend_pubkey) != 0)
-        throw runtime_error("Could not get spend public key.");
+        throw std::runtime_error("Could not get spend public key.");
 
 
     CStealthAddress sxAddr;
@@ -548,7 +547,7 @@ Value importstealthaddress(const Array& params, bool fHelp)
 
 
     if (!pwalletMain->AddStealthAddress(sxAddr))
-        throw runtime_error("Could not save to wallet.");
+        throw std::runtime_error("Could not save to wallet.");
 
     return result;
 }

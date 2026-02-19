@@ -832,6 +832,55 @@ BOOST_AUTO_TEST_CASE(pos_reward_integer_division_bug_golden)
     if (pindexBest) pindexBest->nTime = savedBestTime;
 }
 
+BOOST_AUTO_TEST_CASE(flash_stake_constants_are_accessible)
+{
+    // Verify flash-stake hour constants from main.h are the expected values
+    BOOST_CHECK_EQUAL(nFlashStakeHour1, 15u);
+    BOOST_CHECK_EQUAL(nFlashStakeHour2, 20u);
+    BOOST_CHECK_EQUAL(nFlashStakeHour3, 1u);
+    BOOST_CHECK_EQUAL(nFlashStakeHour4, 6u);
+
+    // Verify retargeting timespan constants
+    BOOST_CHECK_EQUAL(nTargetTimespan, 3600);           // 60 minutes
+    BOOST_CHECK_EQUAL(nStakeTargetTimespan, 7200);       // 2 hours
+    BOOST_CHECK_EQUAL(nFlashStakeTargetTimespan, 600);   // 10 minutes
+}
+
+BOOST_AUTO_TEST_CASE(is_flash_stake_hour_boundaries)
+{
+    // Construct timestamps at specific UTC hours using a known epoch base
+    // 2023-11-16 00:00:00 UTC = 1700092800
+    unsigned int base = 1700092800;
+
+    // Flash-stake hours: 1, 6, 15, 20
+    BOOST_CHECK_EQUAL(IsFlashStake(base + 1 * 3600), true);   // 01:00 UTC
+    BOOST_CHECK_EQUAL(IsFlashStake(base + 6 * 3600), true);   // 06:00 UTC
+    BOOST_CHECK_EQUAL(IsFlashStake(base + 15 * 3600), true);  // 15:00 UTC
+    BOOST_CHECK_EQUAL(IsFlashStake(base + 20 * 3600), true);  // 20:00 UTC
+
+    // Non-flash-stake hours: 0, 2, 5, 7, 10, 14, 16, 19, 21, 23
+    BOOST_CHECK_EQUAL(IsFlashStake(base + 0 * 3600), false);  // 00:00 UTC
+    BOOST_CHECK_EQUAL(IsFlashStake(base + 2 * 3600), false);  // 02:00 UTC
+    BOOST_CHECK_EQUAL(IsFlashStake(base + 5 * 3600), false);  // 05:00 UTC
+    BOOST_CHECK_EQUAL(IsFlashStake(base + 7 * 3600), false);  // 07:00 UTC
+    BOOST_CHECK_EQUAL(IsFlashStake(base + 10 * 3600), false); // 10:00 UTC
+    BOOST_CHECK_EQUAL(IsFlashStake(base + 14 * 3600), false); // 14:00 UTC
+    BOOST_CHECK_EQUAL(IsFlashStake(base + 16 * 3600), false); // 16:00 UTC
+    BOOST_CHECK_EQUAL(IsFlashStake(base + 19 * 3600), false); // 19:00 UTC
+    BOOST_CHECK_EQUAL(IsFlashStake(base + 21 * 3600), false); // 21:00 UTC
+    BOOST_CHECK_EQUAL(IsFlashStake(base + 23 * 3600), false); // 23:00 UTC
+}
+
+BOOST_AUTO_TEST_CASE(is_flash_stake_mid_hour)
+{
+    // Flash-stake check is based on the hour, not exact boundary
+    // 2023-11-16 15:30:00 UTC = base + 15*3600 + 1800
+    unsigned int base = 1700092800;
+    BOOST_CHECK_EQUAL(IsFlashStake(base + 15 * 3600 + 1800), true);   // 15:30
+    BOOST_CHECK_EQUAL(IsFlashStake(base + 15 * 3600 + 3599), true);   // 15:59:59
+    BOOST_CHECK_EQUAL(IsFlashStake(base + 10 * 3600 + 1800), false);  // 10:30
+}
+
 BOOST_AUTO_TEST_SUITE_END()
 
 

@@ -13,14 +13,14 @@
 #include "base58.h"
 
 using namespace json_spirit;
-using namespace std;
+
 
 extern void TxToJSON(const CTransaction& tx, const uint256 hashBlock, json_spirit::Object& entry);
 
 Value getinfo(const Array& params, bool fHelp)
 {
     if (fHelp || !params.empty())
-        throw runtime_error(
+        throw std::runtime_error(
             "getinfo\n"
             "Returns an object containing various state info.");
 
@@ -36,10 +36,10 @@ Value getinfo(const Array& params, bool fHelp)
     obj.push_back(Pair("stake",         ValueFromAmount(pwalletMain->GetStake())));
     obj.push_back(Pair("blocks",        static_cast<int>(nBestHeight)));
     obj.push_back(Pair("timeoffset",    static_cast<int64_t>(GetTimeOffset())));
-    obj.push_back(Pair("offsetfrom",    fNTPSuccess ? string("NTP") : (GetBoolArg("-synctime", false) ? string("Peers") : string("Local"))));
+    obj.push_back(Pair("offsetfrom",    fNTPSuccess ? std::string("NTP") : (GetBoolArg("-synctime", false) ? std::string("Peers") : std::string("Local"))));
     obj.push_back(Pair("moneysupply",   ValueFromAmount(pindexBest->nMoneySupply)));
     obj.push_back(Pair("connections",   static_cast<int>(vNodes.size())));
-    obj.push_back(Pair("proxy",         (proxy.first.IsValid() ? proxy.first.ToStringIPPort() : string())));
+    obj.push_back(Pair("proxy",         (proxy.first.IsValid() ? proxy.first.ToStringIPPort() : std::string())));
     obj.push_back(Pair("ip",            addrSeenByPeer.ToStringIP()));
 
     diff.push_back(Pair("proof-of-work",  GetDifficulty()));
@@ -59,7 +59,7 @@ Value getinfo(const Array& params, bool fHelp)
 }
 
 
-CBitcoinAddress GetAccountAddress(string strAccount, bool bForceNew=false)
+CBitcoinAddress GetAccountAddress(std::string strAccount, bool bForceNew=false)
 {
     CWalletDB walletdb(pwalletMain->strWalletFile);
 
@@ -100,12 +100,12 @@ CBitcoinAddress GetAccountAddress(string strAccount, bool bForceNew=false)
 Value getaccountaddress(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() != 1)
-        throw runtime_error(
+        throw std::runtime_error(
             "getaccountaddress <account>\n"
             "Returns the current Pinkcoin address for receiving payments to this account.");
 
     // Parse the account first so we don't generate a key if there's an error
-    string strAccount = AccountFromValue(params[0]);
+    std::string strAccount = AccountFromValue(params[0]);
 
     Value ret;
 
@@ -119,7 +119,7 @@ Value getaccountaddress(const Array& params, bool fHelp)
 Value setaccount(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() < 1 || params.size() > 2)
-        throw runtime_error(
+        throw std::runtime_error(
             "setaccount <pinkcoinaddress> <account>\n"
             "Sets the account associated with the given address.");
 
@@ -128,14 +128,14 @@ Value setaccount(const Array& params, bool fHelp)
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Pinkcoin address");
 
 
-    string strAccount;
+    std::string strAccount;
     if (params.size() > 1)
         strAccount = AccountFromValue(params[1]);
 
     // Detect when changing the account of an address that is the 'unused current key' of another account:
     if (pwalletMain->mapAddressBook.count(address.Get()))
     {
-        string strOldAccount = pwalletMain->mapAddressBook[address.Get()];
+        std::string strOldAccount = pwalletMain->mapAddressBook[address.Get()];
         if (address == GetAccountAddress(strOldAccount))
             GetAccountAddress(strOldAccount, true);
     }
@@ -149,7 +149,7 @@ Value setaccount(const Array& params, bool fHelp)
 Value getaccount(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() != 1)
-        throw runtime_error(
+        throw std::runtime_error(
             "getaccount <pinkcoinaddress>\n"
             "Returns the account associated with the given address.");
 
@@ -157,7 +157,7 @@ Value getaccount(const Array& params, bool fHelp)
     if (!address.IsValid())
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Pinkcoin address");
 
-    string strAccount;
+    std::string strAccount;
     auto mi = pwalletMain->mapAddressBook.find(address.Get());
     if (mi != pwalletMain->mapAddressBook.end() && !mi->second.empty())
         strAccount = mi->second;
@@ -168,18 +168,18 @@ Value getaccount(const Array& params, bool fHelp)
 Value getaddressesbyaccount(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() != 1)
-        throw runtime_error(
+        throw std::runtime_error(
             "getaddressesbyaccount <account>\n"
             "Returns the list of addresses for the given account.");
 
-    string strAccount = AccountFromValue(params[0]);
+    std::string strAccount = AccountFromValue(params[0]);
 
     // Find all addresses that have the given account
     Array ret;
     for (const auto& item : pwalletMain->mapAddressBook)
     {
         const CBitcoinAddress& address = item.first;
-        const string& strName = item.second;
+        const std::string& strName = item.second;
         if (strName == strAccount)
             ret.push_back(address.ToString());
     }
@@ -189,15 +189,15 @@ Value getaddressesbyaccount(const Array& params, bool fHelp)
 Value listaddressgroupings(const Array& params, bool fHelp)
 {
     if (fHelp)
-        throw runtime_error(
+        throw std::runtime_error(
             "listaddressgroupings\n"
             "Lists groups of addresses which have had their common ownership\n"
             "made public by common use as inputs or as the resulting change\n"
             "in past transactions");
 
     Array jsonGroupings;
-    map<CTxDestination, int64_t> balances = pwalletMain->GetAddressBalances();
-    for (set<CTxDestination> grouping : pwalletMain->GetAddressGroupings())
+    std::map<CTxDestination, int64_t> balances = pwalletMain->GetAddressBalances();
+    for (std::set<CTxDestination> grouping : pwalletMain->GetAddressGroupings())
     {
         Array jsonGrouping;
         for (CTxDestination address : grouping)
@@ -220,7 +220,7 @@ Value listaddressgroupings(const Array& params, bool fHelp)
 Value getreceivedbyaddress(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() < 1 || params.size() > 2)
-        throw runtime_error(
+        throw std::runtime_error(
             "getreceivedbyaddress <pinkcoinaddress> [minconf=1]\n"
             "Returns the total amount received by <pinkcoinaddress> in transactions with at least [minconf] confirmations.");
 
@@ -256,12 +256,12 @@ Value getreceivedbyaddress(const Array& params, bool fHelp)
 }
 
 
-void GetAccountAddresses(string strAccount, set<CTxDestination>& setAddress)
+void GetAccountAddresses(std::string strAccount, std::set<CTxDestination>& setAddress)
 {
     for (const auto& item : pwalletMain->mapAddressBook)
     {
         const CTxDestination& address = item.first;
-        const string& strName = item.second;
+        const std::string& strName = item.second;
         if (strName == strAccount)
             setAddress.insert(address);
     }
@@ -270,7 +270,7 @@ void GetAccountAddresses(string strAccount, set<CTxDestination>& setAddress)
 Value getreceivedbyaccount(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() < 1 || params.size() > 2)
-        throw runtime_error(
+        throw std::runtime_error(
             "getreceivedbyaccount <account> [minconf=1]\n"
             "Returns the total amount received by addresses with <account> in transactions with at least [minconf] confirmations.");
 
@@ -282,8 +282,8 @@ Value getreceivedbyaccount(const Array& params, bool fHelp)
         nMinDepth = params[1].get_int();
 
     // Get the set of pub keys assigned to account
-    string strAccount = AccountFromValue(params[0]);
-    set<CTxDestination> setAddress;
+    std::string strAccount = AccountFromValue(params[0]);
+    std::set<CTxDestination> setAddress;
     GetAccountAddresses(strAccount, setAddress);
 
     // Tally
@@ -310,7 +310,7 @@ Value getreceivedbyaccount(const Array& params, bool fHelp)
 Value getbalance(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() > 2)
-        throw runtime_error(
+        throw std::runtime_error(
             "getbalance [account] [minconf=1]\n"
             "If [account] is not specified, returns the server's total available balance.\n"
             "If [account] is specified, returns the balance in the account.");
@@ -334,9 +334,9 @@ Value getbalance(const Array& params, bool fHelp)
                 continue;
 
             int64_t allFee;
-            string strSentAccount;
-            list<pair<CTxDestination, int64_t> > listReceived;
-            list<pair<CTxDestination, int64_t> > listSent;
+            std::string strSentAccount;
+            std::list<std::pair<CTxDestination, int64_t> > listReceived;
+            std::list<std::pair<CTxDestination, int64_t> > listSent;
             wtx.GetAmounts(listReceived, listSent, allFee, strSentAccount);
             if (wtx.GetDepthInMainChain() >= nMinDepth && wtx.GetBlocksToMaturity() == 0)
             {
@@ -352,7 +352,7 @@ Value getbalance(const Array& params, bool fHelp)
 
     accountingDeprecationCheck();
 
-    string strAccount = AccountFromValue(params[0]);
+    std::string strAccount = AccountFromValue(params[0]);
 
     int64_t nBalance = GetAccountBalance(strAccount, nMinDepth);
 
@@ -384,7 +384,7 @@ Value ListReceived(const Array& params, bool fByAccounts)
         fIncludeEmpty = params[1].get_bool();
 
     // Tally
-    map<CBitcoinAddress, tallyitem> mapTally;
+    std::map<CBitcoinAddress, tallyitem> mapTally;
     for (const auto& entry : pwalletMain->mapWallet)
     {
         const CWalletTx& wtx = entry.second;
@@ -404,17 +404,17 @@ Value ListReceived(const Array& params, bool fByAccounts)
 
             tallyitem& item = mapTally[address];
             item.nAmount += txout.nValue;
-            item.nConf = min(item.nConf, nDepth);
+            item.nConf = std::min(item.nConf, nDepth);
         }
     }
 
     // Reply
     Array ret;
-    map<string, tallyitem> mapAccountTally;
+    std::map<std::string, tallyitem> mapAccountTally;
     for (const auto& item : pwalletMain->mapAddressBook)
     {
         const CBitcoinAddress& address = item.first;
-        const string& strAccount = item.second;
+        const std::string& strAccount = item.second;
         auto it = mapTally.find(address);
         if (it == mapTally.end() && !fIncludeEmpty)
             continue;
@@ -431,7 +431,7 @@ Value ListReceived(const Array& params, bool fByAccounts)
         {
             tallyitem& item = mapAccountTally[strAccount];
             item.nAmount += nAmount;
-            item.nConf = min(item.nConf, nConf);
+            item.nConf = std::min(item.nConf, nConf);
         }
         else
         {
@@ -464,7 +464,7 @@ Value ListReceived(const Array& params, bool fByAccounts)
 Value listreceivedbyaddress(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() > 2)
-        throw runtime_error(
+        throw std::runtime_error(
             "listreceivedbyaddress [minconf=1] [includeempty=false]\n"
             "[minconf] is the minimum number of confirmations before payments are included.\n"
             "[includeempty] whether to include addresses that haven't received any payments.\n"
@@ -480,7 +480,7 @@ Value listreceivedbyaddress(const Array& params, bool fHelp)
 Value listreceivedbyaccount(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() > 2)
-        throw runtime_error(
+        throw std::runtime_error(
             "listreceivedbyaccount [minconf=1] [includeempty=false]\n"
             "[minconf] is the minimum number of confirmations before payments are included.\n"
             "[includeempty] whether to include accounts that haven't received any payments.\n"
@@ -501,16 +501,16 @@ static void MaybePushAddress(Object & entry, const CTxDestination &dest)
         entry.push_back(Pair("address", addr.ToString()));
 }
 
-void ListTransactions(const CWalletTx& wtx, const string& strAccount, int nMinDepth, bool fLong, Array& ret)
+void ListTransactions(const CWalletTx& wtx, const std::string& strAccount, int nMinDepth, bool fLong, Array& ret)
 {
     int64_t nFee;
-    string strSentAccount;
-    list<pair<CTxDestination, int64_t> > listReceived;
-    list<pair<CTxDestination, int64_t> > listSent;
+    std::string strSentAccount;
+    std::list<std::pair<CTxDestination, int64_t> > listReceived;
+    std::list<std::pair<CTxDestination, int64_t> > listSent;
 
     wtx.GetAmounts(listReceived, listSent, nFee, strSentAccount);
 
-    bool fAllAccounts = (strAccount == string("*"));
+    bool fAllAccounts = (strAccount == std::string("*"));
 
     // Sent
     if ((!wtx.IsCoinStake()) && (!listSent.empty() || nFee != 0) && (fAllAccounts || strAccount == strSentAccount))
@@ -535,7 +535,7 @@ void ListTransactions(const CWalletTx& wtx, const string& strAccount, int nMinDe
         bool stop = false;
         for (const auto& r : listReceived)
         {
-            string account;
+            std::string account;
             if (pwalletMain->mapAddressBook.count(r.first))
                 account = pwalletMain->mapAddressBook[r.first];
             if (fAllAccounts || (account == strAccount))
@@ -573,9 +573,9 @@ void ListTransactions(const CWalletTx& wtx, const string& strAccount, int nMinDe
     }
 }
 
-void AcentryToJSON(const CAccountingentry& acentry, const string& strAccount, Array& ret)
+void AcentryToJSON(const CAccountingentry& acentry, const std::string& strAccount, Array& ret)
 {
-    bool fAllAccounts = (strAccount == string("*"));
+    bool fAllAccounts = (strAccount == std::string("*"));
 
     if (fAllAccounts || acentry.strAccount == strAccount)
     {
@@ -593,11 +593,11 @@ void AcentryToJSON(const CAccountingentry& acentry, const string& strAccount, Ar
 Value listtransactions(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() > 3)
-        throw runtime_error(
+        throw std::runtime_error(
             "listtransactions [account] [count=10] [from=0]\n"
             "Returns up to [count] most recent transactions skipping the first [from] transactions for account [account].");
 
-    string strAccount = "*";
+    std::string strAccount = "*";
     if (!params.empty())
         strAccount = params[0].get_str();
     int nCount = 10;
@@ -651,7 +651,7 @@ Value listtransactions(const Array& params, bool fHelp)
 Value listaccounts(const Array& params, bool fHelp)
 {
     if (fHelp || !params.empty())
-        throw runtime_error(
+        throw std::runtime_error(
             "listaccounts [minconf=1]\n"
             "Returns Object that has account names as keys, account balances as values.");
 
@@ -661,7 +661,7 @@ Value listaccounts(const Array& params, bool fHelp)
 //   if (!params.empty())
 //        nMinDepth = params[0].get_int();
 
-    map<string, CBitcoinAddress> mapAccountAddresses;
+    std::map<std::string, CBitcoinAddress> mapAccountAddresses;
     for (const auto& entry : pwalletMain->mapAddressBook) {
         if (IsMine(*pwalletMain, entry.first)) // This address belongs to me
             mapAccountAddresses[entry.second] = CBitcoinAddress(entry.first);
@@ -677,7 +677,7 @@ Value listaccounts(const Array& params, bool fHelp)
 Value listsinceblock(const Array& params, bool fHelp)
 {
     if (fHelp)
-        throw runtime_error(
+        throw std::runtime_error(
             "listsinceblock [blockhash] [target-confirmations]\n"
             "Get all transactions in blocks since block [blockhash], or all transactions if omitted");
 
@@ -740,7 +740,7 @@ Value listsinceblock(const Array& params, bool fHelp)
 Value gettransaction(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() != 1)
-        throw runtime_error(
+        throw std::runtime_error(
             "gettransaction <txid>\n"
             "Get detailed information about <txid>");
 
@@ -803,7 +803,7 @@ Value gettransaction(const Array& params, bool fHelp)
 Value getwalletinfo(const Array& params, bool fHelp)
 {
     if (fHelp || !params.empty())
-        throw runtime_error(
+        throw std::runtime_error(
             "getwalletinfo\n"
             "Returns an object containing various wallet state info.\n"
             "\nResult:\n"

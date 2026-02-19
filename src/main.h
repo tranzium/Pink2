@@ -43,6 +43,17 @@ static const uint256 hashGenesisBlock("0x00000f79b700e6444665c4d090c9b8833664c4e
 static const uint256 hashGenesisBlockTestNet("0x000076a007b949e5f8cdee6c18817d26bc224bfde575ce3f2ecb0dd000f7ec19");
 
 
+// Flash stake hours (UTC) — consensus constants for IsFlashStake()
+inline constexpr unsigned int nFlashStakeHour1 = 15;  // 3pm UTC (7am UTC-8)
+inline constexpr unsigned int nFlashStakeHour2 = 20;  // 8pm UTC (12pm UTC-8)
+inline constexpr unsigned int nFlashStakeHour3 = 1;   // 1am UTC (5pm UTC-8)
+inline constexpr unsigned int nFlashStakeHour4 = 6;   // 6am UTC (10pm UTC-8)
+
+// Retargeting timespans
+inline constexpr int64_t nTargetTimespan = 60 * 60;              // 60 mins
+inline constexpr int64_t nStakeTargetTimespan = 2 * 60 * 60;     // 2 hours
+inline constexpr int64_t nFlashStakeTargetTimespan = 10 * 60;    // 10 mins
+
 inline int64_t PastDrift(int64_t nTime)   { return nTime - 10 * 60; } // up to 10 minutes from the past
 inline int64_t FutureDrift(int64_t nTime) { return nTime + 10 * 60; } // up to 10 minutes from the future
 

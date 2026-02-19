@@ -9,8 +9,6 @@
 
 #include "main.h"
 
-using namespace std;
-
 bool CTxMemPool::addUnchecked(const uint256& hash, CTransaction &tx)
 {
     // Add to memory pool without checking anything.  Don't call this directly,
