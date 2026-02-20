@@ -72,6 +72,7 @@ set(PINKCOIN_TEST_SOURCES
     staking_tests.cpp
     logging_tests.cpp
     security_tests.cpp
+    rpc_response_tests.cpp
 )
 
 #-----------------------------------------
