@@ -98,7 +98,7 @@ std::string Logger::CategoryToString(BCLog::Category cat)
 LogLevel Logger::LevelFromString(const std::string& name)
 {
     std::string lower = strutil::to_lower_copy(name);
-    if (lower == "error") return LogLevel::ERROR;
+    if (lower == "error") return LogLevel::ERR;
     if (lower == "warn")  return LogLevel::WARN;
     if (lower == "info")  return LogLevel::INFO;
     if (lower == "debug") return LogLevel::DEBUG;
@@ -110,7 +110,7 @@ std::string Logger::LevelToString(LogLevel level)
 {
     switch (level) {
         case LogLevel::NONE:  return "none";
-        case LogLevel::ERROR: return "error";
+        case LogLevel::ERR: return "error";
         case LogLevel::WARN:  return "warn";
         case LogLevel::INFO:  return "info";
         case LogLevel::DEBUG: return "debug";

@@ -264,8 +264,7 @@ ReadKeyValue(CWallet* pwallet, CDataStream& ssKey, CDataStream& ssValue,
         } else
         if (strType == "sxAddr")
         {
-            if (fDebug)
-                printf("WalletDB ReadKeyValue sxAddr\n");
+                LogPrint(BCLog::WALLET, "WalletDB ReadKeyValue sxAddr\n");
             
             CStealthAddress sxAddr;
             ssValue >> sxAddr;
@@ -388,8 +387,7 @@ ReadKeyValue(CWallet* pwallet, CDataStream& ssKey, CDataStream& ssValue,
         }
         else if (strType == "sxKeyMeta")
         {
-            if (fDebug)
-                printf("WalletDB ReadKeyValue sxKeyMeta\n");
+                LogPrint(BCLog::WALLET, "WalletDB ReadKeyValue sxKeyMeta\n");
             
             CKeyID keyId;
             ssKey >> keyId;
@@ -478,7 +476,7 @@ DBErrors CWalletDB::LoadWallet(CWallet* pwallet)
         BdbCursorGuard cursor(GetCursor());
         if (!cursor)
         {
-            printf("Error getting wallet database cursor\n");
+            LogPrintf("Error getting wallet database cursor\n");
             return DB_CORRUPT;
         }
 
@@ -492,7 +490,7 @@ DBErrors CWalletDB::LoadWallet(CWallet* pwallet)
                 break;
             else if (ret != 0)
             {
-                printf("Error reading next record from wallet database\n");
+                LogPrintf("Error reading next record from wallet database\n");
                 return DB_CORRUPT;
             }
 
@@ -514,7 +512,7 @@ DBErrors CWalletDB::LoadWallet(CWallet* pwallet)
                 }
             }
             if (!strErr.empty())
-                printf("%s\n", strErr.c_str());
+                LogPrintf("%s\n", strErr.c_str());
         }
     }
     catch (...)
@@ -530,9 +528,9 @@ DBErrors CWalletDB::LoadWallet(CWallet* pwallet)
     if (result != DB_LOAD_OK)
         return result;
 
-    printf("nFileVersion = %d\n", wss.nFileVersion);
+    LogPrintf("nFileVersion = %d\n", wss.nFileVersion);
 
-    printf("Keys: %u plaintext, %u encrypted, %u w/ metadata, %u total\n",
+    LogPrintf("Keys: %u plaintext, %u encrypted, %u w/ metadata, %u total\n",
            wss.nKeys, wss.nCKeys, wss.nKeyMeta, wss.nKeys + wss.nCKeys);
 
     // nTimeFirstKey is only reliable if all keys have metadata
@@ -601,7 +599,7 @@ void ThreadFlushWalletDB(void* parg)
                     map<string, int>::iterator mi = bitdb.mapFileUseCount.find(strFile);
                     if (mi != bitdb.mapFileUseCount.end())
                     {
-                        printf("Flushing wallet.dat\n");
+                        LogPrint(BCLog::WALLET, "Flushing wallet.dat\n");
                         nLastFlushed = nWalletDBUpdated;
                         int64_t nStart = GetTimeMillis();
 
@@ -610,7 +608,7 @@ void ThreadFlushWalletDB(void* parg)
                         bitdb.CheckpointLSN(strFile);
 
                         bitdb.mapFileUseCount.erase(mi++);
-                        printf("Flushed wallet.dat %" PRId64 "ms\n", GetTimeMillis() - nStart);
+                        LogPrint(BCLog::WALLET, "Flushed wallet.dat %" PRId64 "ms\n", GetTimeMillis() - nStart);
                     }
                 }
             }
@@ -641,10 +639,10 @@ bool BackupWallet(const CWallet& wallet, const string& strDest)
 
                 try {
                     std::filesystem::copy_file(pathSrc, pathDest, std::filesystem::copy_options::overwrite_existing);
-                    printf("copied wallet.dat to %s\n", pathDest.string().c_str());
+                    LogPrintf("copied wallet.dat to %s\n", pathDest.string().c_str());
                     return true;
                 } catch(const std::filesystem::filesystem_error &e) {
-                    printf("error copying wallet.dat to %s - %s\n", pathDest.string().c_str(), e.what());
+                    LogPrintf("error copying wallet.dat to %s - %s\n", pathDest.string().c_str(), e.what());
                     return false;
                 }
             }
@@ -672,10 +670,10 @@ bool CWalletDB::Recover(CDBEnv& dbenv, std::string filename, bool fOnlyKeys)
     int result = dbenv.dbenv.dbrename(nullptr, filename.c_str(), nullptr,
                                       newFilename.c_str(), DB_AUTO_COMMIT);
     if (result == 0)
-        printf("Renamed %s to %s\n", filename.c_str(), newFilename.c_str());
+        LogPrintf("Renamed %s to %s\n", filename.c_str(), newFilename.c_str());
     else
     {
-        printf("Failed to rename %s to %s\n", filename.c_str(), newFilename.c_str());
+        LogPrintf("Failed to rename %s to %s\n", filename.c_str(), newFilename.c_str());
         return false;
     }
 
@@ -683,10 +681,10 @@ bool CWalletDB::Recover(CDBEnv& dbenv, std::string filename, bool fOnlyKeys)
     bool allOK = dbenv.Salvage(newFilename, true, salvagedData);
     if (salvagedData.empty())
     {
-        printf("Salvage(aggressive) found no records in %s.\n", newFilename.c_str());
+        LogPrintf("Salvage(aggressive) found no records in %s.\n", newFilename.c_str());
         return false;
     }
-    printf("Salvage(aggressive) found %" PRIszu " records\n", salvagedData.size());
+    LogPrintf("Salvage(aggressive) found %" PRIszu " records\n", salvagedData.size());
 
     bool fSuccess = allOK;
     auto pdbCopy = std::make_unique<Db>(&dbenv.dbenv, 0);
@@ -698,7 +696,7 @@ bool CWalletDB::Recover(CDBEnv& dbenv, std::string filename, bool fOnlyKeys)
                             0);
     if (ret > 0)
     {
-        printf("Cannot create database file %s\n", filename.c_str());
+        LogPrintf("Cannot create database file %s\n", filename.c_str());
         return false;
     }
     CWallet dummyWallet;
@@ -718,7 +716,7 @@ bool CWalletDB::Recover(CDBEnv& dbenv, std::string filename, bool fOnlyKeys)
                 continue;
             if (!fReadOK)
             {
-                printf("WARNING: CWalletDB::Recover skipping %s: %s\n", strType.c_str(), strErr.c_str());
+                LogPrintf("WARNING: CWalletDB::Recover skipping %s: %s\n", strType.c_str(), strErr.c_str());
                 continue;
             }
         }

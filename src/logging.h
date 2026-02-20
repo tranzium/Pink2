@@ -15,7 +15,7 @@
 
 enum class LogLevel : int {
     NONE  = 0,
-    ERROR = 1,
+    ERR   = 1,
     WARN  = 2,
     INFO  = 3,
     DEBUG = 4
@@ -84,7 +84,7 @@ public:
 
 // LogError: always logs at ERROR level (unless level is NONE)
 #define LogError(format, ...) do { \
-    if (Logger::GetInstance().WillLog(LogLevel::ERROR)) { \
+    if (Logger::GetInstance().WillLog(LogLevel::ERR)) { \
         Logger::GetInstance().LogPrintStr("ERROR: " + real_strprintf(format, 0, ##__VA_ARGS__)); \
     } \
 } while(0)

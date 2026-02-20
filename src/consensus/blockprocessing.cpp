@@ -37,11 +37,11 @@ void static InvalidChainFound(CBlockIndex* pindexNew)
     uint256 nBestInvalidBlockTrust = pindexNew->nChainTrust - pindexNew->pprev->nChainTrust;
     uint256 nBestBlockTrust = pindexBest->nHeight != 0 ? (pindexBest->nChainTrust - pindexBest->pprev->nChainTrust) : pindexBest->nChainTrust;
 
-    printf("InvalidChainFound: invalid block=%s  height=%d  trust=%s  blocktrust=%" PRId64 "  date=%s\n",
+    LogPrintf("InvalidChainFound: invalid block=%s  height=%d  trust=%s  blocktrust=%" PRId64 "  date=%s\n",
       pindexNew->GetBlockHash().ToString().substr(0,20).c_str(), pindexNew->nHeight,
       CBigNum(pindexNew->nChainTrust).ToString().c_str(), nBestInvalidBlockTrust.Get64(),
       DateTimeStrFormat("%x %H:%M:%S", pindexNew->GetBlockTime()).c_str());
-    printf("InvalidChainFound:  current best=%s  height=%d  trust=%s  blocktrust=%" PRId64 "  date=%s\n",
+    LogPrintf("InvalidChainFound:  current best=%s  height=%d  trust=%s  blocktrust=%" PRId64 "  date=%s\n",
       hashBestChain.ToString().substr(0,20).c_str(), nBestHeight,
       CBigNum(pindexBest->nChainTrust).ToString().c_str(),
       nBestBlockTrust.Get64(),
@@ -50,7 +50,7 @@ void static InvalidChainFound(CBlockIndex* pindexNew)
 
 bool static Reorganize(CTxDB& txdb, CBlockIndex* pindexNew)
 {
-    printf("REORGANIZE\n");
+    LogPrintf("REORGANIZE\n");
 
     // Find the fork
     CBlockIndex* pfork = pindexBest;
@@ -77,8 +77,8 @@ bool static Reorganize(CTxDB& txdb, CBlockIndex* pindexNew)
         vConnect.push_back(pindex);
     std::reverse(vConnect.begin(), vConnect.end());
 
-    printf("REORGANIZE: Disconnect %" PRIszu " blocks; %s..%s\n", vDisconnect.size(), pfork->GetBlockHash().ToString().c_str(), pindexBest->GetBlockHash().ToString().c_str());
-    printf("REORGANIZE: Connect %" PRIszu " blocks; %s..%s\n", vConnect.size(), pfork->GetBlockHash().ToString().c_str(), pindexNew->GetBlockHash().ToString().c_str());
+    LogPrintf("REORGANIZE: Disconnect %" PRIszu " blocks; %s..%s\n", vDisconnect.size(), pfork->GetBlockHash().ToString().c_str(), pindexBest->GetBlockHash().ToString().c_str());
+    LogPrintf("REORGANIZE: Connect %" PRIszu " blocks; %s..%s\n", vConnect.size(), pfork->GetBlockHash().ToString().c_str(), pindexNew->GetBlockHash().ToString().c_str());
 
     // Disconnect shorter branch
     std::list<CTransaction> vResurrect;
@@ -143,7 +143,7 @@ bool static Reorganize(CTxDB& txdb, CBlockIndex* pindexNew)
         mempool.removeConflicts(tx);
     }
 
-    printf("REORGANIZE: done\n");
+    LogPrintf("REORGANIZE: done\n");
 
     return true;
 }
@@ -210,7 +210,7 @@ bool CBlock::SetBestChain(CTxDB& txdb, CBlockIndex* pindexNew)
         }
 
         if (!vpindexSecondary.empty())
-            printf("Postponing %" PRIszu " reconnects\n", vpindexSecondary.size());
+            LogPrint(BCLog::CONSENSUS, "Postponing %" PRIszu " reconnects\n", vpindexSecondary.size());
 
         // Switch to new best branch
         if (!Reorganize(txdb, pindexIntermediate))
@@ -227,11 +227,11 @@ bool CBlock::SetBestChain(CTxDB& txdb, CBlockIndex* pindexNew)
             CBlock block;
             if (!block.ReadFromDisk(pindex))
             {
-                printf("SetBestChain() : ReadFromDisk failed\n");
+                LogPrintf("SetBestChain() : ReadFromDisk failed\n");
                 break;
             }
             if (!txdb.TxnBegin()) {
-                printf("SetBestChain() : TxnBegin 2 failed\n");
+                LogPrintf("SetBestChain() : TxnBegin 2 failed\n");
                 break;
             }
             // errors now are not fatal, we still did a reorganisation to a new chain in a valid way
@@ -259,8 +259,7 @@ bool CBlock::SetBestChain(CTxDB& txdb, CBlockIndex* pindexNew)
 
     uint256 nBestBlockTrust = pindexBest->nHeight != 0 ? (pindexBest->nChainTrust - pindexBest->pprev->nChainTrust) : pindexBest->nChainTrust;
 
-    if (fDebug)
-        printf("SetBestChain: new best=%s  height=%d  trust=%s  blocktrust=%" PRId64 "  date=%s\n",
+    LogPrint(BCLog::CONSENSUS, "SetBestChain: new best=%s  height=%d  trust=%s  blocktrust=%" PRId64 "  date=%s\n",
         hashBestChain.ToString().substr(0,20).c_str(), nBestHeight,
         CBigNum(nBestChainTrust).ToString().c_str(),
         nBestBlockTrust.Get64(),
@@ -278,7 +277,7 @@ bool CBlock::SetBestChain(CTxDB& txdb, CBlockIndex* pindexNew)
             pindex = pindex->pprev;
         }
         if (nUpgraded > 0)
-            printf("SetBestChain: %d of last 100 blocks above version %d\n", nUpgraded, CBlock::CURRENT_VERSION);
+            LogPrintf("SetBestChain: %d of last 100 blocks above version %d\n", nUpgraded, CBlock::CURRENT_VERSION);
         if (nUpgraded > 100/2 && !fTestNet)
             // strMiscWarning is read by GetWarnings(), called by Qt and the JSON-RPC code to warn the user:
             strMiscWarning = _("Warning: This version is obsolete, upgrade required!");
@@ -417,7 +416,7 @@ bool CBlock::AcceptBlock()
         uint256 targetProofOfStake;
         if (!CheckProofOfStake(vtx[1], nBits, hashProof, targetProofOfStake))
         {
-            printf("WARNING: AcceptBlock(): check proof-of-stake failed for block %s\n", hash.ToString().c_str());
+            LogPrintf("WARNING: AcceptBlock(): check proof-of-stake failed for block %s\n", hash.ToString().c_str());
             return false; // do not error here as we expect this during initial block download
         }
     }
@@ -506,7 +505,7 @@ void GetModTrust(CBigNum &bnStakeTrust, CBigNum &bnTarget, CBlockIndex *pindexBa
 
             nBaseStakeTrust.SetCompact(nBestBits);
             bnStakeTrust = nBaseStakeTrust;
-            printf("StakeTrust nBestBits=%s\n", bnStakeTrust.getuint256().ToString().c_str());
+            LogPrint(BCLog::CONSENSUS, "StakeTrust nBestBits=%s\n", bnStakeTrust.getuint256().ToString().c_str());
         } else {
             bnStakeTrust = nBaseStakeTrust;
         }

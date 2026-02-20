@@ -490,13 +490,11 @@ bool CTransaction::GetCoinAge(CTxDB& txdb, uint64_t& nCoinAge) const
         int64_t nValueIn = txPrev.vout[txin.prevout.n].nValue;
         bnCentSecond += CBigNum(nValueIn) * (nTime-txPrev.nTime) / CENT;
 
-        if (fDebug && GetBoolArg("-printcoinage"))
-            printf("coin age nValueIn=%" PRId64 " nTimeDiff=%d bnCentSecond=%s\n", nValueIn, nTime - txPrev.nTime, bnCentSecond.ToString().c_str());
+        LogPrint(BCLog::CONSENSUS, "coin age nValueIn=%" PRId64 " nTimeDiff=%d bnCentSecond=%s\n", nValueIn, nTime - txPrev.nTime, bnCentSecond.ToString().c_str());
     }
 
     CBigNum bnCoinDay = bnCentSecond * CENT / COIN / (24 * 60 * 60);
-    if (fDebug && GetBoolArg("-printcoinage"))
-        printf("coin age bnCoinDay=%s\n", bnCoinDay.ToString().c_str());
+    LogPrint(BCLog::CONSENSUS, "coin age bnCoinDay=%s\n", bnCoinDay.ToString().c_str());
     nCoinAge = bnCoinDay.getuint64();
     return true;
 }
@@ -518,8 +516,7 @@ bool CBlock::GetCoinAge(uint64_t& nCoinAge) const
 
     if (nCoinAge == 0) // block coin age minimum 1 coin-day
         nCoinAge = 1;
-    if (fDebug && GetBoolArg("-printcoinage"))
-        printf("block coin age total nCoinDays=%" PRId64 "\n", nCoinAge);
+    LogPrint(BCLog::CONSENSUS, "block coin age total nCoinDays=%" PRId64 "\n", nCoinAge);
     return true;
 }
 
@@ -547,7 +544,7 @@ bool CBlock::CheckBlock(bool fCheckPOW, bool fCheckMerkleRoot, bool fCheckSig) c
     // Check timestamp
     if (futureLimit > FutureDrift(GetAdjustedTime()))
     {
-        printf("Block Time: %" PRId64 " Future Drift: %" PRId64 "", GetBlockTime(), FutureDrift(GetAdjustedTime()));
+        LogPrintf("Block Time: %" PRId64 " Future Drift: %" PRId64 "\n", GetBlockTime(), FutureDrift(GetAdjustedTime()));
         return error("CheckBlock() : block timestamp too far in the future");
     }
 
@@ -561,7 +558,7 @@ bool CBlock::CheckBlock(bool fCheckPOW, bool fCheckMerkleRoot, bool fCheckSig) c
     // Check coinbase timestamp
     if (futureLimit > FutureDrift(static_cast<int64_t>(vtx[0].nTime)) && !fTestNet)
     {
-        printf("\nBlockTime: %" PRId64 ", FutureDrift: %" PRId64 "\n", GetBlockTime(), FutureDrift(static_cast<int64_t>(vtx[0].nTime)));
+        LogPrintf("BlockTime: %" PRId64 ", FutureDrift: %" PRId64 "\n", GetBlockTime(), FutureDrift(static_cast<int64_t>(vtx[0].nTime)));
         return DoS(50, error("CheckBlock() : coinbase timestamp is too early"));
     }
 

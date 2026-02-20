@@ -48,8 +48,8 @@ BOOST_AUTO_TEST_CASE(set_and_get_level)
     LoggerStateGuard guard;
     Logger& logger = Logger::GetInstance();
 
-    logger.SetLogLevel(LogLevel::ERROR);
-    BOOST_CHECK(logger.GetLogLevel() == LogLevel::ERROR);
+    logger.SetLogLevel(LogLevel::ERR);
+    BOOST_CHECK(logger.GetLogLevel() == LogLevel::ERR);
 
     logger.SetLogLevel(LogLevel::DEBUG);
     BOOST_CHECK(logger.GetLogLevel() == LogLevel::DEBUG);
@@ -64,7 +64,7 @@ BOOST_AUTO_TEST_CASE(will_log_respects_level)
     Logger& logger = Logger::GetInstance();
 
     logger.SetLogLevel(LogLevel::WARN);
-    BOOST_CHECK(logger.WillLog(LogLevel::ERROR));
+    BOOST_CHECK(logger.WillLog(LogLevel::ERR));
     BOOST_CHECK(logger.WillLog(LogLevel::WARN));
     BOOST_CHECK(!logger.WillLog(LogLevel::INFO));
     BOOST_CHECK(!logger.WillLog(LogLevel::DEBUG));
@@ -76,7 +76,7 @@ BOOST_AUTO_TEST_CASE(debug_level_allows_all)
     Logger& logger = Logger::GetInstance();
 
     logger.SetLogLevel(LogLevel::DEBUG);
-    BOOST_CHECK(logger.WillLog(LogLevel::ERROR));
+    BOOST_CHECK(logger.WillLog(LogLevel::ERR));
     BOOST_CHECK(logger.WillLog(LogLevel::WARN));
     BOOST_CHECK(logger.WillLog(LogLevel::INFO));
     BOOST_CHECK(logger.WillLog(LogLevel::DEBUG));
@@ -88,7 +88,7 @@ BOOST_AUTO_TEST_CASE(level_none_blocks_all)
     Logger& logger = Logger::GetInstance();
 
     logger.SetLogLevel(LogLevel::NONE);
-    BOOST_CHECK(!logger.WillLog(LogLevel::ERROR));
+    BOOST_CHECK(!logger.WillLog(LogLevel::ERR));
     BOOST_CHECK(!logger.WillLog(LogLevel::WARN));
     BOOST_CHECK(!logger.WillLog(LogLevel::INFO));
     BOOST_CHECK(!logger.WillLog(LogLevel::DEBUG));
@@ -234,7 +234,7 @@ BOOST_AUTO_TEST_CASE(category_to_string)
 
 BOOST_AUTO_TEST_CASE(level_from_string)
 {
-    BOOST_CHECK(Logger::LevelFromString("error") == LogLevel::ERROR);
+    BOOST_CHECK(Logger::LevelFromString("error") == LogLevel::ERR);
     BOOST_CHECK(Logger::LevelFromString("warn") == LogLevel::WARN);
     BOOST_CHECK(Logger::LevelFromString("info") == LogLevel::INFO);
     BOOST_CHECK(Logger::LevelFromString("debug") == LogLevel::DEBUG);
@@ -243,7 +243,7 @@ BOOST_AUTO_TEST_CASE(level_from_string)
 
 BOOST_AUTO_TEST_CASE(level_from_string_case_insensitive)
 {
-    BOOST_CHECK(Logger::LevelFromString("ERROR") == LogLevel::ERROR);
+    BOOST_CHECK(Logger::LevelFromString("ERROR") == LogLevel::ERR);
     BOOST_CHECK(Logger::LevelFromString("Debug") == LogLevel::DEBUG);
 }
 
@@ -256,7 +256,7 @@ BOOST_AUTO_TEST_CASE(level_from_string_unknown_defaults_to_info)
 BOOST_AUTO_TEST_CASE(level_to_string)
 {
     BOOST_CHECK_EQUAL(Logger::LevelToString(LogLevel::NONE), "none");
-    BOOST_CHECK_EQUAL(Logger::LevelToString(LogLevel::ERROR), "error");
+    BOOST_CHECK_EQUAL(Logger::LevelToString(LogLevel::ERR), "error");
     BOOST_CHECK_EQUAL(Logger::LevelToString(LogLevel::WARN), "warn");
     BOOST_CHECK_EQUAL(Logger::LevelToString(LogLevel::INFO), "info");
     BOOST_CHECK_EQUAL(Logger::LevelToString(LogLevel::DEBUG), "debug");
@@ -322,7 +322,7 @@ BOOST_AUTO_TEST_CASE(log_print_filtered_by_level)
 {
     LoggerStateGuard guard;
     Logger& logger = Logger::GetInstance();
-    logger.SetLogLevel(LogLevel::ERROR); // only ERROR
+    logger.SetLogLevel(LogLevel::ERR); // only ERROR
 
     // INFO is above ERROR threshold — filtered
     BOOST_CHECK(!logger.WillLog(LogLevel::INFO));
