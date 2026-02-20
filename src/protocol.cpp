@@ -108,7 +108,7 @@ CInv::CInv(int typeIn, const uint256& hashIn)
 CInv::CInv(const std::string& strType, const uint256& hashIn)
 {
     unsigned int i;
-    for (i = 1; i < ARRAYLEN(ppszTypeName); i++)
+    for (i = 1; i < std::size(ppszTypeName); i++)
     {
         if (strType == ppszTypeName[i])
         {
@@ -116,7 +116,7 @@ CInv::CInv(const std::string& strType, const uint256& hashIn)
             break;
         }
     }
-    if (i == ARRAYLEN(ppszTypeName))
+    if (i == std::size(ppszTypeName))
         throw std::out_of_range(strprintf("CInv::CInv(string, uint256) : unknown type '%s'", strType.c_str()));
     hash = hashIn;
 }
@@ -128,7 +128,7 @@ bool operator<(const CInv& a, const CInv& b)
 
 bool CInv::IsKnownType() const
 {
-    return (type >= 1 && type < static_cast<int>(ARRAYLEN(ppszTypeName)));
+    return (type >= 1 && type < static_cast<int>(std::size(ppszTypeName)));
 }
 
 const char* CInv::GetCommand() const

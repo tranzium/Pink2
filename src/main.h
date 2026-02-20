@@ -1007,8 +1007,8 @@ public:
             for (int i = 0; i < nSize; i += 2)
             {
                 int i2 = std::min(i+1, nSize-1);
-                vMerkleTree.push_back(Hash(BEGIN(vMerkleTree[j+i]),  END(vMerkleTree[j+i]),
-                                           BEGIN(vMerkleTree[j+i2]), END(vMerkleTree[j+i2])));
+                vMerkleTree.push_back(Hash(CharCast(vMerkleTree[j+i]),  CharEnd(vMerkleTree[j+i]),
+                                           CharCast(vMerkleTree[j+i2]), CharEnd(vMerkleTree[j+i2])));
             }
             j += nSize;
         }
@@ -1038,9 +1038,9 @@ public:
         for (const uint256& otherside : vMerkleBranch)
         {
             if (nIndex & 1)
-                hash = Hash(BEGIN(otherside), END(otherside), BEGIN(hash), END(hash));
+                hash = Hash(CharCast(otherside), CharEnd(otherside), CharCast(hash), CharEnd(hash));
             else
-                hash = Hash(BEGIN(hash), END(hash), BEGIN(otherside), END(otherside));
+                hash = Hash(CharCast(hash), CharEnd(hash), CharCast(otherside), CharEnd(otherside));
             nIndex >>= 1;
         }
         return hash;

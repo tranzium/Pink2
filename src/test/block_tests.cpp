@@ -278,7 +278,7 @@ BOOST_AUTO_TEST_CASE(merkle_tree_two_tx)
     // Pin: merkle = Hash(Hash(tx0), Hash(tx1))
     uint256 htx0 = block.vtx[0].GetHash();
     uint256 htx1 = block.vtx[1].GetHash();
-    uint256 expected = Hash(BEGIN(htx0), END(htx0), BEGIN(htx1), END(htx1));
+    uint256 expected = Hash(CharCast(htx0), CharEnd(htx0), CharCast(htx1), CharEnd(htx1));
     BOOST_CHECK(merkle == expected);
 }
 
@@ -304,9 +304,9 @@ BOOST_AUTO_TEST_CASE(merkle_tree_three_tx)
     uint256 h0 = block.vtx[0].GetHash();
     uint256 h1 = block.vtx[1].GetHash();
     uint256 h2 = block.vtx[2].GetHash();
-    uint256 h01 = Hash(BEGIN(h0), END(h0), BEGIN(h1), END(h1));
-    uint256 h22 = Hash(BEGIN(h2), END(h2), BEGIN(h2), END(h2));
-    uint256 expected = Hash(BEGIN(h01), END(h01), BEGIN(h22), END(h22));
+    uint256 h01 = Hash(CharCast(h0), CharEnd(h0), CharCast(h1), CharEnd(h1));
+    uint256 h22 = Hash(CharCast(h2), CharEnd(h2), CharCast(h2), CharEnd(h2));
+    uint256 expected = Hash(CharCast(h01), CharEnd(h01), CharCast(h22), CharEnd(h22));
     BOOST_CHECK(merkle == expected);
 }
 

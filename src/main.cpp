@@ -1747,7 +1747,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
                         hashSalt = GetRandHash();
                     uint64_t hashAddr = addr.GetHash();
                     uint256 hashRand = hashSalt ^ (hashAddr<<32) ^ ((GetAdjustedTime()+hashAddr)/(24*60*60));
-                    hashRand = Hash(BEGIN(hashRand), END(hashRand));
+                    hashRand = Hash(CharCast(hashRand), CharEnd(hashRand));
                     multimap<uint256, CNode*> mapMix;
                     for (CNode* pnode : vNodes)
                     {
@@ -1756,7 +1756,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
                         unsigned int nPointer;
                         memcpy(&nPointer, &pnode, sizeof(nPointer));
                         uint256 hashKey = hashRand ^ nPointer;
-                        hashKey = Hash(BEGIN(hashKey), END(hashKey));
+                        hashKey = Hash(CharCast(hashKey), CharEnd(hashKey));
                         mapMix.insert(make_pair(hashKey, pnode));
                     }
                     int nRelayNodes = fReachable ? 2 : 1; // limited relaying of addresses outside our network(s)
@@ -2460,7 +2460,7 @@ bool SendMessages(CNode* pto, bool fSendTrickle)
                     if (hashSalt == 0)
                         hashSalt = GetRandHash();
                     uint256 hashRand = inv.hash ^ hashSalt;
-                    hashRand = Hash(BEGIN(hashRand), END(hashRand));
+                    hashRand = Hash(CharCast(hashRand), CharEnd(hashRand));
                     bool fTrickleWait = ((hashRand & 3) != 0);
 
                     // always trickle our own transactions

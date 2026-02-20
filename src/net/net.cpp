@@ -1317,7 +1317,7 @@ void ThreadDNSAddressSeed2(void* parg)
 
     LogPrintf("Loading addresses from DNS seeds (could take a while)\n");
 
-    for (unsigned int seed_idx = 0; seed_idx < ARRAYLEN(strDNSSeed); seed_idx++) {
+    for (unsigned int seed_idx = 0; seed_idx < std::size(strDNSSeed); seed_idx++) {
         if (HaveNameProxy()) {
             AddOneShot(strDNSSeed[seed_idx][1]);
         } else {
@@ -1504,7 +1504,7 @@ void ThreadOpenConnections2(void* parg)
         if (addrman.empty() && (GetAdjustedTime() - nStart > 60) && !fTestNet)
         {
             std::vector<CAddress> vAdd;
-            for (unsigned int i = 0; i < ARRAYLEN(pnSeed); i++)
+            for (unsigned int i = 0; i < std::size(pnSeed); i++)
             {
                 // It'll only connect to one or two seed nodes because once it connects,
                 // it'll get a pile of addresses with newer timestamps.

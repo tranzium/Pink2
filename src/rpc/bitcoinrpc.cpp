@@ -126,7 +126,7 @@ std::string HexBits(unsigned int nBits)
         char cBits[4];
     } uBits;
     uBits.nBits = htonl(static_cast<int32_t>(nBits));
-    return HexStr(BEGIN(uBits.cBits), END(uBits.cBits));
+    return HexStr(CharCast(uBits.cBits), CharEnd(uBits.cBits));
 }
 
 

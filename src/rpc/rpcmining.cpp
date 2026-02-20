@@ -206,8 +206,8 @@ Value getworkex(const Array& params, bool fHelp)
         std::vector<uint256> merkle = pblock->GetMerkleBranch(0);
 
         Object result;
-        result.push_back(Pair("data",     HexStr(BEGIN(pdata), END(pdata))));
-        result.push_back(Pair("target",   HexStr(BEGIN(hashTarget), END(hashTarget))));
+        result.push_back(Pair("data",     HexStr(CharCast(pdata), CharEnd(pdata))));
+        result.push_back(Pair("target",   HexStr(CharCast(hashTarget), CharEnd(hashTarget))));
 
         CDataStream ssTx(SER_NETWORK, PROTOCOL_VERSION);
         ssTx << coinbaseTx;
@@ -216,7 +216,7 @@ Value getworkex(const Array& params, bool fHelp)
         Array merkle_arr;
 
         for (const uint256& merkleh : merkle) {
-            merkle_arr.push_back(HexStr(BEGIN(merkleh), END(merkleh)));
+            merkle_arr.push_back(HexStr(CharCast(merkleh), CharEnd(merkleh)));
         }
 
         result.push_back(Pair("merkle", merkle_arr));
@@ -340,10 +340,10 @@ Value getwork(const Array& params, bool fHelp)
         uint256 hashTarget = CBigNum().SetCompact(pblock->nBits).getuint256();
 
         Object result;
-        result.push_back(Pair("midstate", HexStr(BEGIN(pmidstate), END(pmidstate)))); // deprecated
-        result.push_back(Pair("data",     HexStr(BEGIN(pdata), END(pdata))));
-        result.push_back(Pair("hash1",    HexStr(BEGIN(phash1), END(phash1)))); // deprecated
-        result.push_back(Pair("target",   HexStr(BEGIN(hashTarget), END(hashTarget))));
+        result.push_back(Pair("midstate", HexStr(CharCast(pmidstate), CharEnd(pmidstate)))); // deprecated
+        result.push_back(Pair("data",     HexStr(CharCast(pdata), CharEnd(pdata))));
+        result.push_back(Pair("hash1",    HexStr(CharCast(phash1), CharEnd(phash1)))); // deprecated
+        result.push_back(Pair("target",   HexStr(CharCast(hashTarget), CharEnd(hashTarget))));
         return result;
     }
     else

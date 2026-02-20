@@ -39,16 +39,17 @@
 static const int64_t COIN = 100000000;
 static const int64_t CENT = 1000000;
 
-#define BEGIN(a)            (const_cast<char*>(reinterpret_cast<const char*>(&(a))))
-#define END(a)              (const_cast<char*>(reinterpret_cast<const char*>(&((&(a))[1]))))
-#define UBEGIN(a)           (const_cast<unsigned char*>(reinterpret_cast<const unsigned char*>(&(a))))
-#define UEND(a)             (const_cast<unsigned char*>(reinterpret_cast<const unsigned char*>(&((&(a))[1]))))
-#define ARRAYLEN(array)     (sizeof(array)/sizeof((array)[0]))
+// Type-safe byte range access — replaces legacy BEGIN/END macros
+template <typename T>
+inline const char* CharCast(const T& obj) {
+    return reinterpret_cast<const char*>(&obj);
+}
+template <typename T>
+inline const char* CharEnd(const T& obj) {
+    return reinterpret_cast<const char*>(&obj) + sizeof(obj);
+}
 
-#define UVOIDBEGIN(a)        (reinterpret_cast<void*>(&(a)))
 #define CVOIDBEGIN(a)        (reinterpret_cast<const void*>(&(a)))
-#define UINTBEGIN(a)        (reinterpret_cast<uint32_t*>(&(a)))
-#define CUINTBEGIN(a)        (reinterpret_cast<const uint32_t*>(&(a)))
 
 /* Format characters for (s)size_t and ptrdiff_t */
 #if defined(_MSC_VER) || defined(__MSVCRT__)
@@ -59,9 +60,6 @@ static const int64_t CENT = 1000000;
 #else /* C99 standard */
   #define PRIszu    "zu"
 #endif
-
-// This is needed because the foreach macro can't get over the comma in pair<t1, t2>
-#define PAIRTYPE(t1, t2)    std::pair<t1, t2>
 
 // Align by increasing pointer, must have extra space at end of buffer
 template <size_t nBytes, typename T>

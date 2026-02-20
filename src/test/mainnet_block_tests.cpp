@@ -39,8 +39,8 @@ static uint256 ComputeMerkleRootFromHashes(const std::vector<uint256>& leaves)
         for (size_t i = 0; i < tree.size(); i += 2)
         {
             size_t i2 = std::min(i + 1, tree.size() - 1);
-            next.push_back(Hash(BEGIN(tree[i]),  END(tree[i]),
-                                BEGIN(tree[i2]), END(tree[i2])));
+            next.push_back(Hash(CharCast(tree[i]),  CharEnd(tree[i]),
+                                CharCast(tree[i2]), CharEnd(tree[i2])));
         }
         tree = next;
     }
