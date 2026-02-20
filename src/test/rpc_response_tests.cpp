@@ -51,12 +51,20 @@ BOOST_AUTO_TEST_CASE(getinfo_response_contract)
     BOOST_CHECK(find_value(obj, "keypoololdest").type() == int_type);
     BOOST_CHECK(find_value(obj, "keypoolsize").type() == int_type);
 
+    BOOST_CHECK(find_value(obj, "timeoffset").type() == int_type);
+
+    // String fields (additional)
+    BOOST_CHECK(find_value(obj, "offsetfrom").type() == str_type);
+    BOOST_CHECK(find_value(obj, "proxy").type() == str_type);
+    BOOST_CHECK(find_value(obj, "ip").type() == str_type);
+
     // Real (double) fields — ValueFromAmount returns double
     BOOST_CHECK(find_value(obj, "balance").type() == real_type);
     BOOST_CHECK(find_value(obj, "newmint").type() == real_type);
     BOOST_CHECK(find_value(obj, "stake").type() == real_type);
     BOOST_CHECK(find_value(obj, "moneysupply").type() == real_type);
     BOOST_CHECK(find_value(obj, "paytxfee").type() == real_type);
+    BOOST_CHECK(find_value(obj, "mininput").type() == real_type);
 
     // Boolean fields
     BOOST_CHECK(find_value(obj, "testnet").type() == bool_type);
@@ -67,6 +75,7 @@ BOOST_AUTO_TEST_CASE(getinfo_response_contract)
     Object diff = find_value(obj, "difficulty").get_obj();
     BOOST_CHECK(find_value(diff, "proof-of-work").type() == real_type);
     BOOST_CHECK(find_value(diff, "proof-of-stake").type() == real_type);
+    BOOST_CHECK(find_value(diff, "proof-of-stake (flash)").type() == real_type);
 }
 
 // ---------------------------------------------------------------------------
