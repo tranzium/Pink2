@@ -267,7 +267,18 @@ Value setloglevel(const Array& params, bool fHelp)
 
     Object result;
     result.push_back(Pair("level", Logger::LevelToString(logger.GetLogLevel())));
-    result.push_back(Pair("categories", static_cast<int64_t>(logger.GetCategories())));
+
+    uint32_t cats = logger.GetCategories();
+    Array catArray;
+    if (cats & BCLog::NET)       catArray.push_back("net");
+    if (cats & BCLog::WALLET)    catArray.push_back("wallet");
+    if (cats & BCLog::STAKE)     catArray.push_back("stake");
+    if (cats & BCLog::RPC)       catArray.push_back("rpc");
+    if (cats & BCLog::CONSENSUS) catArray.push_back("consensus");
+    if (cats & BCLog::SMSG)      catArray.push_back("smsg");
+    if (cats & BCLog::MEMPOOL)   catArray.push_back("mempool");
+    if (cats & BCLog::DB)        catArray.push_back("db");
+    result.push_back(Pair("categories", catArray));
     return result;
 }
 
