@@ -154,6 +154,9 @@ std::string vstrprintf(const char *format, va_list ap);
 
 bool ATTR_WARN_PRINTF(1,2) error(const char *format, ...);
 
+// Structured logging — include after strprintf so LogPrintf/LogPrint macros work
+#include "logging.h"
+
 /* Redefine printf so that it directs output to debug.log
  *
  * Do this *after* defining the other printf-like functions, because otherwise the

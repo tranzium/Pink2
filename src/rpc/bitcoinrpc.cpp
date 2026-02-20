@@ -21,6 +21,7 @@
 #include "string_utils.h"
 #include <memory>
 #include <list>
+#include <sstream>
 
 // Boost Support for 1.70+
 #if BOOST_VERSION >= 107000
@@ -235,6 +236,67 @@ Value stop(const Array& params, bool fHelp)
     return "Pinkcoin server stopping";
 }
 
+Value setloglevel(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() < 1 || params.size() > 2)
+        throw runtime_error(
+            "setloglevel <level> [categories]\n"
+            "Set the logging level and optionally enable categories.\n"
+            "<level> is one of: none, error, warn, info, debug\n"
+            "[categories] is comma-separated list of: net, wallet, stake, rpc, consensus, smsg, mempool, db, all");
+
+    Logger& logger = Logger::GetInstance();
+
+    std::string levelStr = params[0].get_str();
+    LogLevel level = Logger::LevelFromString(levelStr);
+    logger.SetLogLevel(level);
+
+    if (params.size() > 1) {
+        std::string catStr = params[1].get_str();
+        uint32_t cats = 0;
+        std::istringstream ss(catStr);
+        std::string token;
+        while (std::getline(ss, token, ',')) {
+            while (!token.empty() && std::isspace(static_cast<unsigned char>(token.front()))) token.erase(token.begin());
+            while (!token.empty() && std::isspace(static_cast<unsigned char>(token.back()))) token.pop_back();
+            BCLog::Category cat = Logger::CategoryFromString(token);
+            cats |= static_cast<uint32_t>(cat);
+        }
+        logger.SetCategories(cats);
+    }
+
+    Object result;
+    result.push_back(Pair("level", Logger::LevelToString(logger.GetLogLevel())));
+    result.push_back(Pair("categories", static_cast<int64_t>(logger.GetCategories())));
+    return result;
+}
+
+Value getloglevel(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() > 0)
+        throw runtime_error(
+            "getloglevel\n"
+            "Returns the current logging level and enabled categories.");
+
+    Logger& logger = Logger::GetInstance();
+
+    Object result;
+    result.push_back(Pair("level", Logger::LevelToString(logger.GetLogLevel())));
+
+    uint32_t cats = logger.GetCategories();
+    Array catArray;
+    if (cats & BCLog::NET)       catArray.push_back("net");
+    if (cats & BCLog::WALLET)    catArray.push_back("wallet");
+    if (cats & BCLog::STAKE)     catArray.push_back("stake");
+    if (cats & BCLog::RPC)       catArray.push_back("rpc");
+    if (cats & BCLog::CONSENSUS) catArray.push_back("consensus");
+    if (cats & BCLog::SMSG)      catArray.push_back("smsg");
+    if (cats & BCLog::MEMPOOL)   catArray.push_back("mempool");
+    if (cats & BCLog::DB)        catArray.push_back("db");
+    result.push_back(Pair("categories", catArray));
+
+    return result;
+}
 
 
 //
@@ -247,6 +309,8 @@ static const CRPCCommand vRPCCommands[] =
   //  ------------------------  -----------------------  ------  --------
     { "help",                   &help,                   true,   true },
     { "stop",                   &stop,                   true,   true },
+    { "setloglevel",            &setloglevel,            true,   true },
+    { "getloglevel",            &getloglevel,            true,   true },
     { "getbestblockhash",       &getbestblockhash,       true,   false },
     { "getblockcount",          &getblockcount,          true,   false },
     { "getconnectioncount",     &getconnectioncount,     true,   false },

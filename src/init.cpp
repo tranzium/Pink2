@@ -489,6 +489,22 @@ bool AppInit2(ThreadGroup& threadGroup)
         fDebugSmsg = GetBoolArg("-debugsmsg");
     }
 
+    // Configure structured logger from command-line flags
+    {
+        Logger& logger = Logger::GetInstance();
+        std::string logLevelStr = GetArg("-loglevel", fDebug ? "debug" : "info");
+        logger.SetLogLevel(Logger::LevelFromString(logLevelStr));
+
+        if (fDebug) {
+            logger.SetCategories(BCLog::ALL);
+        } else {
+            uint32_t cats = 0;
+            if (fDebugNet)  cats |= BCLog::NET;
+            if (fDebugSmsg) cats |= BCLog::SMSG;
+            logger.SetCategories(cats);
+        }
+    }
+
     bitdb.SetDetach(GetBoolArg("-detachdb", false));
 
 #if !defined(WIN32) && !defined(QT_GUI)

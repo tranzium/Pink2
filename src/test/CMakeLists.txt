@@ -70,6 +70,7 @@ set(PINKCOIN_TEST_SOURCES
     consensus_pinning_tests.cpp
     edge_case_tests.cpp
     staking_tests.cpp
+    logging_tests.cpp
     security_tests.cpp
 )
 

@@ -247,6 +247,9 @@ extern json_spirit::Value smsgscanbuckets(const json_spirit::Array& params, bool
 extern json_spirit::Value smsgaddkey(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value smsggetpubkey(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value smsgsend(const json_spirit::Array& params, bool fHelp);
+
+extern json_spirit::Value setloglevel(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value getloglevel(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value smsgsendanon(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value smsginbox(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value smsgoutbox(const json_spirit::Array& params, bool fHelp);

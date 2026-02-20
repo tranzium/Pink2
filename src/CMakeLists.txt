@@ -17,6 +17,7 @@ set(PINKCOIN_CORE_SOURCES
     kernel.cpp
     key.cpp
     keystore.cpp
+    logging.cpp
     main.cpp
     miner.cpp
     ntp.cpp
@@ -78,6 +79,7 @@ set(PINKCOIN_CORE_HEADERS
     kernel.h
     key.h
     keystore.h
+    logging.h
     main.h
     miner.h
     mruset.h
