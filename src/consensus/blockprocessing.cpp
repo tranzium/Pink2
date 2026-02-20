@@ -14,7 +14,7 @@
 #include "wallet.h"
 #include "ui_interface.h"
 #include "string_utils.h"
-#include <boost/thread.hpp>
+#include <thread>
 
 extern enum Checkpoints::CPMode CheckpointsMode;
 
@@ -292,7 +292,8 @@ bool CBlock::SetBestChain(CTxDB& txdb, CBlockIndex* pindexNew)
         // The hash is already safe (hex chars only), but quoting guards against
         // future changes or unexpected input. Matches walletnotify pattern.
         strutil::replace_all(strCmd, "%s", "'" + hashBestChain.GetHex() + "'");
-        boost::thread t(runCommand, strCmd); // thread runs free
+        std::thread t(runCommand, strCmd);
+        t.detach(); // thread runs free
     }
 
     return true;

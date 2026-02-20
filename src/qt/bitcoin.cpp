@@ -131,7 +131,7 @@ class BitcoinCore : public QObject
 {
     Q_OBJECT
 public:
-    explicit BitcoinCore(boost::thread_group& threadGroup)
+    explicit BitcoinCore(ThreadGroup& threadGroup)
         : m_threadGroup(threadGroup) {}
 
 public Q_SLOTS:
@@ -151,7 +151,7 @@ Q_SIGNALS:
     void initializeResult(bool success);
 
 private:
-    boost::thread_group& m_threadGroup;
+    ThreadGroup& m_threadGroup;
 };
 
 /** Event filter that swallows mouse clicks on the splash screen. */
@@ -290,7 +290,7 @@ int main(int argc, char *argv[])
         if (GUIUtil::GetStartOnSystemStartup())
             GUIUtil::SetStartOnSystemStartup(true);
 
-        boost::thread_group threadGroup;
+        ThreadGroup threadGroup;
 
         BitcoinGUI window;
         guiref = &window;

@@ -14,15 +14,16 @@
 #include <sys/resource.h>
 #endif
 
+#include <algorithm>
 #include <map>
 #include <list>
 #include <utility>
 #include <vector>
 #include <string>
 
-#include <boost/thread.hpp>
 #include <chrono>
 #include <filesystem>
+#include <system_error>
 #include <thread>
 
 #include "openssl_ptr.h"
@@ -599,6 +600,35 @@ public:
 
 bool NewThread(void(*pfn)(void*), void* parg);
 
+// Minimal std::thread-based replacement for boost::thread_group.
+// Stores joinable threads created via create_thread() and provides join_all().
+// interrupt_all() sets fShutdown — threads must poll fShutdown to exit.
+class ThreadGroup {
+    std::vector<std::thread> m_threads;
+public:
+    ThreadGroup() = default;
+    ~ThreadGroup() { join_all(); }
+
+    ThreadGroup(const ThreadGroup&) = delete;
+    ThreadGroup& operator=(const ThreadGroup&) = delete;
+
+    template <typename Callable>
+    void create_thread(Callable&& f) {
+        m_threads.emplace_back(std::forward<Callable>(f));
+    }
+
+    void interrupt_all() {
+        // std::thread has no interruption mechanism.
+        // Threads must check fShutdown to exit gracefully.
+    }
+
+    void join_all() {
+        for (auto& t : m_threads)
+            if (t.joinable()) t.join();
+        m_threads.clear();
+    }
+};
+
 #ifdef WIN32
 inline void SetThreadPriority(int nPriority)
 {
@@ -637,15 +667,10 @@ inline uint32_t ByteReverse(uint32_t value)
 }
 
 // Standard wrapper for do-something-forever thread functions.
-// "Forever" really means until the thread is interrupted.
-// Use it like:
-//   new boost::thread(boost::bind(&LoopForever<void (*)()>, "dumpaddr", &DumpAddresses, 10000));
-// or maybe:
-//    boost::function<void()> f = boost::bind(&FunctionWithArg, argument);
-//    threadGroup.create_thread(boost::bind(&LoopForever<boost::function<void()> >, "nothing", f, milliseconds));
-template <typename Callable> void LoopForever(const char* name,  Callable func, int64_t msecs)
+// "Forever" really means until fShutdown is set.
+template <typename Callable> void LoopForever(const char* name, Callable func, int64_t msecs)
 {
-    std::string s = strprintf("blackcoin-%s", name);
+    std::string s = strprintf("pinkcoin-%s", name);
     RenameThread(s.c_str());
     printf("%s thread start\n", name);
     try
@@ -656,11 +681,6 @@ template <typename Callable> void LoopForever(const char* name,  Callable func, 
             MilliSleep(msecs);
         }
     }
-    catch (boost::thread_interrupted)
-    {
-        printf("%s thread stop\n", name);
-        throw;
-    }
     catch (std::exception& e) {
         PrintException(&e, name);
     }
@@ -669,20 +689,15 @@ template <typename Callable> void LoopForever(const char* name,  Callable func, 
     }
 }
 // .. and a wrapper that just calls func once
-template <typename Callable> void TraceThread(const char* name,  Callable func)
+template <typename Callable> void TraceThread(const char* name, Callable func)
 {
-    std::string s = strprintf("blackcoin-%s", name);
+    std::string s = strprintf("pinkcoin-%s", name);
     RenameThread(s.c_str());
     try
     {
         printf("%s thread start\n", name);
         func();
         printf("%s thread exit\n", name);
-    }
-    catch (boost::thread_interrupted)
-    {
-        printf("%s thread interrupt\n", name);
-        throw;
     }
     catch (std::exception& e) {
         PrintException(&e, name);

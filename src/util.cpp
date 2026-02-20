@@ -10,7 +10,6 @@
 #include "string_utils.h"
 #include <filesystem>
 #include <fstream>
-#include <boost/thread.hpp>
 #include <openssl/crypto.h>
 #include <openssl/rand.h>
 #include <stdarg.h>
@@ -1330,8 +1329,9 @@ bool NewThread(void(*pfn)(void*), void* parg)
 {
     try
     {
-        boost::thread(pfn, parg); // thread detaches when out of scope
-    } catch(boost::thread_resource_error &e) {
+        std::thread t(pfn, parg);
+        t.detach();
+    } catch(const std::system_error& e) {
         printf("Error creating thread: %s\n", e.what());
         return false;
     }

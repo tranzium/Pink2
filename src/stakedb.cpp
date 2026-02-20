@@ -5,6 +5,7 @@
 
 #include "stakedb.h"
 #include "wallet.h"
+#include "db_cursor_guard.h"
 
 #include <filesystem>
 
@@ -99,8 +100,8 @@ SDBErrors CStakeDB::LoadWallet(CWallet* pwallet)
         }
 
         // Get cursor
-        Dbc* pcursor = GetCursor();
-        if (!pcursor)
+        BdbCursorGuard cursor(GetCursor());
+        if (!cursor)
         {
             printf("Error getting wallet database cursor\n");
             return SDB_CORRUPT;
@@ -111,7 +112,7 @@ SDBErrors CStakeDB::LoadWallet(CWallet* pwallet)
             // Read next record
             CDataStream ssKey(SER_DISK, CLIENT_VERSION);
             CDataStream ssValue(SER_DISK, CLIENT_VERSION);
-            int ret = ReadAtCursor(pcursor, ssKey, ssValue);
+            int ret = ReadAtCursor(cursor.get(), ssKey, ssValue);
             if (ret == DB_NOTFOUND)
                 break;
             else if (ret != 0)
@@ -130,7 +131,6 @@ SDBErrors CStakeDB::LoadWallet(CWallet* pwallet)
                 printf("%s\n", strErr.c_str());
 
         }
-        pcursor->close();
     }
     catch (...)
     {

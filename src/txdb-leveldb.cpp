@@ -4,6 +4,7 @@
 // file license.txt or http://www.opensource.org/licenses/mit-license.php.
 
 #include <map>
+#include <memory>
 
 #include <filesystem>
 
@@ -315,7 +316,7 @@ bool CTxDB::LoadBlockIndex()
     // The block index is an in-memory structure that maps hashes to on-disk
     // locations where the contents of the block can be found. Here, we scan it
     // out of the DB and into mapBlockIndex.
-    leveldb::Iterator *iterator = pdb->NewIterator(leveldb::ReadOptions());
+    std::unique_ptr<leveldb::Iterator> iterator(pdb->NewIterator(leveldb::ReadOptions()));
     // Seek to start key.
     CDataStream ssStartKey(SER_DISK, CLIENT_VERSION);
     ssStartKey << make_pair(string("blockindex"), uint256(0));
@@ -363,7 +364,6 @@ bool CTxDB::LoadBlockIndex()
             pindexGenesisBlock = pindexNew;
 
         if (!pindexNew->CheckIndex()) {
-            delete iterator;
             return error("LoadBlockIndex() : CheckIndex failed at %d", pindexNew->nHeight);
         }
 
@@ -373,7 +373,6 @@ bool CTxDB::LoadBlockIndex()
 
         iterator->Next();
     }
-    delete iterator;
 
     if (fRequestShutdown)
         return true;

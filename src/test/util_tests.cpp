@@ -1,3 +1,4 @@
+#include <cmath>
 #include <vector>
 #include <boost/test/unit_test.hpp>
 
@@ -341,16 +342,15 @@ static void CountWithArg(int arg)
     MilliSleep(10);
 }
 
-// Disabled: LoopForever tests rely on boost::thread interruption which doesn't work
-// with std::this_thread::sleep_for() (only boost::this_thread::sleep_for is an
-// interruption point). These functions are unused in production code anyway.
+// Disabled: LoopForever runs indefinitely — std::thread has no interruption mechanism.
+// These functions are unused in production code anyway.
 #if 0
 BOOST_AUTO_TEST_CASE(util_loop_forever1)
 {
     nCounter = 0;
-    boost::thread_group threadGroup;
+    ThreadGroup threadGroup;
 
-    threadGroup.create_thread(boost::bind(&LoopForever<void (*)()>, "count", &Count, 1));
+    threadGroup.create_thread([]() { LoopForever<void (*)()>("count", &Count, 1); });
     MilliSleep(1);
     threadGroup.interrupt_all();
     threadGroup.join_all();
@@ -361,10 +361,10 @@ BOOST_AUTO_TEST_CASE(util_loop_forever1)
 BOOST_AUTO_TEST_CASE(util_loop_forever2)
 {
     nCounter = 0;
-    boost::thread_group threadGroup;
+    ThreadGroup threadGroup;
 
-    boost::function<void()> f = boost::bind(&CountWithArg, 11);
-    threadGroup.create_thread(boost::bind(&LoopForever<boost::function<void()> >, "count11", f, 11));
+    std::function<void()> f = []() { CountWithArg(11); };
+    threadGroup.create_thread([f]() { LoopForever<std::function<void()>>("count11", f, 11); });
     MilliSleep(1);
     threadGroup.interrupt_all();
     threadGroup.join_all();
@@ -376,9 +376,9 @@ BOOST_AUTO_TEST_CASE(util_loop_forever2)
 BOOST_AUTO_TEST_CASE(util_threadtrace1)
 {
     nCounter = 0;  // Reset at start of test
-    boost::thread_group threadGroup;
+    ThreadGroup threadGroup;
 
-    threadGroup.create_thread(boost::bind(&TraceThread<void (*)()>, "count11", &Count));
+    threadGroup.create_thread([]() { TraceThread<void (*)()>("count11", &Count); });
     threadGroup.join_all();
     BOOST_CHECK_EQUAL(nCounter, 1);
     nCounter = 0;
@@ -387,10 +387,10 @@ BOOST_AUTO_TEST_CASE(util_threadtrace1)
 BOOST_AUTO_TEST_CASE(util_threadtrace2)
 {
     nCounter = 0;  // Reset at start of test
-    boost::thread_group threadGroup;
+    ThreadGroup threadGroup;
 
-    boost::function<void()> f = boost::bind(&CountWithArg, 11);
-    threadGroup.create_thread(boost::bind(&TraceThread<boost::function<void()> >, "count11", f));
+    std::function<void()> f = []() { CountWithArg(11); };
+    threadGroup.create_thread([f]() { TraceThread<std::function<void()>>("count11", f); });
     threadGroup.join_all();
     BOOST_CHECK_EQUAL(nCounter, 11);
     nCounter = 0;

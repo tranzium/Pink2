@@ -7,6 +7,7 @@
 #include "addresstablemodel.h"
 
 #include <functional>
+#include <memory>
 
 #include "ui_interface.h"
 #include "base58.h"
@@ -77,8 +78,8 @@ public:
             QDateTime received_datetime;
 
             std::string sPrefix("im");
-            leveldb::Iterator* it = dbSmsg.pdb->NewIterator(leveldb::ReadOptions());
-            while (dbSmsg.NextSmesg(it, sPrefix, chKey, smsgStored))
+            std::unique_ptr<leveldb::Iterator> it(dbSmsg.pdb->NewIterator(leveldb::ReadOptions()));
+            while (dbSmsg.NextSmesg(it.get(), sPrefix, chKey, smsgStored))
             {
                 uint32_t nPayload = smsgStored.vchMessage.size() - SMSG_HDR_LEN;
                 if (SecureMsgDecrypt(false, smsgStored.sAddrTo, &smsgStored.vchMessage[0], &smsgStored.vchMessage[SMSG_HDR_LEN], nPayload, msg) == 0)
@@ -102,11 +103,9 @@ public:
                 }
             };
 
-            delete it;
-
             sPrefix = "sm";
-            it = dbSmsg.pdb->NewIterator(leveldb::ReadOptions());
-            while (dbSmsg.NextSmesg(it, sPrefix, chKey, smsgStored))
+            it.reset(dbSmsg.pdb->NewIterator(leveldb::ReadOptions()));
+            while (dbSmsg.NextSmesg(it.get(), sPrefix, chKey, smsgStored))
             {
                 uint32_t nPayload = smsgStored.vchMessage.size() - SMSG_HDR_LEN;
                 if (SecureMsgDecrypt(false, smsgStored.sAddrOutbox, &smsgStored.vchMessage[0], &smsgStored.vchMessage[SMSG_HDR_LEN], nPayload, msg) == 0)
@@ -129,8 +128,6 @@ public:
                                     true);
                 }
             };
-
-            delete it;
         }
     }
 

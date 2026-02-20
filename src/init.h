@@ -6,15 +6,14 @@
 #define BITCOIN_INIT_H
 
 #include "wallet.h"
-namespace boost {
-    class thread_group;
-} // namespace boost
+
+class ThreadGroup;
 
 extern CWallet* pwalletMain;
 extern CWallet* pstakeDB;
 void StartShutdown();
 void Shutdown(void* parg);
-bool AppInit2(boost::thread_group& threadGroup);
+bool AppInit2(ThreadGroup& threadGroup);
 std::string HelpMessage();
 
 #endif

@@ -14,6 +14,7 @@
 #include "kernel.h"
 #include "smessage.h"
 #include "time.h"
+#include <cmath>
 #include <filesystem>
 #include "string_utils.h"
 

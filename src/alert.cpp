@@ -259,9 +259,10 @@ bool CAlert::ProcessAlert(bool fThread)
                 safeStatus = singleQuote+safeStatus+singleQuote;
                 strutil::replace_all(strCmd, "%s", safeStatus);
 
-                if (fThread)
-                    boost::thread t(runCommand, strCmd); // thread runs free
-                else
+                if (fThread) {
+                    std::thread t(runCommand, strCmd);
+                    t.detach(); // thread runs free
+                } else
                     runCommand(strCmd);
             }
         }

@@ -4,6 +4,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "db.h"
+#include "db_cursor_guard.h"
 #include "net.h"
 #include "util.h"
 #include "main.h"
@@ -391,21 +392,19 @@ bool CDB::Rewrite(const string& strFile, const char* pszSkip)
                         fSuccess = false;
                     }
 
-                    Dbc* pcursor = db.GetCursor();
-                    if (pcursor)
+                    BdbCursorGuard cursor(db.GetCursor());
+                    if (cursor)
                         while (fSuccess)
                         {
                             CDataStream ssKey(SER_DISK, CLIENT_VERSION);
                             CDataStream ssValue(SER_DISK, CLIENT_VERSION);
-                            int ret = db.ReadAtCursor(pcursor, ssKey, ssValue, DB_NEXT);
+                            int ret = db.ReadAtCursor(cursor.get(), ssKey, ssValue, DB_NEXT);
                             if (ret == DB_NOTFOUND)
                             {
-                                pcursor->close();
                                 break;
                             }
                             else if (ret != 0)
                             {
-                                pcursor->close();
                                 fSuccess = false;
                                 break;
                             }

@@ -247,10 +247,14 @@ bool SetNTPOffset(const string &strPool)
         // By default we use pool.ntp.org - which generally selects pools that are appropriate for your ip.
         // https://www.ntppool.org/en/use.html
         // https://www.pool.ntp.org/zone/@
-        boost::thread nGet1(threadGetNTPTime, 0, strPool, nowMicros);
-        boost::thread nGet2(threadGetNTPTime, 1, strPool, nowMicros);
-        boost::thread nGet3(threadGetNTPTime, 2, strPool, nowMicros);
-        boost::thread nGet4(threadGetNTPTime, 3, strPool, nowMicros);
+        std::thread nGet1(threadGetNTPTime, 0, strPool, nowMicros);
+        std::thread nGet2(threadGetNTPTime, 1, strPool, nowMicros);
+        std::thread nGet3(threadGetNTPTime, 2, strPool, nowMicros);
+        std::thread nGet4(threadGetNTPTime, 3, strPool, nowMicros);
+        nGet1.detach();
+        nGet2.detach();
+        nGet3.detach();
+        nGet4.detach();
 
         // Ideally we want times from NTP servers that can respond to us in < 500ms.
         // We'll wait longer if we don't get what we need.

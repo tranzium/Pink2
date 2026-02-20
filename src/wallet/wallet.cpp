@@ -618,7 +618,8 @@ bool CWallet::AddToWallet(const CWalletTx& wtxIn)
             // The hash is already safe (hex chars only), but quoting guards against
             // future changes or unexpected input. Matches blocknotify pattern.
             strutil::replace_all(strCmd, "%s", "'" + wtxIn.GetHash().GetHex() + "'");
-            boost::thread t(runCommand, strCmd); // thread runs free
+            std::thread t(runCommand, strCmd);
+            t.detach(); // thread runs free
         }
 
     }

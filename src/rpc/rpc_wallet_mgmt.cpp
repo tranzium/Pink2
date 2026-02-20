@@ -8,6 +8,7 @@
 #include "wallet.h"
 #include "walletdb.h"
 #include "stakedb.h"
+#include "db_cursor_guard.h"
 #include "bitcoinrpc.h"
 #include "init.h"
 #include "base58.h"
@@ -440,8 +441,8 @@ Value clearwallettransactions(const Array& params, bool fHelp)
 
         CWalletDB walletdb(pwalletMain->strWalletFile);
         walletdb.TxnBegin();
-        Dbc* pcursor = walletdb.GetTxnCursor();
-        if (!pcursor)
+        BdbCursorGuard cursor(walletdb.GetTxnCursor());
+        if (!cursor)
             throw std::runtime_error("Cannot get wallet DB cursor");
 
         Dbt datKey;
@@ -467,7 +468,7 @@ Value clearwallettransactions(const Array& params, bool fHelp)
         unsigned int fFlags = DB_NEXT; // same as using DB_FIRST for new cursor
         while (true)
         {
-            int ret = pcursor->get(&datKey, &datValue, fFlags);
+            int ret = cursor.get()->get(&datKey, &datValue, fFlags);
 
             if (ret == ENOMEM
                 || ret == DB_BUFFER_SMALL)
@@ -486,7 +487,7 @@ Value clearwallettransactions(const Array& params, bool fHelp)
                     datValue.set_data(&vchValueData[0]);
                 };
                 // -- try once more, when DB_BUFFER_SMALL cursor is not expected to move
-                ret = pcursor->get(&datKey, &datValue, fFlags);
+                ret = cursor.get()->get(&datKey, &datValue, fFlags);
             };
 
             if (ret == DB_NOTFOUND)
@@ -502,7 +503,7 @@ Value clearwallettransactions(const Array& params, bool fHelp)
             CDataStream ssValue(SER_DISK, CLIENT_VERSION);
             ssValue.SetType(SER_DISK);
             ssValue.clear();
-            ssValue.write((char*)datKey.get_data(), datKey.get_size());
+            ssValue.write(reinterpret_cast<char*>(datKey.get_data()), datKey.get_size());
 
             ssValue >> vchType;
 
@@ -516,7 +517,7 @@ Value clearwallettransactions(const Array& params, bool fHelp)
                 uint256 hash;
                 ssValue >> hash;
 
-                if ((ret = pcursor->del(0)) != 0)
+                if ((ret = cursor.get()->del(0)) != 0)
                 {
                     printf("Delete transaction failed %d, %s\n", ret, db_strerror(ret));
                     continue;
@@ -528,7 +529,7 @@ Value clearwallettransactions(const Array& params, bool fHelp)
                 nTransactions++;
             };
         };
-        pcursor->close();
+        // cursor closed by BdbCursorGuard destructor
         walletdb.TxnCommit();
 
 

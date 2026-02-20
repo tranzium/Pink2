@@ -118,10 +118,11 @@ void Shutdown(void* parg)
 //
 // Signal handlers are very limited in what they are allowed to do, so:
 //
-void DetectShutdownThread(boost::thread_group* threadGroup)
+void DetectShutdownThread(ThreadGroup* threadGroup)
 {
     while (fRequestShutdown == false)
         MilliSleep(200);
+    fShutdown = true;
     threadGroup->interrupt_all();
 }
 
@@ -146,7 +147,7 @@ void HandleSIGHUP(int)
 #if !defined(QT_GUI)
 bool AppInit(int argc, char* argv[])
 {
-    boost::thread_group threadGroup;
+    ThreadGroup threadGroup;
     bool fRet = false;
     try
     {
@@ -370,7 +371,7 @@ bool InitSanityCheck(void)
 /** Initialize bitcoin.
  *  @pre Parameters should be parsed and config file should be read.
  */
-bool AppInit2(boost::thread_group& threadGroup)
+bool AppInit2(ThreadGroup& threadGroup)
 {
     // ********************************************************* Step 1: setup
 #ifdef _MSC_VER

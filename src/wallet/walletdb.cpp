@@ -5,6 +5,7 @@
 
 #include "walletdb.h"
 #include "wallet.h"
+#include "db_cursor_guard.h"
 #include <filesystem>
 #include <tuple>
 
@@ -69,8 +70,8 @@ void CWalletDB::ListAccountCreditDebit(const string& strAccount, list<CAccountin
 {
     bool fAllAccounts = (strAccount == "*");
 
-    Dbc* pcursor = GetCursor();
-    if (!pcursor)
+    BdbCursorGuard cursor(GetCursor());
+    if (!cursor)
         throw runtime_error("CWalletDB::ListAccountCreditDebit() : cannot create DB cursor");
     unsigned int fFlags = DB_SET_RANGE;
     while (true)
@@ -80,13 +81,12 @@ void CWalletDB::ListAccountCreditDebit(const string& strAccount, list<CAccountin
         if (fFlags == DB_SET_RANGE)
             ssKey << std::make_tuple(string("acentry"), (fAllAccounts? string("") : strAccount), uint64_t(0));
         CDataStream ssValue(SER_DISK, CLIENT_VERSION);
-        int ret = ReadAtCursor(pcursor, ssKey, ssValue, fFlags);
+        int ret = ReadAtCursor(cursor.get(), ssKey, ssValue, fFlags);
         fFlags = DB_NEXT;
         if (ret == DB_NOTFOUND)
             break;
         else if (ret != 0)
         {
-            pcursor->close();
             throw runtime_error("CWalletDB::ListAccountCreditDebit() : error scanning DB");
         }
 
@@ -104,8 +104,6 @@ void CWalletDB::ListAccountCreditDebit(const string& strAccount, list<CAccountin
         ssKey >> acentry.nEntryNo;
         entries.push_back(acentry);
     }
-
-    pcursor->close();
 }
 
 
@@ -477,8 +475,8 @@ DBErrors CWalletDB::LoadWallet(CWallet* pwallet)
         }
 
         // Get cursor
-        Dbc* pcursor = GetCursor();
-        if (!pcursor)
+        BdbCursorGuard cursor(GetCursor());
+        if (!cursor)
         {
             printf("Error getting wallet database cursor\n");
             return DB_CORRUPT;
@@ -489,7 +487,7 @@ DBErrors CWalletDB::LoadWallet(CWallet* pwallet)
             // Read next record
             CDataStream ssKey(SER_DISK, CLIENT_VERSION);
             CDataStream ssValue(SER_DISK, CLIENT_VERSION);
-            int ret = ReadAtCursor(pcursor, ssKey, ssValue);
+            int ret = ReadAtCursor(cursor.get(), ssKey, ssValue);
             if (ret == DB_NOTFOUND)
                 break;
             else if (ret != 0)
@@ -518,7 +516,6 @@ DBErrors CWalletDB::LoadWallet(CWallet* pwallet)
             if (!strErr.empty())
                 printf("%s\n", strErr.c_str());
         }
-        pcursor->close();
     }
     catch (...)
     {
