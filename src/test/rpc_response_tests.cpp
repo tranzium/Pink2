@@ -423,23 +423,35 @@ BOOST_AUTO_TEST_CASE(getaddressesbyaccount_response_contract)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(listreceivedbyaddress_response_contract)
 {
-    // Include empty addresses to ensure we get results
+    // Add a wallet-visible tx with output to a wallet-owned address
+    Array pAddr;
+    string testAddr = getnewaddress(pAddr, false).get_str();
+    CBitcoinAddress destAddr(testAddr);
+    CScript destScript;
+    destScript.SetDestination(destAddr.Get());
+
+    CTransaction tx;
+    tx.vin.push_back(CTxIn(coinbaseTxns[1].GetHash(), 0));
+    tx.vout.push_back(CTxOut(10 * COIN, destScript));
+
+    CWalletTx wtx(pwalletMain, tx);
+    wtx.hashBlock = blockIndexAt(nBaseHeight + 1)->GetBlockHash();
+    wtx.nIndex = 0;
+    wtx.fMerkleVerified = true;  // bypass Merkle branch check
+    pwalletMain->AddToWallet(wtx);
+
     Array p;
-    p.push_back(0);     // minconf = 0
-    p.push_back(true);  // includeempty = true
+    p.push_back(1);      // minconf = 1
+    p.push_back(false);  // includeempty = false
     Value result = listreceivedbyaddress(p, false);
     BOOST_CHECK(result.type() == array_type);
     const Array& arr = result.get_array();
-    // With includeempty=true, we should get at least one entry
-    // (from getnewaddress calls above, or address book entries)
-    if (!arr.empty())
-    {
-        Object elem = arr[0].get_obj();
-        BOOST_CHECK(find_value(elem, "address").type() == str_type);
-        BOOST_CHECK(find_value(elem, "account").type() == str_type);
-        BOOST_CHECK(find_value(elem, "amount").type() == real_type);
-        BOOST_CHECK(find_value(elem, "confirmations").type() == int_type);
-    }
+    BOOST_REQUIRE(!arr.empty());
+    Object elem = arr[0].get_obj();
+    BOOST_CHECK(find_value(elem, "address").type() == str_type);
+    BOOST_CHECK(find_value(elem, "account").type() == str_type);
+    BOOST_CHECK(find_value(elem, "amount").type() == real_type);
+    BOOST_CHECK(find_value(elem, "confirmations").type() == int_type);
 }
 
 // ---------------------------------------------------------------------------
@@ -448,10 +460,28 @@ BOOST_AUTO_TEST_CASE(listreceivedbyaddress_response_contract)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(listtransactions_response_contract)
 {
+    // Add a wallet-visible tx so listtransactions has entries to return
+    Array pAddr;
+    string testAddr = getnewaddress(pAddr, false).get_str();
+    CBitcoinAddress destAddr(testAddr);
+    CScript destScript;
+    destScript.SetDestination(destAddr.Get());
+
+    CTransaction tx;
+    tx.vin.push_back(CTxIn(coinbaseTxns[2].GetHash(), 0));
+    tx.vout.push_back(CTxOut(10 * COIN, destScript));
+
+    CWalletTx wtx(pwalletMain, tx);
+    wtx.hashBlock = blockIndexAt(nBaseHeight + 1)->GetBlockHash();
+    wtx.nIndex = 0;
+    wtx.fMerkleVerified = true;
+    pwalletMain->AddToWallet(wtx);
+
     Array p;
     Value result = listtransactions(p, false);
     BOOST_CHECK(result.type() == array_type);
     const Array& arr = result.get_array();
+    BOOST_REQUIRE(!arr.empty());
     // Every entry (whether tx or accounting "move") has these fields:
     for (const Value& v : arr)
     {
@@ -485,33 +515,104 @@ BOOST_AUTO_TEST_CASE(listtransactions_response_contract)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(listunspent_response_contract)
 {
+    // Add a wallet-visible tx with unspent output to a wallet-owned address
+    Array pAddr;
+    string testAddr = getnewaddress(pAddr, false).get_str();
+    CBitcoinAddress destAddr(testAddr);
+    CScript destScript;
+    destScript.SetDestination(destAddr.Get());
+
+    CTransaction tx;
+    tx.vin.push_back(CTxIn(coinbaseTxns[3].GetHash(), 0));
+    tx.vout.push_back(CTxOut(10 * COIN, destScript));
+
+    CWalletTx wtx(pwalletMain, tx);
+    wtx.hashBlock = blockIndexAt(nBaseHeight + 1)->GetBlockHash();
+    wtx.nIndex = 0;
+    wtx.fMerkleVerified = true;
+    pwalletMain->AddToWallet(wtx);
+
     Array p;
     Value result = listunspent(p, false);
     BOOST_CHECK(result.type() == array_type);
     const Array& arr = result.get_array();
-    // TestChain coinbase outputs have empty scriptPubKey so AvailableCoins
-    // may or may not include them. Check structure if elements exist.
-    if (!arr.empty())
-    {
-        Object elem = arr[0].get_obj();
-        BOOST_CHECK(find_value(elem, "txid").type() == str_type);
-        BOOST_CHECK(find_value(elem, "vout").type() == int_type);
-        BOOST_CHECK(find_value(elem, "scriptPubKey").type() == str_type);
-        BOOST_CHECK(find_value(elem, "amount").type() == real_type);
-        BOOST_CHECK(find_value(elem, "confirmations").type() == int_type);
-    }
+    BOOST_REQUIRE(!arr.empty());
+    Object elem = arr[0].get_obj();
+    BOOST_CHECK(find_value(elem, "txid").type() == str_type);
+    BOOST_CHECK(find_value(elem, "vout").type() == int_type);
+    BOOST_CHECK(find_value(elem, "scriptPubKey").type() == str_type);
+    BOOST_CHECK(find_value(elem, "amount").type() == real_type);
+    BOOST_CHECK(find_value(elem, "confirmations").type() == int_type);
+}
+
+// ---------------------------------------------------------------------------
+// getreceivedbyaccount — deprecated accounting API, throws by default
+// Pins deprecation behavior: -enableaccounts not set → runtime_error
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(getreceivedbyaccount_response_contract)
+{
+    Array p;
+    p.push_back(string(""));
+    BOOST_CHECK_THROW(getreceivedbyaccount(p, false), std::runtime_error);
+}
+
+// ---------------------------------------------------------------------------
+// listreceivedbyaccount — deprecated accounting API, throws by default
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(listreceivedbyaccount_response_contract)
+{
+    Array p;
+    p.push_back(0);
+    p.push_back(true);
+    BOOST_CHECK_THROW(listreceivedbyaccount(p, false), std::runtime_error);
 }
 
 // ---------------------------------------------------------------------------
 // listaddressgroupings — returns array_type (of array_type groupings)
+// Inner structure: [[address_str, balance_num, ?account_str], ...]
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(listaddressgroupings_response_contract)
 {
+    // Add a wallet-visible tx so address groupings are non-empty
+    Array pAddr;
+    string testAddr = getnewaddress(pAddr, false).get_str();
+    CBitcoinAddress destAddr(testAddr);
+    CScript destScript;
+    destScript.SetDestination(destAddr.Get());
+
+    CTransaction tx;
+    tx.vin.push_back(CTxIn(coinbaseTxns[4].GetHash(), 0));
+    tx.vout.push_back(CTxOut(10 * COIN, destScript));
+
+    CWalletTx wtx(pwalletMain, tx);
+    wtx.hashBlock = blockIndexAt(nBaseHeight + 1)->GetBlockHash();
+    wtx.nIndex = 0;
+    wtx.fMerkleVerified = true;
+    pwalletMain->AddToWallet(wtx);
+
     Array p;
     Value result = listaddressgroupings(p, false);
     BOOST_CHECK(result.type() == array_type);
-    // Each grouping is an array of arrays [address, balance, ?account]
-    // May be empty in test environment.
+    const Array& groupings = result.get_array();
+    BOOST_REQUIRE(!groupings.empty());
+    // Validate inner structure
+    for (const Value& grouping : groupings)
+    {
+        BOOST_CHECK(grouping.type() == array_type);
+        const Array& addrs = grouping.get_array();
+        for (const Value& addrEntry : addrs)
+        {
+            BOOST_CHECK(addrEntry.type() == array_type);
+            const Array& info = addrEntry.get_array();
+            // Must have at least 2 elements: [address, balance]
+            BOOST_CHECK(info.size() >= 2);
+            BOOST_CHECK(info[0].type() == str_type);   // address
+            BOOST_CHECK(info[1].type() == real_type);   // balance
+            // Optional 3rd element is account name
+            if (info.size() >= 3)
+                BOOST_CHECK(info[2].type() == str_type);
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -605,20 +706,23 @@ BOOST_AUTO_TEST_CASE(validatepubkey_response_contract)
 }
 
 // ---------------------------------------------------------------------------
-// gettransaction — needs a wallet txid; uses coinbase from mined blocks
+// gettransaction — uses confirmed coinbase from mined blocks
 // Returns obj_type with TxToJSON fields + "amount", "details", WalletTxToJSON
+// Coinbase txs also have "generated"(bool), "blockhash", "blockindex", "blocktime"
+// Note: TestChain uses anyone-can-spend coinbases (empty scriptPubKey), so
+// mapWallet is empty by default. We manually add a CWalletTx from a known
+// coinbase to the wallet before querying.
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(gettransaction_response_contract)
 {
-    // Use a coinbase tx that exists in the wallet
-    // TestChain mines 50 blocks — coinbase txns should be in mapWallet
-    // (the coinbase scriptPubKey is empty, but the tx is tracked by the wallet
-    //  if it was mined by pwalletMain via CreateNewBlock)
-    // Find any wallet tx to query
-    BOOST_REQUIRE(!pwalletMain->mapWallet.empty());
+    // Add a confirmed coinbase tx to the wallet so gettransaction can find it
+    BOOST_REQUIRE(!coinbaseTxns.empty());
+    CWalletTx wtx(pwalletMain, coinbaseTxns[0]);
+    wtx.hashBlock = blockIndexAt(nBaseHeight + 1)->GetBlockHash();
+    wtx.nIndex = 0;  // coinbase is always tx index 0 in block
+    pwalletMain->AddToWallet(wtx);
 
-    // Get the first wallet tx hash
-    uint256 txid = pwalletMain->mapWallet.begin()->first;
+    uint256 txid = coinbaseTxns[0].GetHash();
 
     Array p;
     p.push_back(txid.GetHex());
@@ -628,17 +732,27 @@ BOOST_AUTO_TEST_CASE(gettransaction_response_contract)
 
     // TxToJSON fields
     BOOST_CHECK(find_value(obj, "txid").type() == str_type);
+    BOOST_CHECK_EQUAL(find_value(obj, "txid").get_str(), txid.GetHex());
     BOOST_CHECK(find_value(obj, "version").type() == int_type);
     BOOST_CHECK(find_value(obj, "time").type() == int_type);
     BOOST_CHECK(find_value(obj, "locktime").type() == int_type);
     BOOST_CHECK(find_value(obj, "vin").type() == array_type);
     BOOST_CHECK(find_value(obj, "vout").type() == array_type);
 
-    // WalletTxToJSON adds confirmations, txid (overwritten), time, timereceived
+    // WalletTxToJSON fields — confirmed coinbase has all of these
     BOOST_CHECK(find_value(obj, "confirmations").type() == int_type);
+    BOOST_CHECK(find_value(obj, "confirmations").get_int() > 0);
+    BOOST_CHECK(find_value(obj, "blockhash").type() == str_type);
+    BOOST_CHECK_EQUAL(find_value(obj, "blockhash").get_str().size(), 64u);
+    BOOST_CHECK(find_value(obj, "blockindex").type() == int_type);
+    BOOST_CHECK(find_value(obj, "blocktime").type() == int_type);
     BOOST_CHECK(find_value(obj, "timereceived").type() == int_type);
 
-    // amount field from the wallet branch
+    // Coinbase-specific: "generated" field
+    BOOST_CHECK(find_value(obj, "generated").type() == bool_type);
+    BOOST_CHECK_EQUAL(find_value(obj, "generated").get_bool(), true);
+
+    // amount field
     BOOST_CHECK(find_value(obj, "amount").type() == real_type);
 
     // details array
