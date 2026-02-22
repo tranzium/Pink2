@@ -1734,3 +1734,214 @@ BOOST_AUTO_TEST_CASE(smsgoptions_help_works)
 }
 
 BOOST_AUTO_TEST_SUITE_END()
+
+// ============================================================================
+// Suite: rpc_response_errors — RPC error envelope & code contracts
+// ============================================================================
+
+BOOST_FIXTURE_TEST_SUITE(rpc_response_errors, TestChain)
+
+// ---------------------------------------------------------------------------
+// JSONRPCError envelope: {code: int, message: str}
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(error_envelope_structure)
+{
+    Object err = JSONRPCError(RPC_MISC_ERROR, "test error");
+    BOOST_CHECK(find_value(err, "code").type() == int_type);
+    BOOST_CHECK(find_value(err, "message").type() == str_type);
+    BOOST_CHECK_EQUAL(find_value(err, "code").get_int(), -1);
+    BOOST_CHECK_EQUAL(find_value(err, "message").get_str(), "test error");
+}
+
+// ---------------------------------------------------------------------------
+// Pin RPCErrorCode enum values (consensus for RPC clients)
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(rpc_error_code_values_pinned)
+{
+    BOOST_CHECK_EQUAL(RPC_INVALID_REQUEST,  -32600);
+    BOOST_CHECK_EQUAL(RPC_METHOD_NOT_FOUND, -32601);
+    BOOST_CHECK_EQUAL(RPC_INVALID_PARAMS,   -32602);
+    BOOST_CHECK_EQUAL(RPC_PARSE_ERROR,      -32700);
+
+    BOOST_CHECK_EQUAL(RPC_MISC_ERROR,                  -1);
+    BOOST_CHECK_EQUAL(RPC_INVALID_ADDRESS_OR_KEY,      -5);
+    BOOST_CHECK_EQUAL(RPC_INVALID_PARAMETER,           -8);
+
+    BOOST_CHECK_EQUAL(RPC_WALLET_ERROR,                -4);
+    BOOST_CHECK_EQUAL(RPC_WALLET_INSUFFICIENT_FUNDS,   -6);
+    BOOST_CHECK_EQUAL(RPC_WALLET_INVALID_ACCOUNT_NAME, -11);
+    BOOST_CHECK_EQUAL(RPC_WALLET_KEYPOOL_RAN_OUT,      -12);
+    BOOST_CHECK_EQUAL(RPC_WALLET_UNLOCK_NEEDED,        -13);
+    BOOST_CHECK_EQUAL(RPC_WALLET_PASSPHRASE_INCORRECT, -14);
+    BOOST_CHECK_EQUAL(RPC_WALLET_WRONG_ENC_STATE,      -15);
+    BOOST_CHECK_EQUAL(RPC_WALLET_ENCRYPTION_FAILED,    -16);
+    BOOST_CHECK_EQUAL(RPC_WALLET_ALREADY_UNLOCKED,     -17);
+}
+
+// ---------------------------------------------------------------------------
+// Invalid address throws Object with RPC_INVALID_ADDRESS_OR_KEY
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(validateaddress_invalid_does_not_throw)
+{
+    // validateaddress doesn't throw on invalid — it returns isvalid=false
+    Array p;
+    p.push_back(string("notanaddress"));
+    Value result = validateaddress(p, false);
+    Object obj = result.get_obj();
+    BOOST_CHECK_EQUAL(find_value(obj, "isvalid").get_bool(), false);
+}
+
+// ---------------------------------------------------------------------------
+// createrawtransaction — invalid address throws Object (RPC_INVALID_ADDRESS_OR_KEY)
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(createrawtx_invalid_address_throws)
+{
+    Array inputs;
+    Object sendTo;
+    sendTo.push_back(Pair("notavalidaddress", 0.01));
+
+    Array p;
+    p.push_back(inputs);
+    p.push_back(sendTo);
+
+    BOOST_CHECK_THROW(createrawtransaction(p, false), Object);
+}
+
+// ---------------------------------------------------------------------------
+// createrawtransaction — invalid address error code is RPC_INVALID_ADDRESS_OR_KEY
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(createrawtx_invalid_address_error_code)
+{
+    Array inputs;
+    Object sendTo;
+    sendTo.push_back(Pair("notavalidaddress", 0.01));
+
+    Array p;
+    p.push_back(inputs);
+    p.push_back(sendTo);
+
+    try {
+        createrawtransaction(p, false);
+        BOOST_FAIL("Should have thrown");
+    } catch (Object& err) {
+        BOOST_CHECK_EQUAL(find_value(err, "code").get_int(), RPC_INVALID_ADDRESS_OR_KEY);
+        BOOST_CHECK(find_value(err, "message").get_str().find("Invalid") != string::npos);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// decoderawtransaction — invalid hex throws Object (RPC_DESERIALIZATION_ERROR)
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(decoderawtx_invalid_hex_throws)
+{
+    Array p;
+    p.push_back(string("zzzz"));
+    // Non-hex string causes ParseHex to return empty, then deserialization fails
+    BOOST_CHECK_THROW(decoderawtransaction(p, false), Object);
+}
+
+// ---------------------------------------------------------------------------
+// createrawtransaction — wrong param types throws Object (RPC_TYPE_ERROR)
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(createrawtx_wrong_param_type_throws)
+{
+    Array p;
+    p.push_back(string("notanarray"));
+    p.push_back(string("notanobject"));
+
+    BOOST_CHECK_THROW(createrawtransaction(p, false), Object);
+}
+
+// ---------------------------------------------------------------------------
+// sendtoaddress — missing params throws runtime_error (help text)
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(sendtoaddress_missing_params_throws)
+{
+    Array p;
+    BOOST_CHECK_THROW(sendtoaddress(p, false), runtime_error);
+}
+
+// ---------------------------------------------------------------------------
+// sendfrom — missing params throws runtime_error
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(sendfrom_missing_params_throws)
+{
+    Array p;
+    BOOST_CHECK_THROW(sendfrom(p, false), runtime_error);
+}
+
+// ---------------------------------------------------------------------------
+// signmessage — missing params throws runtime_error
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(signmessage_missing_params_throws)
+{
+    Array p;
+    BOOST_CHECK_THROW(signmessage(p, false), runtime_error);
+}
+
+// ---------------------------------------------------------------------------
+// verifymessage — missing params throws runtime_error
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(verifymessage_missing_params_throws)
+{
+    Array p;
+    BOOST_CHECK_THROW(verifymessage(p, false), runtime_error);
+}
+
+// ---------------------------------------------------------------------------
+// dumpprivkey — missing params throws runtime_error
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(dumpprivkey_missing_params_throws)
+{
+    Array p;
+    BOOST_CHECK_THROW(dumpprivkey(p, false), runtime_error);
+}
+
+// ---------------------------------------------------------------------------
+// importprivkey — missing params throws runtime_error
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(importprivkey_missing_params_throws)
+{
+    Array p;
+    BOOST_CHECK_THROW(importprivkey(p, false), runtime_error);
+}
+
+// ---------------------------------------------------------------------------
+// getblock — invalid hash throws Object
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(getblock_invalid_hash_throws)
+{
+    Array p;
+    p.push_back(string("0000000000000000000000000000000000000000000000000000000000000000"));
+    BOOST_CHECK_THROW(getblock(p, false), Object);
+}
+
+// ---------------------------------------------------------------------------
+// getblockhash — out of range height throws Object
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(getblockhash_out_of_range_throws)
+{
+    Array p;
+    p.push_back(999999999);
+    BOOST_CHECK_THROW(getblockhash(p, false), runtime_error);
+}
+
+// ---------------------------------------------------------------------------
+// decodescript — help throws runtime_error
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(decodescript_help_works)
+{
+    Array p;
+    BOOST_CHECK_THROW(decodescript(p, true), runtime_error);
+}
+
+// ---------------------------------------------------------------------------
+// listunspent — help throws runtime_error
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(listunspent_help_works)
+{
+    Array p;
+    BOOST_CHECK_THROW(listunspent(p, true), runtime_error);
+}
+
+BOOST_AUTO_TEST_SUITE_END()
