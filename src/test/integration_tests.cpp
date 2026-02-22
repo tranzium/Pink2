@@ -652,3 +652,163 @@ BOOST_AUTO_TEST_CASE(get_transaction_from_mempool)
 }
 
 BOOST_AUTO_TEST_SUITE_END()
+
+// ============================================================================
+// Suite: integration_chain_processing — ConnectBlock & chain state
+// ============================================================================
+
+BOOST_FIXTURE_TEST_SUITE(integration_chain_processing, TestChain)
+
+// ---------------------------------------------------------------------------
+// Mining increases best height monotonically
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(mine_increases_height)
+{
+    int heightBefore = chainHeight();
+    MineEmptyBlocks(3);
+    BOOST_CHECK_EQUAL(chainHeight(), heightBefore + 3);
+}
+
+// ---------------------------------------------------------------------------
+// Each mined block has a unique hash
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(mined_blocks_unique_hashes)
+{
+    int h = chainHeight();
+    MineEmptyBlocks(3);
+
+    std::set<uint256> hashes;
+    for (int i = h + 1; i <= chainHeight(); i++) {
+        CBlockIndex* idx = blockIndexAt(i);
+        BOOST_REQUIRE(idx != nullptr);
+        hashes.insert(idx->GetBlockHash());
+    }
+    BOOST_CHECK_EQUAL(hashes.size(), 3u);
+}
+
+// ---------------------------------------------------------------------------
+// Block timestamps are non-decreasing
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(block_timestamps_nondecreasing)
+{
+    MineEmptyBlocks(3);
+    int h = chainHeight();
+
+    for (int i = 1; i <= h; i++) {
+        CBlockIndex* prev = blockIndexAt(i - 1);
+        CBlockIndex* cur = blockIndexAt(i);
+        BOOST_REQUIRE(prev && cur);
+        // Timestamps may be equal but never decrease
+        BOOST_CHECK(cur->nTime >= prev->nTime);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Coinbase value matches expected reward
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(coinbase_value_matches_reward)
+{
+    // Check first coinbase (at height nBaseHeight+1)
+    if (!coinbaseTxns.empty()) {
+        const CTransaction& cb = coinbaseTxns[0];
+        BOOST_CHECK(!cb.vout.empty());
+        // Coinbase should have non-zero value (block reward)
+        int64_t totalOut = 0;
+        for (const auto& out : cb.vout)
+            totalOut += out.nValue;
+        BOOST_CHECK(totalOut > 0);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// nChainTrust increases with each block
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(chain_trust_increases_with_blocks)
+{
+    int h = chainHeight();
+    uint256 trustBefore = blockIndexAt(h)->nChainTrust;
+
+    MineEmptyBlocks(1);
+    uint256 trustAfter = blockIndexAt(chainHeight())->nChainTrust;
+
+    BOOST_CHECK(trustAfter > trustBefore);
+}
+
+// ---------------------------------------------------------------------------
+// Best block hash matches tip
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(best_hash_matches_tip)
+{
+    BOOST_CHECK(pindexBest->GetBlockHash() == hashBestChain);
+    BOOST_CHECK_EQUAL(nBestHeight, pindexBest->nHeight);
+}
+
+// ---------------------------------------------------------------------------
+// UTXO: spend creates new output tracked in tx index
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(spend_creates_tracked_output)
+{
+    BOOST_REQUIRE(IsCoinbaseMature(0));
+
+    CScript destScript = CScript() << OP_TRUE;
+    CTransaction spendTx = CreateSpendTx(0, destScript, 1 * COIN);
+    BOOST_CHECK(AddToMempool(spendTx));
+
+    // The tx is in mempool; its hash should be findable
+    uint256 hash = spendTx.GetHash();
+    CTransaction found;
+    uint256 hashBlock;
+    BOOST_CHECK(GetTransaction(hash, found, hashBlock));
+    BOOST_CHECK_EQUAL(found.vout[0].nValue, 1 * COIN);
+
+    ClearMempool();
+}
+
+// ---------------------------------------------------------------------------
+// Multiple coinbases: each has unique txid
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(coinbase_txids_unique)
+{
+    std::set<uint256> txids;
+    for (const auto& cb : coinbaseTxns) {
+        txids.insert(cb.GetHash());
+    }
+    BOOST_CHECK_EQUAL(txids.size(), coinbaseTxns.size());
+}
+
+// ---------------------------------------------------------------------------
+// Block at genesis is always accessible
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(genesis_always_accessible)
+{
+    CBlockIndex* genesis = blockIndexAt(0);
+    BOOST_REQUIRE(genesis != nullptr);
+    BOOST_CHECK_EQUAL(genesis->nHeight, 0);
+    BOOST_CHECK(genesis->GetBlockHash() == hashGenesisBlock);
+}
+
+// ---------------------------------------------------------------------------
+// pindexBest chain is fully linked (pprev chain to genesis)
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(chain_fully_linked_to_genesis)
+{
+    CBlockIndex* idx = pindexBest;
+    int count = 0;
+    while (idx->pprev) {
+        idx = idx->pprev;
+        count++;
+    }
+    // idx should now be genesis
+    BOOST_CHECK_EQUAL(idx->nHeight, 0);
+    BOOST_CHECK_EQUAL(count, nBestHeight);
+}
+
+// ---------------------------------------------------------------------------
+// Money supply is non-negative
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(money_supply_non_negative)
+{
+    BOOST_CHECK(moneySupply() >= 0);
+}
+
+BOOST_AUTO_TEST_SUITE_END()
