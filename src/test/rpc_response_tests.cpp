@@ -19,7 +19,8 @@
 #include "test_framework.h"
 
 using namespace json_spirit;
-using namespace std;
+using std::runtime_error;
+using std::string;
 
 extern CWallet* pwalletMain;
 extern Value help(const Array& params, bool fHelp);
@@ -1423,79 +1424,8 @@ BOOST_AUTO_TEST_CASE(getsubsidy_with_height_param)
     BOOST_CHECK(result.get_int64() >= 0);
 }
 
-// ---------------------------------------------------------------------------
-// getstakinginfo — returns obj_type with required fields
-// ---------------------------------------------------------------------------
-BOOST_AUTO_TEST_CASE(getstakinginfo_response_contract)
-{
-    Array p;
-    Value result = getstakinginfo(p, false);
-    BOOST_CHECK(result.type() == obj_type);
-    Object obj = result.get_obj();
-
-    // Boolean fields
-    BOOST_CHECK(find_value(obj, "enabled").type() == bool_type);
-    BOOST_CHECK(find_value(obj, "staking").type() == bool_type);
-
-    // String fields
-    BOOST_CHECK(find_value(obj, "errors").type() == str_type);
-
-    // Integer fields
-    BOOST_CHECK(find_value(obj, "currentblocksize").type() == int_type);
-    BOOST_CHECK(find_value(obj, "currentblocktx").type() == int_type);
-    BOOST_CHECK(find_value(obj, "pooledtx").type() == int_type);
-    BOOST_CHECK(find_value(obj, "search-interval").type() == int_type);
-    BOOST_CHECK(find_value(obj, "weight").type() == int_type);
-    BOOST_CHECK(find_value(obj, "netstakeweight").type() == int_type);
-    BOOST_CHECK(find_value(obj, "expectedtime").type() == int_type);
-
-    // Real fields
-    BOOST_CHECK(find_value(obj, "difficulty").type() == real_type);
-    BOOST_CHECK(find_value(obj, "difficulty (flash)").type() == real_type);
-}
-
-// ---------------------------------------------------------------------------
-// getmininginfo — returns obj_type with nested objects
-// ---------------------------------------------------------------------------
-BOOST_AUTO_TEST_CASE(getmininginfo_response_contract)
-{
-    Array p;
-    Value result = getmininginfo(p, false);
-    BOOST_CHECK(result.type() == obj_type);
-    Object obj = result.get_obj();
-
-    // Top-level fields
-    BOOST_CHECK(find_value(obj, "blocks").type() == int_type);
-    BOOST_CHECK(find_value(obj, "next-block-value-pos").type() == real_type);
-    BOOST_CHECK(find_value(obj, "last-block-size").type() == int_type);
-    BOOST_CHECK(find_value(obj, "last-block-tx").type() == int_type);
-    BOOST_CHECK(find_value(obj, "pooledtx").type() == int_type);
-    BOOST_CHECK(find_value(obj, "tx-fee").type() == real_type);
-
-    // Nested staking object
-    BOOST_CHECK(find_value(obj, "staking").type() == obj_type);
-    Object stk = find_value(obj, "staking").get_obj();
-    BOOST_CHECK(find_value(stk, "enabled").type() == bool_type);
-    BOOST_CHECK(find_value(stk, "targeting-fpos").type() == bool_type);
-    BOOST_CHECK(find_value(stk, "estimated-time").type() == int_type);
-
-    // Nested stakeweight object
-    BOOST_CHECK(find_value(obj, "stakeweight").type() == obj_type);
-    Object sw = find_value(obj, "stakeweight").get_obj();
-    BOOST_CHECK(find_value(sw, "minimum").type() == int_type);
-    BOOST_CHECK(find_value(sw, "maximum").type() == int_type);
-    BOOST_CHECK(find_value(sw, "combined").type() == int_type);
-
-    // Nested difficulty object
-    BOOST_CHECK(find_value(obj, "difficulty").type() == obj_type);
-    Object diff = find_value(obj, "difficulty").get_obj();
-    BOOST_CHECK(find_value(diff, "proof-of-stake").type() == real_type);
-    BOOST_CHECK(find_value(diff, "proof-of-stake(flash)").type() == real_type);
-
-    // Boolean + string fields
-    BOOST_CHECK(find_value(obj, "testnet").type() == bool_type);
-    BOOST_CHECK(find_value(obj, "errors").type() == str_type);
-}
+// NOTE: getstakinginfo and getmininginfo response contracts are in rpc_response_info suite
+// (lines 84-157). Only mining-specific tests below.
 
 // ---------------------------------------------------------------------------
 // getmininginfo — blocks matches nBestHeight
