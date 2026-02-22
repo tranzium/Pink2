@@ -180,22 +180,22 @@ BOOST_AUTO_TEST_CASE(defaultkey_roundtrip)
 }
 
 // ---------------------------------------------------------------------------
-// CScript (P2SH redeem script) write round-trip
+// CScript serialization round-trip (P2SH redeem script)
+// (DB write covered by walletdb_tests/write_cscript)
 // ---------------------------------------------------------------------------
-BOOST_AUTO_TEST_CASE(cscript_roundtrip)
+BOOST_AUTO_TEST_CASE(cscript_serialization_roundtrip)
 {
     CScript script;
     script << OP_1 << OP_1 << OP_CHECKMULTISIG;
-    uint160 hash = Hash160(script);
 
-    {
-        CWalletDB db(pwalletMain->strWalletFile);
-        BOOST_CHECK(db.WriteCScript(hash, script));
-    }
-    // Verify via keystore
-    CScript readScript;
-    // May not be in memory keystore, but DB write succeeded (no throw above)
-    (void)pwalletMain->GetCScript(hash, readScript);
+    CDataStream ss(SER_DISK, CLIENT_VERSION);
+    ss << script;
+
+    CScript script2;
+    ss >> script2;
+
+    BOOST_CHECK(script2 == script);
+    BOOST_CHECK(script2.GetID() == script.GetID());
 }
 
 // ---------------------------------------------------------------------------

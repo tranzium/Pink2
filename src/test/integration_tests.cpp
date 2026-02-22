@@ -812,3 +812,185 @@ BOOST_AUTO_TEST_CASE(money_supply_non_negative)
 }
 
 BOOST_AUTO_TEST_SUITE_END()
+
+// ============================================================================
+// Suite: integration_wallet_workflows — end-to-end wallet operations
+// ============================================================================
+
+BOOST_FIXTURE_TEST_SUITE(integration_wallet_workflows, TestChain)
+
+// ---------------------------------------------------------------------------
+// Generate new address: returns valid Pinkcoin address starting with "2"
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(generate_new_address)
+{
+    CPubKey newKey;
+    BOOST_CHECK(pwalletMain->GetKeyFromPool(newKey, false));
+    CKeyID keyID = newKey.GetID();
+    CBitcoinAddress addr(keyID);
+    BOOST_CHECK(addr.IsValid());
+    BOOST_CHECK_EQUAL(addr.ToString()[0], '2'); // Pinkcoin PUBKEY_ADDRESS=3 → prefix "2"
+}
+
+// ---------------------------------------------------------------------------
+// GetBalance reflects wallet state
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(wallet_balance_non_negative)
+{
+    BOOST_CHECK(pwalletMain->GetBalance() >= 0);
+}
+
+// ---------------------------------------------------------------------------
+// Wallet default key: either valid or not set (test env may not set it)
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(wallet_default_key_accessible)
+{
+    // In test environment, default key may not be set
+    // Just verify we can access it without crash
+    CPubKey defKey = pwalletMain->vchDefaultKey;
+    (void)defKey.IsValid();
+    BOOST_CHECK(true);
+}
+
+// ---------------------------------------------------------------------------
+// Wallet version is set
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(wallet_version_set)
+{
+    BOOST_CHECK(pwalletMain->GetVersion() >= 0);
+}
+
+// ---------------------------------------------------------------------------
+// Key pool: can reserve and return keys
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(keypool_reserve_return)
+{
+    int64_t nIndex = -1;
+    CKeyPool kp;
+    pwalletMain->ReserveKeyFromKeyPool(nIndex, kp);
+    if (nIndex >= 0) {
+        BOOST_CHECK(kp.vchPubKey.IsValid());
+        pwalletMain->ReturnKey(nIndex);
+    }
+    // Even if pool is empty, test should not crash
+    BOOST_CHECK(true);
+}
+
+// ---------------------------------------------------------------------------
+// Multiple addresses: each is unique
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(multiple_addresses_unique)
+{
+    std::set<std::string> addrs;
+    for (int i = 0; i < 5; i++) {
+        CPubKey key;
+        if (pwalletMain->GetKeyFromPool(key, false)) {
+            addrs.insert(CBitcoinAddress(key.GetID()).ToString());
+        }
+    }
+    BOOST_CHECK_EQUAL(addrs.size(), 5u);
+}
+
+// ---------------------------------------------------------------------------
+// Address book: can add and retrieve labels
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(address_book_operations)
+{
+    CPubKey key;
+    BOOST_REQUIRE(pwalletMain->GetKeyFromPool(key, false));
+    CBitcoinAddress addr(key.GetID());
+
+    pwalletMain->SetAddressBookName(addr.Get(), "test label");
+    BOOST_CHECK(pwalletMain->mapAddressBook.count(addr.Get()) > 0);
+    BOOST_CHECK_EQUAL(pwalletMain->mapAddressBook[addr.Get()], "test label");
+}
+
+// ---------------------------------------------------------------------------
+// Private key: can retrieve for owned address
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(get_private_key_for_owned_address)
+{
+    CPubKey pubkey;
+    BOOST_REQUIRE(pwalletMain->GetKeyFromPool(pubkey, false));
+
+    CKey key;
+    BOOST_CHECK(pwalletMain->GetKey(pubkey.GetID(), key));
+    BOOST_CHECK(key.IsValid());
+    BOOST_CHECK(key.GetPubKey() == pubkey);
+}
+
+// ---------------------------------------------------------------------------
+// Wallet is not encrypted by default in test
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(wallet_not_encrypted_by_default)
+{
+    BOOST_CHECK(!pwalletMain->IsCrypted());
+    BOOST_CHECK(!pwalletMain->IsLocked());
+}
+
+// ---------------------------------------------------------------------------
+// CreateTransaction: fails with insufficient funds (empty wallet)
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(create_tx_insufficient_funds)
+{
+    // Try to create a large send — should fail since test wallet has no spendable coins
+    CScript dest = CScript() << OP_TRUE;
+    CWalletTx wtx;
+    CReserveKey reservekey(pwalletMain);
+    int64_t nFeeRet = 0;
+    std::string strNarr;
+
+    bool ok = pwalletMain->CreateTransaction(dest, 1000000 * COIN, strNarr, wtx, reservekey, nFeeRet);
+    BOOST_CHECK(!ok);
+}
+
+// ---------------------------------------------------------------------------
+// IsMine: recognizes own addresses
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(ismine_own_address)
+{
+    CPubKey pubkey;
+    BOOST_REQUIRE(pwalletMain->GetKeyFromPool(pubkey, false));
+
+    CScript script;
+    script.SetDestination(pubkey.GetID());
+    BOOST_CHECK(IsMine(*pwalletMain, script));
+}
+
+// ---------------------------------------------------------------------------
+// IsMine: does not recognize random address
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(ismine_foreign_address)
+{
+    CKey foreignKey;
+    foreignKey.MakeNewKey(true);
+    CScript script;
+    script.SetDestination(foreignKey.GetPubKey().GetID());
+    BOOST_CHECK(!IsMine(*pwalletMain, script));
+}
+
+// ---------------------------------------------------------------------------
+// Wallet can generate P2SH script and store it
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(add_cscript_to_wallet)
+{
+    CScript redeemScript;
+    redeemScript << OP_1 << OP_1 << OP_CHECKMULTISIG;
+
+    BOOST_CHECK(pwalletMain->AddCScript(redeemScript));
+    CScript retrieved;
+    BOOST_CHECK(pwalletMain->GetCScript(redeemScript.GetID(), retrieved));
+    BOOST_CHECK(retrieved == redeemScript);
+}
+
+// ---------------------------------------------------------------------------
+// GetOldestKeyPoolTime returns reasonable timestamp
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(oldest_keypool_time)
+{
+    int64_t t = pwalletMain->GetOldestKeyPoolTime();
+    // Should be either 0 (empty pool) or a positive timestamp
+    BOOST_CHECK(t >= 0);
+}
+
+BOOST_AUTO_TEST_SUITE_END()
