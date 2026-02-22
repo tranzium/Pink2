@@ -19,6 +19,7 @@
 #include "protocol.h"
 #include "version.h"
 #include "json/json_spirit.h"
+#include "ui_interface.h"
 #include "test_framework.h"
 
 extern CWallet* pwalletMain;
@@ -937,6 +938,198 @@ BOOST_AUTO_TEST_CASE(json_write_produces_valid_json)
     json_spirit::Object obj2 = v2.get_obj();
     BOOST_CHECK_EQUAL(json_spirit::find_value(obj2, "num").get_int(), 42);
     BOOST_CHECK_EQUAL(json_spirit::find_value(obj2, "str").get_str(), "test");
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
+// ============================================================================
+// Suite: signal_behavioral_pinning — boost::signals2 semantics
+// These tests will be updated ONCE during Phase 6D when signals2 is replaced.
+// ============================================================================
+
+BOOST_AUTO_TEST_SUITE(signal_behavioral_pinning)
+
+// ---------------------------------------------------------------------------
+// Single slot: fire and receive
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(single_slot_fires)
+{
+    boost::signals2::signal<void(int)> sig;
+    int received = 0;
+    sig.connect([&](int v) { received = v; });
+    sig(42);
+    BOOST_CHECK_EQUAL(received, 42);
+}
+
+// ---------------------------------------------------------------------------
+// Multiple slots: all fire
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(multiple_slots_fire)
+{
+    boost::signals2::signal<void()> sig;
+    int count = 0;
+    sig.connect([&]() { count++; });
+    sig.connect([&]() { count++; });
+    sig.connect([&]() { count++; });
+    sig();
+    BOOST_CHECK_EQUAL(count, 3);
+}
+
+// ---------------------------------------------------------------------------
+// Disconnect: slot stops receiving
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(disconnect_stops_receiving)
+{
+    boost::signals2::signal<void()> sig;
+    int count = 0;
+    auto conn = sig.connect([&]() { count++; });
+    sig();
+    BOOST_CHECK_EQUAL(count, 1);
+    conn.disconnect();
+    sig();
+    BOOST_CHECK_EQUAL(count, 1); // No change after disconnect
+}
+
+// ---------------------------------------------------------------------------
+// Scoped connection: auto-disconnects on scope exit
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(scoped_connection_auto_disconnects)
+{
+    boost::signals2::signal<void()> sig;
+    int count = 0;
+    {
+        boost::signals2::scoped_connection sc(sig.connect([&]() { count++; }));
+        sig();
+        BOOST_CHECK_EQUAL(count, 1);
+    }
+    // sc is destroyed, connection should be disconnected
+    sig();
+    BOOST_CHECK_EQUAL(count, 1); // No change
+}
+
+// ---------------------------------------------------------------------------
+// Return value: last_value combiner
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(last_value_combiner)
+{
+    boost::signals2::signal<int(), boost::signals2::last_value<int>> sig;
+    sig.connect([]() { return 1; });
+    sig.connect([]() { return 2; });
+    int result = sig();
+    BOOST_CHECK_EQUAL(result, 2); // last_value returns last slot's result
+}
+
+// ---------------------------------------------------------------------------
+// Empty signal: fire with no slots is safe
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(empty_signal_fire_safe)
+{
+    boost::signals2::signal<void()> sig;
+    sig(); // Should not crash
+    BOOST_CHECK(true);
+}
+
+// ---------------------------------------------------------------------------
+// Signal num_slots
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(num_slots_tracking)
+{
+    boost::signals2::signal<void()> sig;
+    BOOST_CHECK_EQUAL(sig.num_slots(), 0u);
+
+    auto c1 = sig.connect([](){});
+    BOOST_CHECK_EQUAL(sig.num_slots(), 1u);
+
+    auto c2 = sig.connect([](){});
+    BOOST_CHECK_EQUAL(sig.num_slots(), 2u);
+
+    c1.disconnect();
+    BOOST_CHECK_EQUAL(sig.num_slots(), 1u);
+
+    c2.disconnect();
+    BOOST_CHECK_EQUAL(sig.num_slots(), 0u);
+}
+
+// ---------------------------------------------------------------------------
+// Connection is_connected tracks state
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(connection_is_connected)
+{
+    boost::signals2::signal<void()> sig;
+    auto conn = sig.connect([](){});
+    BOOST_CHECK(conn.connected());
+    conn.disconnect();
+    BOOST_CHECK(!conn.connected());
+}
+
+// ---------------------------------------------------------------------------
+// uiInterface.InitMessage: slot receives messages
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(uiinterface_initmessage)
+{
+    std::string lastMsg;
+    auto conn = uiInterface.InitMessage.connect([&](const std::string& msg) {
+        lastMsg = msg;
+    });
+    uiInterface.InitMessage("test init message");
+    BOOST_CHECK_EQUAL(lastMsg, "test init message");
+    conn.disconnect();
+}
+
+// ---------------------------------------------------------------------------
+// uiInterface.NotifyNumConnectionsChanged: receives int
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(uiinterface_notify_connections)
+{
+    int lastCount = -1;
+    auto conn = uiInterface.NotifyNumConnectionsChanged.connect([&](int n) {
+        lastCount = n;
+    });
+    uiInterface.NotifyNumConnectionsChanged(5);
+    BOOST_CHECK_EQUAL(lastCount, 5);
+    conn.disconnect();
+}
+
+// ---------------------------------------------------------------------------
+// uiInterface.ThreadSafeMessageBox: receives all params
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(uiinterface_messagebox)
+{
+    std::string gotMsg, gotCaption;
+    int gotStyle = 0;
+    auto conn = uiInterface.ThreadSafeMessageBox.connect(
+        [&](const std::string& msg, const std::string& cap, int style) {
+            gotMsg = msg;
+            gotCaption = cap;
+            gotStyle = style;
+        });
+    uiInterface.ThreadSafeMessageBox("error", "Error", CClientUIInterface::ICON_ERROR);
+    BOOST_CHECK_EQUAL(gotMsg, "error");
+    BOOST_CHECK_EQUAL(gotCaption, "Error");
+    BOOST_CHECK_EQUAL(gotStyle, CClientUIInterface::ICON_ERROR);
+    conn.disconnect();
+}
+
+// ---------------------------------------------------------------------------
+// ChangeType enum values pinned
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(changetype_enum_pinned)
+{
+    BOOST_CHECK_EQUAL(CT_NEW, 0);
+    BOOST_CHECK_EQUAL(CT_UPDATED, 1);
+    BOOST_CHECK_EQUAL(CT_DELETED, 2);
+}
+
+// ---------------------------------------------------------------------------
+// MessageBoxFlags values pinned
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(messagebox_flags_pinned)
+{
+    BOOST_CHECK_EQUAL(CClientUIInterface::YES, 0x00000002);
+    BOOST_CHECK_EQUAL(CClientUIInterface::OK, 0x00000004);
+    BOOST_CHECK_EQUAL(CClientUIInterface::NO, 0x00000008);
+    BOOST_CHECK_EQUAL(CClientUIInterface::MODAL, 0x00040000);
+    BOOST_CHECK_EQUAL(CClientUIInterface::ICON_ERROR, CClientUIInterface::ICON_HAND);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
