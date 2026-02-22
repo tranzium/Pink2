@@ -153,7 +153,7 @@ target_include_directories(pinkcoin_core
 # Link dependencies
 target_link_libraries(pinkcoin_core
     PUBLIC
-        json_spirit
+        nlohmann_json
         leveldb
         memenv
         $<$<TARGET_EXISTS:Boost::system>:Boost::system>
