@@ -18,6 +18,7 @@
 #include "stealth.h"
 #include "protocol.h"
 #include "version.h"
+#include "json/json_spirit.h"
 #include "test_framework.h"
 
 extern CWallet* pwalletMain;
@@ -704,6 +705,238 @@ BOOST_AUTO_TEST_CASE(caddress_serialization_roundtrip)
 BOOST_AUTO_TEST_CASE(protocol_version_pinned)
 {
     BOOST_CHECK_EQUAL(PROTOCOL_VERSION, 60019);
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
+// ============================================================================
+// Suite: json_behavioral_pinning — json_spirit edge-case behaviors
+// These tests will be updated ONCE during Phase 6D when json_spirit is replaced.
+// ============================================================================
+
+BOOST_AUTO_TEST_SUITE(json_behavioral_pinning)
+
+// ---------------------------------------------------------------------------
+// Value default type is null_type
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(value_default_is_null)
+{
+    json_spirit::Value v;
+    BOOST_CHECK(v.type() == json_spirit::null_type);
+}
+
+// ---------------------------------------------------------------------------
+// Integer types: int vs int64
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(int_type_from_int)
+{
+    json_spirit::Value v(42);
+    BOOST_CHECK(v.type() == json_spirit::int_type);
+    BOOST_CHECK_EQUAL(v.get_int(), 42);
+}
+
+BOOST_AUTO_TEST_CASE(int_type_from_int64)
+{
+    json_spirit::Value v(static_cast<int64_t>(1234567890123LL));
+    BOOST_CHECK(v.type() == json_spirit::int_type);
+    BOOST_CHECK_EQUAL(v.get_int64(), 1234567890123LL);
+}
+
+BOOST_AUTO_TEST_CASE(int_type_max_int64)
+{
+    int64_t maxVal = std::numeric_limits<int64_t>::max();
+    json_spirit::Value v(maxVal);
+    BOOST_CHECK(v.type() == json_spirit::int_type);
+    BOOST_CHECK_EQUAL(v.get_int64(), maxVal);
+}
+
+BOOST_AUTO_TEST_CASE(int_type_min_int64)
+{
+    int64_t minVal = std::numeric_limits<int64_t>::min();
+    json_spirit::Value v(minVal);
+    BOOST_CHECK(v.type() == json_spirit::int_type);
+    BOOST_CHECK_EQUAL(v.get_int64(), minVal);
+}
+
+// ---------------------------------------------------------------------------
+// Real (double) type
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(real_type_from_double)
+{
+    json_spirit::Value v(3.14);
+    BOOST_CHECK(v.type() == json_spirit::real_type);
+    BOOST_CHECK_CLOSE(v.get_real(), 3.14, 0.001);
+}
+
+BOOST_AUTO_TEST_CASE(real_type_zero)
+{
+    json_spirit::Value v(0.0);
+    BOOST_CHECK(v.type() == json_spirit::real_type);
+    BOOST_CHECK_EQUAL(v.get_real(), 0.0);
+}
+
+// ---------------------------------------------------------------------------
+// String type
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(str_type_from_string)
+{
+    json_spirit::Value v(std::string("hello"));
+    BOOST_CHECK(v.type() == json_spirit::str_type);
+    BOOST_CHECK_EQUAL(v.get_str(), "hello");
+}
+
+BOOST_AUTO_TEST_CASE(str_type_empty)
+{
+    json_spirit::Value v(std::string(""));
+    BOOST_CHECK(v.type() == json_spirit::str_type);
+    BOOST_CHECK_EQUAL(v.get_str(), "");
+}
+
+BOOST_AUTO_TEST_CASE(str_type_unicode_passthrough)
+{
+    // json_spirit passes UTF-8 bytes through without validation
+    std::string utf8 = "\xc3\xa9"; // é in UTF-8
+    json_spirit::Value v(utf8);
+    BOOST_CHECK_EQUAL(v.get_str(), utf8);
+}
+
+// ---------------------------------------------------------------------------
+// Boolean type
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(bool_type_true)
+{
+    json_spirit::Value v(true);
+    BOOST_CHECK(v.type() == json_spirit::bool_type);
+    BOOST_CHECK_EQUAL(v.get_bool(), true);
+}
+
+BOOST_AUTO_TEST_CASE(bool_type_false)
+{
+    json_spirit::Value v(false);
+    BOOST_CHECK(v.type() == json_spirit::bool_type);
+    BOOST_CHECK_EQUAL(v.get_bool(), false);
+}
+
+// ---------------------------------------------------------------------------
+// Array type
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(array_type_empty)
+{
+    json_spirit::Array arr;
+    json_spirit::Value v(arr);
+    BOOST_CHECK(v.type() == json_spirit::array_type);
+    BOOST_CHECK(v.get_array().empty());
+}
+
+BOOST_AUTO_TEST_CASE(array_type_mixed_elements)
+{
+    json_spirit::Array arr;
+    arr.push_back(42);
+    arr.push_back(std::string("hello"));
+    arr.push_back(true);
+    arr.push_back(json_spirit::Value());
+
+    json_spirit::Value v(arr);
+    const json_spirit::Array& a = v.get_array();
+    BOOST_CHECK_EQUAL(a.size(), 4u);
+    BOOST_CHECK(a[0].type() == json_spirit::int_type);
+    BOOST_CHECK(a[1].type() == json_spirit::str_type);
+    BOOST_CHECK(a[2].type() == json_spirit::bool_type);
+    BOOST_CHECK(a[3].type() == json_spirit::null_type);
+}
+
+// ---------------------------------------------------------------------------
+// Object type
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(object_type_empty)
+{
+    json_spirit::Object obj;
+    json_spirit::Value v(obj);
+    BOOST_CHECK(v.type() == json_spirit::obj_type);
+    BOOST_CHECK(v.get_obj().empty());
+}
+
+BOOST_AUTO_TEST_CASE(object_find_value_missing_is_null)
+{
+    json_spirit::Object obj;
+    obj.push_back(json_spirit::Pair("key", 42));
+    json_spirit::Value v = json_spirit::find_value(obj, "nonexistent");
+    BOOST_CHECK(v.type() == json_spirit::null_type);
+}
+
+BOOST_AUTO_TEST_CASE(object_duplicate_keys_last_wins_in_find)
+{
+    // json_spirit objects are arrays of pairs — duplicates are allowed
+    json_spirit::Object obj;
+    obj.push_back(json_spirit::Pair("dup", 1));
+    obj.push_back(json_spirit::Pair("dup", 2));
+    BOOST_CHECK_EQUAL(obj.size(), 2u); // Both entries exist
+
+    // find_value returns the first match
+    json_spirit::Value v = json_spirit::find_value(obj, "dup");
+    BOOST_CHECK_EQUAL(v.get_int(), 1);
+}
+
+// ---------------------------------------------------------------------------
+// Pair construction
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(pair_construction)
+{
+    json_spirit::Pair p("name", std::string("value"));
+    BOOST_CHECK_EQUAL(p.name_, "name");
+    BOOST_CHECK(p.value_.type() == json_spirit::str_type);
+    BOOST_CHECK_EQUAL(p.value_.get_str(), "value");
+}
+
+// ---------------------------------------------------------------------------
+// JSON parse round-trip (read then write)
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(json_parse_roundtrip)
+{
+    std::string jsonStr = "{\"a\":1,\"b\":\"hello\",\"c\":true}";
+    json_spirit::Value v;
+    BOOST_CHECK(json_spirit::read(jsonStr, v));
+    BOOST_CHECK(v.type() == json_spirit::obj_type);
+
+    json_spirit::Object obj = v.get_obj();
+    BOOST_CHECK_EQUAL(json_spirit::find_value(obj, "a").get_int(), 1);
+    BOOST_CHECK_EQUAL(json_spirit::find_value(obj, "b").get_str(), "hello");
+    BOOST_CHECK_EQUAL(json_spirit::find_value(obj, "c").get_bool(), true);
+}
+
+BOOST_AUTO_TEST_CASE(json_parse_array)
+{
+    std::string jsonStr = "[1,2,3]";
+    json_spirit::Value v;
+    BOOST_CHECK(json_spirit::read(jsonStr, v));
+    BOOST_CHECK(v.type() == json_spirit::array_type);
+    BOOST_CHECK_EQUAL(v.get_array().size(), 3u);
+}
+
+BOOST_AUTO_TEST_CASE(json_parse_invalid_returns_false)
+{
+    std::string jsonStr = "{invalid json}}}";
+    json_spirit::Value v;
+    BOOST_CHECK(!json_spirit::read(jsonStr, v));
+}
+
+BOOST_AUTO_TEST_CASE(json_write_produces_valid_json)
+{
+    json_spirit::Object obj;
+    obj.push_back(json_spirit::Pair("num", 42));
+    obj.push_back(json_spirit::Pair("str", std::string("test")));
+    json_spirit::Value v(obj);
+
+    std::string out = json_spirit::write(v);
+    BOOST_CHECK(!out.empty());
+
+    // Re-parse to verify round-trip
+    json_spirit::Value v2;
+    BOOST_CHECK(json_spirit::read(out, v2));
+    BOOST_CHECK(v2.type() == json_spirit::obj_type);
+    json_spirit::Object obj2 = v2.get_obj();
+    BOOST_CHECK_EQUAL(json_spirit::find_value(obj2, "num").get_int(), 42);
+    BOOST_CHECK_EQUAL(json_spirit::find_value(obj2, "str").get_str(), "test");
 }
 
 BOOST_AUTO_TEST_SUITE_END()
