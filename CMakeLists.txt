@@ -76,12 +76,10 @@ find_package(Threads REQUIRED)
 # Boost
 set(Boost_USE_STATIC_LIBS ${STATIC_BUILD})
 find_package(Boost 1.55 REQUIRED COMPONENTS
-    program_options
-    thread
     unit_test_framework
     OPTIONAL_COMPONENTS
-    chrono
     system
+    chrono
 )
 
 # OpenSSL

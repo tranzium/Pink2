@@ -158,8 +158,6 @@ target_link_libraries(pinkcoin_core
         memenv
         $<$<TARGET_EXISTS:Boost::system>:Boost::system>
         $<$<TARGET_EXISTS:Boost::chrono>:Boost::chrono>
-        Boost::program_options
-        Boost::thread
         OpenSSL::SSL
         OpenSSL::Crypto
         BerkeleyDB::BerkeleyDB
