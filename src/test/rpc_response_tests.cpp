@@ -886,3 +886,303 @@ BOOST_AUTO_TEST_CASE(getstakesplitthreshold_response_contract)
 }
 
 BOOST_AUTO_TEST_SUITE_END()
+
+// ============================================================================
+// Suite: rpc_response_blockchain — blockchain RPC response contracts
+// ============================================================================
+
+BOOST_FIXTURE_TEST_SUITE(rpc_response_blockchain, TestChain)
+
+// ---------------------------------------------------------------------------
+// getblockcount — returns int_type equal to nBestHeight
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(getblockcount_response_contract)
+{
+    Array p;
+    Value result = getblockcount(p, false);
+    BOOST_CHECK(result.type() == int_type);
+    BOOST_CHECK_EQUAL(result.get_int(), nBestHeight);
+}
+
+// ---------------------------------------------------------------------------
+// getbestblockhash — returns str_type, 64 hex characters
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(getbestblockhash_response_contract)
+{
+    Array p;
+    Value result = getbestblockhash(p, false);
+    BOOST_CHECK(result.type() == str_type);
+    string hash = result.get_str();
+    BOOST_CHECK_EQUAL(hash.size(), 64u);
+    BOOST_CHECK(IsHex(hash));
+}
+
+// ---------------------------------------------------------------------------
+// getblockhash — param: height 0, returns str_type, 64 hex chars
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(getblockhash_response_contract)
+{
+    Array p;
+    p.push_back(0);
+    Value result = getblockhash(p, false);
+    BOOST_CHECK(result.type() == str_type);
+    string hash = result.get_str();
+    BOOST_CHECK_EQUAL(hash.size(), 64u);
+    BOOST_CHECK(IsHex(hash));
+}
+
+// ---------------------------------------------------------------------------
+// getblock — param: genesis hash; verify field types from blockToJSON
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(getblock_response_contract)
+{
+    // Get genesis hash
+    Array pH;
+    pH.push_back(0);
+    string genesisHash = getblockhash(pH, false).get_str();
+
+    Array p;
+    p.push_back(genesisHash);
+    Value result = getblock(p, false);
+    BOOST_CHECK(result.type() == obj_type);
+    Object obj = result.get_obj();
+
+    // String fields
+    BOOST_CHECK(find_value(obj, "hash").type() == str_type);
+    BOOST_CHECK(find_value(obj, "merkleroot").type() == str_type);
+    BOOST_CHECK(find_value(obj, "bits").type() == str_type);
+
+    // Integer fields
+    BOOST_CHECK(find_value(obj, "confirmations").type() == int_type);
+    BOOST_CHECK(find_value(obj, "size").type() == int_type);
+    BOOST_CHECK(find_value(obj, "height").type() == int_type);
+    BOOST_CHECK(find_value(obj, "version").type() == int_type);
+    BOOST_CHECK(find_value(obj, "time").type() == int_type);
+    BOOST_CHECK(find_value(obj, "nonce").type() == int_type);
+
+    // Real (double) fields
+    BOOST_CHECK(find_value(obj, "difficulty").type() == real_type);
+    BOOST_CHECK(find_value(obj, "mint").type() == real_type);
+
+    // Array fields
+    BOOST_CHECK(find_value(obj, "tx").type() == array_type);
+
+    // Additional blockToJSON fields
+    BOOST_CHECK(find_value(obj, "blocktrust").type() == str_type);
+    BOOST_CHECK(find_value(obj, "chaintrust").type() == str_type);
+    BOOST_CHECK(find_value(obj, "flags").type() == str_type);
+    BOOST_CHECK(find_value(obj, "proofhash").type() == str_type);
+    BOOST_CHECK(find_value(obj, "entropybit").type() == int_type);
+    BOOST_CHECK(find_value(obj, "modifier").type() == str_type);
+}
+
+// ---------------------------------------------------------------------------
+// getblockbynumber — param: 0; same fields as getblock
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(getblockbynumber_response_contract)
+{
+    Array p;
+    p.push_back(0);
+    Value result = getblockbynumber(p, false);
+    BOOST_CHECK(result.type() == obj_type);
+    Object obj = result.get_obj();
+
+    // Verify same core fields as getblock
+    BOOST_CHECK(find_value(obj, "hash").type() == str_type);
+    BOOST_CHECK(find_value(obj, "confirmations").type() == int_type);
+    BOOST_CHECK(find_value(obj, "size").type() == int_type);
+    BOOST_CHECK(find_value(obj, "height").type() == int_type);
+    BOOST_CHECK(find_value(obj, "version").type() == int_type);
+    BOOST_CHECK(find_value(obj, "merkleroot").type() == str_type);
+    BOOST_CHECK(find_value(obj, "time").type() == int_type);
+    BOOST_CHECK(find_value(obj, "nonce").type() == int_type);
+    BOOST_CHECK(find_value(obj, "bits").type() == str_type);
+    BOOST_CHECK(find_value(obj, "difficulty").type() == real_type);
+    BOOST_CHECK(find_value(obj, "tx").type() == array_type);
+}
+
+// ---------------------------------------------------------------------------
+// getcheckpoint — returns obj_type with field contracts
+// Fields: "synccheckpoint"(str), "height"(int), "timestamp"(str), "policy"(str)
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(getcheckpoint_response_contract)
+{
+    Array p;
+    Value result = getcheckpoint(p, false);
+    BOOST_CHECK(result.type() == obj_type);
+    Object obj = result.get_obj();
+
+    BOOST_CHECK(find_value(obj, "synccheckpoint").type() == str_type);
+    BOOST_CHECK(find_value(obj, "height").type() == int_type);
+    BOOST_CHECK(find_value(obj, "timestamp").type() == str_type);
+    // "policy" is always present (one of strict/advisory/permissive)
+    BOOST_CHECK(find_value(obj, "policy").type() == str_type);
+}
+
+// ---------------------------------------------------------------------------
+// getblock — genesis block hash pinned to hashGenesisBlock
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(getblock_genesis_hash_pinned)
+{
+    Array pH;
+    pH.push_back(0);
+    string genesisHash = getblockhash(pH, false).get_str();
+
+    Array p;
+    p.push_back(genesisHash);
+    Value result = getblock(p, false);
+    Object obj = result.get_obj();
+
+    // Pin the genesis block hash exactly
+    BOOST_CHECK_EQUAL(find_value(obj, "hash").get_str(), hashGenesisBlock.GetHex());
+    BOOST_CHECK_EQUAL(find_value(obj, "height").get_int(), 0);
+}
+
+// ---------------------------------------------------------------------------
+// getblock — genesis block version == 1
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(getblock_height_zero_version)
+{
+    Array p;
+    p.push_back(0);
+    Value result = getblockbynumber(p, false);
+    Object obj = result.get_obj();
+
+    BOOST_CHECK_EQUAL(find_value(obj, "version").get_int(), 1);
+}
+
+// ---------------------------------------------------------------------------
+// getblock — genesis tx array is non-empty (has at least 1 tx)
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(getblock_tx_array_nonempty)
+{
+    Array p;
+    p.push_back(0);
+    Value result = getblockbynumber(p, false);
+    Object obj = result.get_obj();
+
+    const Array& txArr = find_value(obj, "tx").get_array();
+    BOOST_CHECK(!txArr.empty());
+}
+
+// ---------------------------------------------------------------------------
+// getblock — genesis confirmations > 0
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(getblock_confirmations_positive)
+{
+    Array p;
+    p.push_back(0);
+    Value result = getblockbynumber(p, false);
+    Object obj = result.get_obj();
+
+    BOOST_CHECK(find_value(obj, "confirmations").get_int() > 0);
+}
+
+// ---------------------------------------------------------------------------
+// getblockcount — matches TestChain::chainHeight()
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(getblockcount_matches_chain_height)
+{
+    Array p;
+    Value result = getblockcount(p, false);
+    BOOST_CHECK_EQUAL(result.get_int(), chainHeight());
+}
+
+// ---------------------------------------------------------------------------
+// getbestblockhash — matches pindexBest->GetBlockHash()
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(getbestblockhash_matches_tip)
+{
+    Array p;
+    Value result = getbestblockhash(p, false);
+    BOOST_CHECK_EQUAL(result.get_str(), pindexBest->GetBlockHash().GetHex());
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
+// ============================================================================
+// Suite: rpc_response_network — network RPC response contracts
+// ============================================================================
+
+BOOST_AUTO_TEST_SUITE(rpc_response_network)
+
+// ---------------------------------------------------------------------------
+// getconnectioncount — returns int_type, >= 0
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(getconnectioncount_response_contract)
+{
+    Array p;
+    Value result = getconnectioncount(p, false);
+    BOOST_CHECK(result.type() == int_type);
+    BOOST_CHECK(result.get_int() >= 0);
+}
+
+// ---------------------------------------------------------------------------
+// getpeerinfo — returns array_type (may be empty in test environment)
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(getpeerinfo_response_contract)
+{
+    Array p;
+    Value result = getpeerinfo(p, false);
+    BOOST_CHECK(result.type() == array_type);
+}
+
+// ---------------------------------------------------------------------------
+// getnodes — returns str_type (addnode= lines, empty in test environment)
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(getnodes_response_contract)
+{
+    Array p;
+    Value result = getnodes(p, false);
+    // getnodes returns a string, not object/array
+    BOOST_CHECK(result.type() == str_type);
+}
+
+// ---------------------------------------------------------------------------
+// getconnectioncount — is zero in test environment (no real peers)
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(getconnectioncount_is_zero_in_test)
+{
+    Array p;
+    Value result = getconnectioncount(p, false);
+    BOOST_CHECK_EQUAL(result.get_int(), 0);
+}
+
+// ---------------------------------------------------------------------------
+// getpeerinfo — empty in test environment (no real peers)
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(getpeerinfo_empty_in_test)
+{
+    Array p;
+    Value result = getpeerinfo(p, false);
+    BOOST_CHECK(result.get_array().empty());
+}
+
+// ---------------------------------------------------------------------------
+// getpeerinfo — help mode throws runtime_error
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(getpeerinfo_help_works)
+{
+    Array p;
+    BOOST_CHECK_THROW(getpeerinfo(p, true), runtime_error);
+}
+
+// ---------------------------------------------------------------------------
+// getconnectioncount — help mode throws runtime_error
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(getconnectioncount_help_works)
+{
+    Array p;
+    BOOST_CHECK_THROW(getconnectioncount(p, true), runtime_error);
+}
+
+// ---------------------------------------------------------------------------
+// getnodes — help mode throws runtime_error
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(getnodes_help_works)
+{
+    Array p;
+    BOOST_CHECK_THROW(getnodes(p, true), runtime_error);
+}
+
+BOOST_AUTO_TEST_SUITE_END()
