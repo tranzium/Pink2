@@ -15,6 +15,7 @@
 #include "wallet.h"
 #include "base58.h"
 #include "init.h"
+#include "smessage.h"
 #include "test_framework.h"
 
 using namespace json_spirit;
@@ -1183,6 +1184,553 @@ BOOST_AUTO_TEST_CASE(getnodes_help_works)
 {
     Array p;
     BOOST_CHECK_THROW(getnodes(p, true), runtime_error);
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
+// ============================================================================
+// Suite: rpc_response_raw — raw transaction RPC response contracts
+// ============================================================================
+
+BOOST_FIXTURE_TEST_SUITE(rpc_response_raw, TestChain)
+
+// ---------------------------------------------------------------------------
+// createrawtransaction — returns str_type (hex-encoded raw tx)
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(createrawtransaction_response_contract)
+{
+    // Create a raw transaction with empty inputs and a valid output
+    Array inputs;
+    Object sendTo;
+    Array addrParams;
+    Value addrResult = getnewaddress(addrParams, false);
+    string addr = addrResult.get_str();
+    sendTo.push_back(Pair(addr, 0.01));
+
+    Array p;
+    p.push_back(inputs);
+    p.push_back(sendTo);
+    Value result = createrawtransaction(p, false);
+    BOOST_CHECK(result.type() == str_type);
+    BOOST_CHECK(IsHex(result.get_str()));
+}
+
+// ---------------------------------------------------------------------------
+// decoderawtransaction — returns obj_type with TxToJSON fields
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(decoderawtransaction_response_contract)
+{
+    Array inputs;
+    Object sendTo;
+    Array addrParams;
+    string addr = getnewaddress(addrParams, false).get_str();
+    sendTo.push_back(Pair(addr, 0.01));
+
+    Array pCreate;
+    pCreate.push_back(inputs);
+    pCreate.push_back(sendTo);
+    string rawHex = createrawtransaction(pCreate, false).get_str();
+
+    Array pDecode;
+    pDecode.push_back(rawHex);
+    Value result = decoderawtransaction(pDecode, false);
+    BOOST_CHECK(result.type() == obj_type);
+    Object obj = result.get_obj();
+
+    // TxToJSON fields
+    BOOST_CHECK(find_value(obj, "txid").type() == str_type);
+    BOOST_CHECK(find_value(obj, "version").type() == int_type);
+    BOOST_CHECK(find_value(obj, "time").type() == int_type);
+    BOOST_CHECK(find_value(obj, "locktime").type() == int_type);
+    BOOST_CHECK(find_value(obj, "vin").type() == array_type);
+    BOOST_CHECK(find_value(obj, "vout").type() == array_type);
+}
+
+// ---------------------------------------------------------------------------
+// decoderawtransaction — Pinkcoin-specific nTime field present
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(decoderawtransaction_has_ntime)
+{
+    Array inputs;
+    Object sendTo;
+    Array addrParams;
+    string addr = getnewaddress(addrParams, false).get_str();
+    sendTo.push_back(Pair(addr, 0.01));
+
+    Array pCreate;
+    pCreate.push_back(inputs);
+    pCreate.push_back(sendTo);
+    string rawHex = createrawtransaction(pCreate, false).get_str();
+
+    Array pDecode;
+    pDecode.push_back(rawHex);
+    Object obj = decoderawtransaction(pDecode, false).get_obj();
+
+    // nTime is Pinkcoin-specific (not in Bitcoin Core)
+    Value timeVal = find_value(obj, "time");
+    BOOST_CHECK(timeVal.type() == int_type);
+    BOOST_CHECK(timeVal.get_int64() >= 0);
+}
+
+// ---------------------------------------------------------------------------
+// decoderawtransaction — vout scriptPubKey sub-object fields
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(decoderawtransaction_vout_fields)
+{
+    Array inputs;
+    Object sendTo;
+    Array addrParams;
+    string addr = getnewaddress(addrParams, false).get_str();
+    sendTo.push_back(Pair(addr, 0.01));
+
+    Array pCreate;
+    pCreate.push_back(inputs);
+    pCreate.push_back(sendTo);
+    string rawHex = createrawtransaction(pCreate, false).get_str();
+
+    Array pDecode;
+    pDecode.push_back(rawHex);
+    Object obj = decoderawtransaction(pDecode, false).get_obj();
+
+    const Array& vout = find_value(obj, "vout").get_array();
+    BOOST_REQUIRE(!vout.empty());
+    Object out0 = vout[0].get_obj();
+
+    BOOST_CHECK(find_value(out0, "value").type() == real_type);
+    BOOST_CHECK(find_value(out0, "n").type() == int_type);
+
+    Object spk = find_value(out0, "scriptPubKey").get_obj();
+    BOOST_CHECK(find_value(spk, "asm").type() == str_type);
+    BOOST_CHECK(find_value(spk, "type").type() == str_type);
+}
+
+// ---------------------------------------------------------------------------
+// decodescript — returns obj_type with asm, type, p2sh
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(decodescript_response_contract)
+{
+    Array p;
+    p.push_back(string("76a91489abcdefabbaabbaabbaabbaabbaabbaabbaabba88ac"));
+    Value result = decodescript(p, false);
+    BOOST_CHECK(result.type() == obj_type);
+    Object obj = result.get_obj();
+
+    BOOST_CHECK(find_value(obj, "asm").type() == str_type);
+    BOOST_CHECK(find_value(obj, "type").type() == str_type);
+    BOOST_CHECK(find_value(obj, "p2sh").type() == str_type);
+}
+
+// ---------------------------------------------------------------------------
+// decodescript — P2PKH type detection
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(decodescript_p2pkh_type)
+{
+    Array p;
+    p.push_back(string("76a91489abcdefabbaabbaabbaabbaabbaabbaabbaabba88ac"));
+    Object obj = decodescript(p, false).get_obj();
+    BOOST_CHECK_EQUAL(find_value(obj, "type").get_str(), "pubkeyhash");
+}
+
+// ---------------------------------------------------------------------------
+// decodescript — P2SH address starts with "C" (Pinkcoin SCRIPT_ADDRESS=28)
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(decodescript_p2sh_prefix)
+{
+    Array p;
+    p.push_back(string("76a91489abcdefabbaabbaabbaabbaabbaabbaabbaabba88ac"));
+    Object obj = decodescript(p, false).get_obj();
+    string p2sh = find_value(obj, "p2sh").get_str();
+    BOOST_CHECK(!p2sh.empty());
+    BOOST_CHECK_EQUAL(p2sh[0], 'C');
+}
+
+// ---------------------------------------------------------------------------
+// makekeypair — returns obj with PrivateKey, PublicKey (both hex)
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(makekeypair_response_contract)
+{
+    Array p;
+    Value result = makekeypair(p, false);
+    BOOST_CHECK(result.type() == obj_type);
+    Object obj = result.get_obj();
+
+    BOOST_CHECK(find_value(obj, "PrivateKey").type() == str_type);
+    BOOST_CHECK(find_value(obj, "PublicKey").type() == str_type);
+    BOOST_CHECK(IsHex(find_value(obj, "PrivateKey").get_str()));
+    BOOST_CHECK(IsHex(find_value(obj, "PublicKey").get_str()));
+}
+
+// ---------------------------------------------------------------------------
+// makekeypair — two calls produce different keys
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(makekeypair_unique_each_call)
+{
+    Array p;
+    Object obj1 = makekeypair(p, false).get_obj();
+    Object obj2 = makekeypair(p, false).get_obj();
+    BOOST_CHECK(find_value(obj1, "PrivateKey").get_str() != find_value(obj2, "PrivateKey").get_str());
+    BOOST_CHECK(find_value(obj1, "PublicKey").get_str() != find_value(obj2, "PublicKey").get_str());
+}
+
+// ---------------------------------------------------------------------------
+// createrawtransaction — help throws runtime_error
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(createrawtransaction_help_works)
+{
+    Array p;
+    BOOST_CHECK_THROW(createrawtransaction(p, true), runtime_error);
+}
+
+// ---------------------------------------------------------------------------
+// decoderawtransaction — help throws runtime_error
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(decoderawtransaction_help_works)
+{
+    Array p;
+    BOOST_CHECK_THROW(decoderawtransaction(p, true), runtime_error);
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
+// ============================================================================
+// Suite: rpc_response_mining — mining RPC response contracts
+// ============================================================================
+
+BOOST_FIXTURE_TEST_SUITE(rpc_response_mining, TestChain)
+
+// ---------------------------------------------------------------------------
+// getsubsidy — returns int_type (proof-of-work subsidy)
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(getsubsidy_response_contract)
+{
+    Array p;
+    Value result = getsubsidy(p, false);
+    BOOST_CHECK(result.type() == int_type);
+    BOOST_CHECK(result.get_int64() >= 0);
+}
+
+// ---------------------------------------------------------------------------
+// getsubsidy — with explicit height param
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(getsubsidy_with_height_param)
+{
+    Array p;
+    // getsubsidy takes string param (uses atoi)
+    p.push_back(string("100"));
+    Value result = getsubsidy(p, false);
+    BOOST_CHECK(result.type() == int_type);
+    // PoW subsidy may be zero if PoW is disabled at this height
+    BOOST_CHECK(result.get_int64() >= 0);
+}
+
+// ---------------------------------------------------------------------------
+// getstakinginfo — returns obj_type with required fields
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(getstakinginfo_response_contract)
+{
+    Array p;
+    Value result = getstakinginfo(p, false);
+    BOOST_CHECK(result.type() == obj_type);
+    Object obj = result.get_obj();
+
+    // Boolean fields
+    BOOST_CHECK(find_value(obj, "enabled").type() == bool_type);
+    BOOST_CHECK(find_value(obj, "staking").type() == bool_type);
+
+    // String fields
+    BOOST_CHECK(find_value(obj, "errors").type() == str_type);
+
+    // Integer fields
+    BOOST_CHECK(find_value(obj, "currentblocksize").type() == int_type);
+    BOOST_CHECK(find_value(obj, "currentblocktx").type() == int_type);
+    BOOST_CHECK(find_value(obj, "pooledtx").type() == int_type);
+    BOOST_CHECK(find_value(obj, "search-interval").type() == int_type);
+    BOOST_CHECK(find_value(obj, "weight").type() == int_type);
+    BOOST_CHECK(find_value(obj, "netstakeweight").type() == int_type);
+    BOOST_CHECK(find_value(obj, "expectedtime").type() == int_type);
+
+    // Real fields
+    BOOST_CHECK(find_value(obj, "difficulty").type() == real_type);
+    BOOST_CHECK(find_value(obj, "difficulty (flash)").type() == real_type);
+}
+
+// ---------------------------------------------------------------------------
+// getmininginfo — returns obj_type with nested objects
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(getmininginfo_response_contract)
+{
+    Array p;
+    Value result = getmininginfo(p, false);
+    BOOST_CHECK(result.type() == obj_type);
+    Object obj = result.get_obj();
+
+    // Top-level fields
+    BOOST_CHECK(find_value(obj, "blocks").type() == int_type);
+    BOOST_CHECK(find_value(obj, "next-block-value-pos").type() == real_type);
+    BOOST_CHECK(find_value(obj, "last-block-size").type() == int_type);
+    BOOST_CHECK(find_value(obj, "last-block-tx").type() == int_type);
+    BOOST_CHECK(find_value(obj, "pooledtx").type() == int_type);
+    BOOST_CHECK(find_value(obj, "tx-fee").type() == real_type);
+
+    // Nested staking object
+    BOOST_CHECK(find_value(obj, "staking").type() == obj_type);
+    Object stk = find_value(obj, "staking").get_obj();
+    BOOST_CHECK(find_value(stk, "enabled").type() == bool_type);
+    BOOST_CHECK(find_value(stk, "targeting-fpos").type() == bool_type);
+    BOOST_CHECK(find_value(stk, "estimated-time").type() == int_type);
+
+    // Nested stakeweight object
+    BOOST_CHECK(find_value(obj, "stakeweight").type() == obj_type);
+    Object sw = find_value(obj, "stakeweight").get_obj();
+    BOOST_CHECK(find_value(sw, "minimum").type() == int_type);
+    BOOST_CHECK(find_value(sw, "maximum").type() == int_type);
+    BOOST_CHECK(find_value(sw, "combined").type() == int_type);
+
+    // Nested difficulty object
+    BOOST_CHECK(find_value(obj, "difficulty").type() == obj_type);
+    Object diff = find_value(obj, "difficulty").get_obj();
+    BOOST_CHECK(find_value(diff, "proof-of-stake").type() == real_type);
+    BOOST_CHECK(find_value(diff, "proof-of-stake(flash)").type() == real_type);
+
+    // Boolean + string fields
+    BOOST_CHECK(find_value(obj, "testnet").type() == bool_type);
+    BOOST_CHECK(find_value(obj, "errors").type() == str_type);
+}
+
+// ---------------------------------------------------------------------------
+// getmininginfo — blocks matches nBestHeight
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(getmininginfo_blocks_matches_height)
+{
+    Array p;
+    Object obj = getmininginfo(p, false).get_obj();
+    BOOST_CHECK_EQUAL(find_value(obj, "blocks").get_int(), nBestHeight);
+}
+
+// ---------------------------------------------------------------------------
+// getstakinginfo — help throws runtime_error
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(getstakinginfo_help_works)
+{
+    Array p;
+    BOOST_CHECK_THROW(getstakinginfo(p, true), runtime_error);
+}
+
+// ---------------------------------------------------------------------------
+// getmininginfo — help throws runtime_error
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(getmininginfo_help_works)
+{
+    Array p;
+    BOOST_CHECK_THROW(getmininginfo(p, true), runtime_error);
+}
+
+// ---------------------------------------------------------------------------
+// getwork — help throws runtime_error
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(getwork_help_works)
+{
+    Array p;
+    BOOST_CHECK_THROW(getwork(p, true), runtime_error);
+}
+
+// ---------------------------------------------------------------------------
+// getblocktemplate — help throws runtime_error
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(getblocktemplate_help_works)
+{
+    Array p;
+    BOOST_CHECK_THROW(getblocktemplate(p, true), runtime_error);
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
+// ============================================================================
+// Suite: rpc_response_smessage — secure messaging RPC response contracts
+// ============================================================================
+
+// RAII guard to save/restore fSecMsgenabled state
+struct SmsgGuard {
+    bool savedState;
+    SmsgGuard() : savedState(fSecMsgenabled) {}
+    ~SmsgGuard() {
+        if (fSecMsgenabled != savedState) {
+            if (savedState) {
+                Array p;
+                try { smsgenable(p, false); } catch (...) {}
+            } else {
+                Array p;
+                try { smsgdisable(p, false); } catch (...) {}
+            }
+        }
+    }
+};
+
+BOOST_FIXTURE_TEST_SUITE(rpc_response_smessage, TestChain)
+
+// ---------------------------------------------------------------------------
+// smsgoptions — returns obj_type with option fields
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(smsgoptions_response_contract)
+{
+    Array p;
+    p.push_back(string("list"));
+    Value result = smsgoptions(p, false);
+    BOOST_CHECK(result.type() == obj_type);
+    Object obj = result.get_obj();
+    BOOST_CHECK(find_value(obj, "result").type() == str_type);
+}
+
+// ---------------------------------------------------------------------------
+// smsgenable — returns obj with "result" field
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(smsgenable_response_contract)
+{
+    SmsgGuard guard;
+    if (fSecMsgenabled) {
+        Array pDisable;
+        smsgdisable(pDisable, false);
+    }
+
+    Array p;
+    Value result = smsgenable(p, false);
+    BOOST_CHECK(result.type() == obj_type);
+    Object obj = result.get_obj();
+    BOOST_CHECK(find_value(obj, "result").type() == str_type);
+    BOOST_CHECK_EQUAL(find_value(obj, "result").get_str(), "Enabled secure messaging.");
+}
+
+// ---------------------------------------------------------------------------
+// smsgdisable — returns obj with "result" field
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(smsgdisable_response_contract)
+{
+    SmsgGuard guard;
+    if (!fSecMsgenabled) {
+        Array pEnable;
+        smsgenable(pEnable, false);
+    }
+
+    Array p;
+    Value result = smsgdisable(p, false);
+    BOOST_CHECK(result.type() == obj_type);
+    Object obj = result.get_obj();
+    BOOST_CHECK(find_value(obj, "result").type() == str_type);
+    BOOST_CHECK_EQUAL(find_value(obj, "result").get_str(), "Disabled secure messaging.");
+}
+
+// ---------------------------------------------------------------------------
+// smsgenable — already enabled throws runtime_error
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(smsgenable_already_enabled_throws)
+{
+    SmsgGuard guard;
+    if (!fSecMsgenabled) {
+        Array pEnable;
+        smsgenable(pEnable, false);
+    }
+    Array p;
+    BOOST_CHECK_THROW(smsgenable(p, false), runtime_error);
+}
+
+// ---------------------------------------------------------------------------
+// smsgdisable — already disabled throws runtime_error
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(smsgdisable_already_disabled_throws)
+{
+    SmsgGuard guard;
+    if (fSecMsgenabled) {
+        Array pDisable;
+        smsgdisable(pDisable, false);
+    }
+    Array p;
+    BOOST_CHECK_THROW(smsgdisable(p, false), runtime_error);
+}
+
+// ---------------------------------------------------------------------------
+// smsgoptions — set with too few params returns error result
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(smsgoptions_set_too_few_params)
+{
+    Array p;
+    p.push_back(string("set"));
+    Value result = smsgoptions(p, false);
+    Object obj = result.get_obj();
+    BOOST_CHECK_EQUAL(find_value(obj, "result").get_str(), "Too few parameters.");
+    BOOST_CHECK(find_value(obj, "expected").type() == str_type);
+}
+
+// ---------------------------------------------------------------------------
+// smsgbuckets — requires smsg enabled, returns obj
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(smsgbuckets_response_contract)
+{
+    SmsgGuard guard;
+    if (!fSecMsgenabled) {
+        Array pEnable;
+        smsgenable(pEnable, false);
+    }
+
+    Array p;
+    Value result = smsgbuckets(p, false);
+    BOOST_CHECK(result.type() == obj_type);
+}
+
+// ---------------------------------------------------------------------------
+// smsglocalkeys — requires smsg enabled, returns obj
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(smsglocalkeys_response_contract)
+{
+    SmsgGuard guard;
+    if (!fSecMsgenabled) {
+        Array pEnable;
+        smsgenable(pEnable, false);
+    }
+
+    Array p;
+    Value result = smsglocalkeys(p, false);
+    BOOST_CHECK(result.type() == obj_type);
+}
+
+// ---------------------------------------------------------------------------
+// smsglocalkeys — disabled throws runtime_error
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(smsglocalkeys_disabled_throws)
+{
+    SmsgGuard guard;
+    if (fSecMsgenabled) {
+        Array pDisable;
+        smsgdisable(pDisable, false);
+    }
+    Array p;
+    BOOST_CHECK_THROW(smsglocalkeys(p, false), runtime_error);
+}
+
+// ---------------------------------------------------------------------------
+// smsgenable — help throws runtime_error
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(smsgenable_help_works)
+{
+    Array p;
+    BOOST_CHECK_THROW(smsgenable(p, true), runtime_error);
+}
+
+// ---------------------------------------------------------------------------
+// smsgdisable — help throws runtime_error
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(smsgdisable_help_works)
+{
+    Array p;
+    BOOST_CHECK_THROW(smsgdisable(p, true), runtime_error);
+}
+
+// ---------------------------------------------------------------------------
+// smsgoptions — help throws runtime_error
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(smsgoptions_help_works)
+{
+    Array p;
+    BOOST_CHECK_THROW(smsgoptions(p, true), runtime_error);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
