@@ -425,6 +425,16 @@ bool AppInit2(ThreadGroup& threadGroup)
     // Parses and adds configurable checkpoints.
     Checkpoints::GetCheckpointsFromConfig();
 
+    // Windows headers define STRICT as a macro — undefine before using Checkpoints enum
+#ifdef STRICT
+#undef STRICT
+#endif
+#ifdef ADVISORY
+#undef ADVISORY
+#endif
+#ifdef PERMISSIVE
+#undef PERMISSIVE
+#endif
     CheckpointsMode = Checkpoints::STRICT;
     std::string strCpMode = GetArg("-cppolicy", "strict");
 

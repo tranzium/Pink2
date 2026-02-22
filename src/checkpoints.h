@@ -7,10 +7,16 @@
 #include <map>
 #include "net.h"
 #include "util.h"
+#include <mutex>
 
-#ifdef WIN32
+// Windows headers define STRICT, PERMISSIVE, ADVISORY as macros
+#ifdef STRICT
 #undef STRICT
+#endif
+#ifdef PERMISSIVE
 #undef PERMISSIVE
+#endif
+#ifdef ADVISORY
 #undef ADVISORY
 #endif
 

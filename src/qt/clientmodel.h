@@ -2,7 +2,7 @@
 #define CLIENTMODEL_H
 
 #include <QObject>
-#include <boost/signals2/connection.hpp>
+#include "pink_signal.h"
 #include <vector>
 
 class OptionsModel;
@@ -61,7 +61,7 @@ private:
     void subscribeToCoreSignals();
     void unsubscribeFromCoreSignals();
 
-    std::vector<boost::signals2::connection> coreSignalConnections;
+    std::vector<Connection> coreSignalConnections;
 signals:
     void numConnectionsChanged(int count);
     void numBlocksChanged(int count, int countOfPeers);

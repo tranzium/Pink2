@@ -14,6 +14,7 @@
 #undef printf
 #include <boost/asio.hpp>
 #include <boost/asio/ip/v6_only.hpp>
+#include <boost/shared_ptr.hpp>
 #include <filesystem>
 #include <boost/iostreams/concepts.hpp>
 #include <boost/iostreams/stream.hpp>
@@ -997,7 +998,7 @@ void ThreadRPCServer2(void* parg)
     boost::system::error_code v6_only_error;
     boost::shared_ptr<ip::tcp::acceptor> acceptor(new ip::tcp::acceptor(io_service));
 
-    boost::signals2::signal<void ()> StopRequests;
+    Signal<> StopRequests;
 
     bool fListening = false;
     std::string strerr;
@@ -1014,9 +1015,10 @@ void ThreadRPCServer2(void* parg)
 
         RPCListen(acceptor, context, fUseSSL);
         // Cancel outstanding listen-requests for this acceptor when shutting down
-        StopRequests.connect(signals2::slot<void ()>(
-                    static_cast<void (ip::tcp::acceptor::*)()>(&ip::tcp::acceptor::close), acceptor.get())
-                .track(acceptor));
+        {
+            auto acc = acceptor;
+            StopRequests.connect([acc]() { acc->close(); });
+        }
 
         fListening = true;
     }
@@ -1040,9 +1042,10 @@ void ThreadRPCServer2(void* parg)
 
             RPCListen(acceptor, context, fUseSSL);
             // Cancel outstanding listen-requests for this acceptor when shutting down
-            StopRequests.connect(signals2::slot<void ()>(
-                        static_cast<void (ip::tcp::acceptor::*)()>(&ip::tcp::acceptor::close), acceptor.get())
-                    .track(acceptor));
+            {
+                auto acc = acceptor;
+                StopRequests.connect([acc]() { acc->close(); });
+            }
 
             fListening = true;
         }

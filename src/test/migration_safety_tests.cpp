@@ -929,8 +929,8 @@ BOOST_AUTO_TEST_CASE(json_dump_produces_valid_json)
 BOOST_AUTO_TEST_SUITE_END()
 
 // ============================================================================
-// Suite: signal_behavioral_pinning — boost::signals2 semantics
-// These tests will be updated ONCE during Phase 6D when signals2 is replaced.
+// Suite: signal_behavioral_pinning — custom Signal class semantics
+// Updated during Phase 6D: boost::signals2 replaced with Signal<>.
 // ============================================================================
 
 BOOST_AUTO_TEST_SUITE(signal_behavioral_pinning)
@@ -940,7 +940,7 @@ BOOST_AUTO_TEST_SUITE(signal_behavioral_pinning)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(single_slot_fires)
 {
-    boost::signals2::signal<void(int)> sig;
+    Signal<int> sig;
     int received = 0;
     sig.connect([&](int v) { received = v; });
     sig(42);
@@ -952,7 +952,7 @@ BOOST_AUTO_TEST_CASE(single_slot_fires)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(multiple_slots_fire)
 {
-    boost::signals2::signal<void()> sig;
+    Signal<> sig;
     int count = 0;
     sig.connect([&]() { count++; });
     sig.connect([&]() { count++; });
@@ -966,7 +966,7 @@ BOOST_AUTO_TEST_CASE(multiple_slots_fire)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(disconnect_stops_receiving)
 {
-    boost::signals2::signal<void()> sig;
+    Signal<> sig;
     int count = 0;
     auto conn = sig.connect([&]() { count++; });
     sig();
@@ -977,32 +977,32 @@ BOOST_AUTO_TEST_CASE(disconnect_stops_receiving)
 }
 
 // ---------------------------------------------------------------------------
-// Scoped connection: auto-disconnects on scope exit
+// Manual disconnect in scope: equivalent to scoped_connection
 // ---------------------------------------------------------------------------
-BOOST_AUTO_TEST_CASE(scoped_connection_auto_disconnects)
+BOOST_AUTO_TEST_CASE(manual_disconnect_in_scope)
 {
-    boost::signals2::signal<void()> sig;
+    Signal<> sig;
     int count = 0;
     {
-        boost::signals2::scoped_connection sc(sig.connect([&]() { count++; }));
+        Connection conn = sig.connect([&]() { count++; });
         sig();
         BOOST_CHECK_EQUAL(count, 1);
+        conn.disconnect();
     }
-    // sc is destroyed, connection should be disconnected
     sig();
     BOOST_CHECK_EQUAL(count, 1); // No change
 }
 
 // ---------------------------------------------------------------------------
-// Return value: last_value combiner
+// Return value: SignalLastValue (last_value combiner)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(last_value_combiner)
 {
-    boost::signals2::signal<int(), boost::signals2::last_value<int>> sig;
-    sig.connect([]() { return 1; });
-    sig.connect([]() { return 2; });
-    int result = sig();
-    BOOST_CHECK_EQUAL(result, 2); // last_value returns last slot's result
+    SignalLastValue<> sig;
+    sig.connect([]() { return true; });
+    sig.connect([]() { return false; });
+    bool result = sig();
+    BOOST_CHECK_EQUAL(result, false); // last slot's result
 }
 
 // ---------------------------------------------------------------------------
@@ -1010,42 +1010,52 @@ BOOST_AUTO_TEST_CASE(last_value_combiner)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(empty_signal_fire_safe)
 {
-    boost::signals2::signal<void()> sig;
+    Signal<> sig;
     sig(); // Should not crash
     BOOST_CHECK(true);
 }
 
 // ---------------------------------------------------------------------------
-// Signal num_slots
+// disconnect_all: removes all slots
 // ---------------------------------------------------------------------------
-BOOST_AUTO_TEST_CASE(num_slots_tracking)
+BOOST_AUTO_TEST_CASE(disconnect_all_removes_slots)
 {
-    boost::signals2::signal<void()> sig;
-    BOOST_CHECK_EQUAL(sig.num_slots(), 0u);
-
-    auto c1 = sig.connect([](){});
-    BOOST_CHECK_EQUAL(sig.num_slots(), 1u);
-
-    auto c2 = sig.connect([](){});
-    BOOST_CHECK_EQUAL(sig.num_slots(), 2u);
-
-    c1.disconnect();
-    BOOST_CHECK_EQUAL(sig.num_slots(), 1u);
-
-    c2.disconnect();
-    BOOST_CHECK_EQUAL(sig.num_slots(), 0u);
+    Signal<> sig;
+    int count = 0;
+    sig.connect([&]() { count++; });
+    sig.connect([&]() { count++; });
+    sig();
+    BOOST_CHECK_EQUAL(count, 2);
+    sig.disconnect_all();
+    sig();
+    BOOST_CHECK_EQUAL(count, 2); // No change after disconnect_all
 }
 
 // ---------------------------------------------------------------------------
-// Connection is_connected tracks state
+// Connection connected() tracks state
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(connection_is_connected)
 {
-    boost::signals2::signal<void()> sig;
+    Signal<> sig;
     auto conn = sig.connect([](){});
     BOOST_CHECK(conn.connected());
     conn.disconnect();
     BOOST_CHECK(!conn.connected());
+}
+
+// ---------------------------------------------------------------------------
+// SignalOptional: returns std::optional
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(signal_optional_returns_value)
+{
+    SignalOptional<std::string, const char*> sig;
+    auto rv = sig("test");
+    BOOST_CHECK(!rv.has_value()); // No slots -> empty optional
+
+    sig.connect([](const char* s) -> std::string { return std::string(s) + "_translated"; });
+    rv = sig("hello");
+    BOOST_CHECK(rv.has_value());
+    BOOST_CHECK_EQUAL(*rv, "hello_translated");
 }
 
 // ---------------------------------------------------------------------------

@@ -71,9 +71,9 @@ Notes:
 
 // TODO: For buckets older than current, only need to store no. messages and hash in memory
 
-boost::signals2::signal<void (SecMsgStored& inboxHdr)>  NotifySecMsgInboxChanged;
-boost::signals2::signal<void (SecMsgStored& outboxHdr)> NotifySecMsgOutboxChanged;
-boost::signals2::signal<void ()> NotifySecMsgWalletUnlocked;
+Signal<SecMsgStored&>  NotifySecMsgInboxChanged;
+Signal<SecMsgStored&> NotifySecMsgOutboxChanged;
+Signal<> NotifySecMsgWalletUnlocked;
 
 bool fSecMsgenabled = false;
 

@@ -2,7 +2,7 @@
 #define WALLETMODEL_H
 
 #include <QObject>
-#include <boost/signals2/connection.hpp>
+#include "pink_signal.h"
 #include <vector>
 #include <map>
 
@@ -162,7 +162,7 @@ private:
     void subscribeToCoreSignals();
     void unsubscribeFromCoreSignals();
 
-    std::vector<boost::signals2::connection> coreSignalConnections;
+    std::vector<Connection> coreSignalConnections;
     void checkBalanceChanged();
 
 

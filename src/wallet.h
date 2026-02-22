@@ -377,14 +377,14 @@ public:
     /** Address book entry changed.
      * @note called with lock cs_wallet held.
      */
-    boost::signals2::signal<void (CWallet *wallet, const CTxDestination &address, const std::string &label, bool isMine, ChangeType status)> NotifyAddressBookChanged;
-    boost::signals2::signal<void (CWallet *wallet, const CTxDestination &address, const std::string &label, const std::string percent, ChangeType status)> NotifyAddressBookStakeChanged;
-    
+    Signal<CWallet*, const CTxDestination&, const std::string&, bool, ChangeType> NotifyAddressBookChanged;
+    Signal<CWallet*, const CTxDestination&, const std::string&, const std::string, ChangeType> NotifyAddressBookStakeChanged;
+
 
     /** Wallet transaction added, removed or updated.
      * @note called with lock cs_wallet held.
      */
-    boost::signals2::signal<void (CWallet *wallet, const uint256 &hashTx, ChangeType status)> NotifyTransactionChanged;
+    Signal<CWallet*, const uint256&, ChangeType> NotifyTransactionChanged;
 };
 
 /** A key allocated from the key pool. */
