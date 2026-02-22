@@ -16,6 +16,8 @@
 #include "main.h"
 #include "base58.h"
 #include "stealth.h"
+#include "protocol.h"
+#include "version.h"
 #include "test_framework.h"
 
 extern CWallet* pwalletMain;
@@ -466,6 +468,242 @@ BOOST_AUTO_TEST_CASE(blocklocator_serialization_roundtrip)
     CDataStream ssOrig(SER_DISK, CLIENT_VERSION);
     ssOrig << loc;
     BOOST_CHECK(ssOrig.str() == ss2.str());
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
+// ============================================================================
+// Helper: SerializeToHex / DeserializeFromHex
+// (local copies from golden_tests.cpp — avoid cross-file coupling)
+// ============================================================================
+
+template<typename T>
+static std::string SerializeToHex(const T& obj, int nType = SER_DISK, int nVersion = CLIENT_VERSION)
+{
+    CDataStream ss(nType, nVersion);
+    ss << obj;
+    return HexStr(ss.begin(), ss.end());
+}
+
+template<typename T>
+static T DeserializeFromHex(const std::string& hex, int nType = SER_DISK, int nVersion = CLIENT_VERSION)
+{
+    std::vector<unsigned char> data = ParseHex(hex);
+    CDataStream ss(data, nType, nVersion);
+    T obj;
+    ss >> obj;
+    return obj;
+}
+
+// ============================================================================
+// Suite: wire_protocol_pinning — exact serialized bytes for network messages
+// ============================================================================
+
+BOOST_AUTO_TEST_SUITE(wire_protocol_pinning)
+
+// ---------------------------------------------------------------------------
+// CMessageHeader: exactly 24 bytes
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(message_header_size)
+{
+    BOOST_CHECK_EQUAL(CMessageHeader::HEADER_SIZE, 24u);
+    BOOST_CHECK_EQUAL(CMessageHeader::MESSAGE_START_SIZE, 4u);
+    BOOST_CHECK_EQUAL(CMessageHeader::COMMAND_SIZE, 12u);
+    BOOST_CHECK_EQUAL(CMessageHeader::MESSAGE_SIZE_SIZE, 4u);
+    BOOST_CHECK_EQUAL(CMessageHeader::CHECKSUM_SIZE, 4u);
+}
+
+// ---------------------------------------------------------------------------
+// CInv serialization: 4-byte type + 32-byte hash = 36 bytes
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(cinv_serialization_size)
+{
+    CInv inv(MSG_TX, uint256(0));
+    std::string hex = SerializeToHex(inv, SER_NETWORK, PROTOCOL_VERSION);
+    BOOST_CHECK_EQUAL(hex.size() / 2, 36u); // 36 bytes = 72 hex chars
+}
+
+// ---------------------------------------------------------------------------
+// CInv round-trip: type and hash survive
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(cinv_roundtrip)
+{
+    uint256 testHash("0xabcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789");
+    CInv inv(MSG_BLOCK, testHash);
+
+    std::string hex = SerializeToHex(inv, SER_NETWORK, PROTOCOL_VERSION);
+    CInv inv2 = DeserializeFromHex<CInv>(hex, SER_NETWORK, PROTOCOL_VERSION);
+
+    BOOST_CHECK_EQUAL(inv2.type, MSG_BLOCK);
+    BOOST_CHECK(inv2.hash == testHash);
+}
+
+// ---------------------------------------------------------------------------
+// CInv MSG_TX type value pinned
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(cinv_msg_types_pinned)
+{
+    BOOST_CHECK_EQUAL(MSG_TX, 1);
+    BOOST_CHECK_EQUAL(MSG_BLOCK, 2);
+}
+
+// ---------------------------------------------------------------------------
+// CTransaction with nTime: Pinkcoin-specific field serialized
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(ctransaction_ntime_serialized)
+{
+    CTransaction tx;
+    tx.nVersion = 1;
+    tx.nTime = 0x65530000; // deterministic timestamp
+    tx.nLockTime = 0;
+
+    std::string hex = SerializeToHex(tx, SER_NETWORK, PROTOCOL_VERSION);
+
+    // Deserialize and verify nTime survives
+    CTransaction tx2 = DeserializeFromHex<CTransaction>(hex, SER_NETWORK, PROTOCOL_VERSION);
+    BOOST_CHECK_EQUAL(tx2.nVersion, 1);
+    BOOST_CHECK_EQUAL(tx2.nTime, 0x65530000u);
+    BOOST_CHECK_EQUAL(tx2.nLockTime, 0u);
+}
+
+// ---------------------------------------------------------------------------
+// CTransaction serialization: deterministic empty tx hex pinned
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(ctransaction_empty_hex_pinned)
+{
+    CTransaction tx;
+    tx.nVersion = 1;
+    tx.nTime = 0;
+    tx.nLockTime = 0;
+    // vin and vout are empty
+
+    std::string hex = SerializeToHex(tx, SER_NETWORK, PROTOCOL_VERSION);
+
+    // Structure: version(4) + nTime(4) + vin_count(1) + vout_count(1) + nLockTime(4)
+    // = 14 bytes = 28 hex chars
+    BOOST_CHECK_EQUAL(hex.size() / 2, 14u);
+
+    // Pin exact bytes: version=01000000, nTime=00000000, vin=00, vout=00, locktime=00000000
+    BOOST_CHECK_EQUAL(hex, "0100000000000000000000000000");
+}
+
+// ---------------------------------------------------------------------------
+// Block header: exactly 80 bytes via SER_BLOCKHEADERONLY
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(block_header_80_bytes)
+{
+    CBlock block;
+    block.nVersion = 1;
+    block.hashPrevBlock = uint256(0);
+    block.hashMerkleRoot = uint256(0);
+    block.nTime = 1700000000;
+    block.nBits = 0x1d00ffff;
+    block.nNonce = 0;
+
+    CDataStream ss(SER_BLOCKHEADERONLY, CLIENT_VERSION);
+    ss << block;
+    BOOST_CHECK_EQUAL(ss.size(), 80u);
+}
+
+// ---------------------------------------------------------------------------
+// Block header round-trip: all 6 fields survive
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(block_header_roundtrip)
+{
+    CBlock block;
+    block.nVersion = 7;
+    block.hashPrevBlock = hashGenesisBlock;
+    block.hashMerkleRoot = uint256("0x1111111111111111111111111111111111111111111111111111111111111111");
+    block.nTime = 1700000000;
+    block.nBits = 0x1d00ffff;
+    block.nNonce = 42;
+
+    CDataStream ss(SER_BLOCKHEADERONLY, CLIENT_VERSION);
+    ss << block;
+
+    CBlock block2;
+    ss >> block2;
+
+    BOOST_CHECK_EQUAL(block2.nVersion, 7);
+    BOOST_CHECK(block2.hashPrevBlock == hashGenesisBlock);
+    BOOST_CHECK(block2.hashMerkleRoot == block.hashMerkleRoot);
+    BOOST_CHECK_EQUAL(block2.nTime, 1700000000u);
+    BOOST_CHECK_EQUAL(block2.nBits, 0x1d00ffffu);
+    BOOST_CHECK_EQUAL(block2.nNonce, 42u);
+}
+
+// ---------------------------------------------------------------------------
+// CTxIn serialization: prevout + scriptSig + nSequence
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(ctxin_serialization_roundtrip)
+{
+    CTxIn txin;
+    txin.prevout.hash = uint256("0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+    txin.prevout.n = 3;
+    txin.scriptSig = CScript() << OP_1;
+    txin.nSequence = 0xfffffffe;
+
+    std::string hex = SerializeToHex(txin, SER_NETWORK, PROTOCOL_VERSION);
+    CTxIn txin2 = DeserializeFromHex<CTxIn>(hex, SER_NETWORK, PROTOCOL_VERSION);
+
+    BOOST_CHECK(txin2.prevout.hash == txin.prevout.hash);
+    BOOST_CHECK_EQUAL(txin2.prevout.n, 3u);
+    BOOST_CHECK(txin2.scriptSig == txin.scriptSig);
+    BOOST_CHECK_EQUAL(txin2.nSequence, 0xfffffffeu);
+}
+
+// ---------------------------------------------------------------------------
+// CTxOut serialization: nValue + scriptPubKey
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(ctxout_serialization_roundtrip)
+{
+    CTxOut txout;
+    txout.nValue = 50 * COIN;
+    txout.scriptPubKey = CScript() << OP_DUP << OP_HASH160 << ParseHex("89abcdefabbaabbaabbaabbaabbaabbaabbaabba") << OP_EQUALVERIFY << OP_CHECKSIG;
+
+    std::string hex = SerializeToHex(txout, SER_NETWORK, PROTOCOL_VERSION);
+    CTxOut txout2 = DeserializeFromHex<CTxOut>(hex, SER_NETWORK, PROTOCOL_VERSION);
+
+    BOOST_CHECK_EQUAL(txout2.nValue, 50 * COIN);
+    BOOST_CHECK(txout2.scriptPubKey == txout.scriptPubKey);
+}
+
+// ---------------------------------------------------------------------------
+// COutPoint serialization: 32-byte hash + 4-byte index = 36 bytes
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(coutpoint_serialization_size)
+{
+    COutPoint op(uint256(42), 7);
+    std::string hex = SerializeToHex(op, SER_NETWORK, PROTOCOL_VERSION);
+    BOOST_CHECK_EQUAL(hex.size() / 2, 36u);
+
+    COutPoint op2 = DeserializeFromHex<COutPoint>(hex, SER_NETWORK, PROTOCOL_VERSION);
+    BOOST_CHECK(op2.hash == uint256(42));
+    BOOST_CHECK_EQUAL(op2.n, 7u);
+}
+
+// ---------------------------------------------------------------------------
+// CAddress serialization: includes nServices and nTime
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(caddress_serialization_roundtrip)
+{
+    CAddress addr;
+    addr.nServices = NODE_NETWORK;
+    addr.nTime = 1700000000;
+
+    std::string hex = SerializeToHex(addr, SER_DISK, PROTOCOL_VERSION);
+    CAddress addr2 = DeserializeFromHex<CAddress>(hex, SER_DISK, PROTOCOL_VERSION);
+
+    BOOST_CHECK_EQUAL(addr2.nServices, NODE_NETWORK);
+    BOOST_CHECK_EQUAL(addr2.nTime, 1700000000u);
+}
+
+// ---------------------------------------------------------------------------
+// PROTOCOL_VERSION pinned
+// ---------------------------------------------------------------------------
+BOOST_AUTO_TEST_CASE(protocol_version_pinned)
+{
+    BOOST_CHECK_EQUAL(PROTOCOL_VERSION, 60019);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
