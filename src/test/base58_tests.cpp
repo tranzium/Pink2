@@ -1,33 +1,31 @@
 #include <boost/test/unit_test.hpp>
-#include "json/json_spirit_reader_template.h"
-#include "json/json_spirit_writer_template.h"
-#include "json/json_spirit_utils.h"
+#include "json/nlohmann/json.hpp"
 
 #include "base58.h"
 #include "util.h"
 #include "stealth.h"
 
-using namespace json_spirit;
-extern Array read_json(const std::string& filename);
+using json = nlohmann::json;
+extern json read_json(const std::string& filename);
 
 BOOST_AUTO_TEST_SUITE(base58_tests)
 
 // Goal: test low-level base58 encoding functionality
 BOOST_AUTO_TEST_CASE(base58_EncodeBase58)
 {
-    Array tests = read_json("base58_encode_decode.json");
+    json tests = read_json("base58_encode_decode.json");
 
-    for (Value& tv : tests)
+    for (json& tv : tests)
     {
-        Array test = tv.get_array();
-        std::string strTest = write_string(tv, false);
+        json test = tv;
+        std::string strTest = tv.dump();
         if (test.size() < 2) // Allow for extra stuff (useful for comments)
         {
             BOOST_ERROR("Bad test: " << strTest);
             continue;
         }
-        std::vector<unsigned char> sourcedata = ParseHex(test[0].get_str());
-        std::string base58string = test[1].get_str();
+        std::vector<unsigned char> sourcedata = ParseHex(test[0].get<std::string>());
+        std::string base58string = test[1].get<std::string>();
         BOOST_CHECK_MESSAGE(
                     EncodeBase58(&sourcedata[0], &sourcedata[sourcedata.size()]) == base58string,
                     strTest);
@@ -37,20 +35,20 @@ BOOST_AUTO_TEST_CASE(base58_EncodeBase58)
 // Goal: test low-level base58 decoding functionality
 BOOST_AUTO_TEST_CASE(base58_DecodeBase58)
 {
-    Array tests = read_json("base58_encode_decode.json");
+    json tests = read_json("base58_encode_decode.json");
     std::vector<unsigned char> result;
 
-    for (Value& tv : tests)
+    for (json& tv : tests)
     {
-        Array test = tv.get_array();
-        std::string strTest = write_string(tv, false);
+        json test = tv;
+        std::string strTest = tv.dump();
         if (test.size() < 2) // Allow for extra stuff (useful for comments)
         {
             BOOST_ERROR("Bad test: " << strTest);
             continue;
         }
-        std::vector<unsigned char> expected = ParseHex(test[0].get_str());
-        std::string base58string = test[1].get_str();
+        std::vector<unsigned char> expected = ParseHex(test[0].get<std::string>());
+        std::string base58string = test[1].get<std::string>();
         BOOST_CHECK_MESSAGE(DecodeBase58(base58string, result), strTest);
         BOOST_CHECK_MESSAGE(result.size() == expected.size() && std::equal(result.begin(), result.end(), expected.begin()), strTest);
     }
@@ -250,21 +248,21 @@ BOOST_AUTO_TEST_CASE(base58_keys_valid_gen)
 // Goal: check that base58 parsing code is robust against a variety of corrupted data
 BOOST_AUTO_TEST_CASE(base58_keys_invalid)
 {
-    Array tests = read_json("base58_keys_invalid.json"); // Negative testcases
+    json tests = read_json("base58_keys_invalid.json"); // Negative testcases
     std::vector<unsigned char> result;
     CBitcoinSecret secret;
     CBitcoinAddress addr;
 
-    for (Value& tv : tests)
+    for (json& tv : tests)
     {
-        Array test = tv.get_array();
-        std::string strTest = write_string(tv, false);
+        json test = tv;
+        std::string strTest = tv.dump();
         if (test.size() < 1) // Allow for extra stuff (useful for comments)
         {
             BOOST_ERROR("Bad test: " << strTest);
             continue;
         }
-        std::string exp_base58string = test[0].get_str();
+        std::string exp_base58string = test[0].get<std::string>();
 
         // must be invalid as public and as private key
         addr.SetString(exp_base58string);
@@ -276,4 +274,3 @@ BOOST_AUTO_TEST_CASE(base58_keys_invalid)
 
 
 BOOST_AUTO_TEST_SUITE_END()
-

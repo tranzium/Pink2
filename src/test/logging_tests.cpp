@@ -13,13 +13,7 @@
 #include <thread>
 #include <vector>
 
-using json_spirit::Array;
-using json_spirit::Value;
-using json_spirit::Object;
-using json_spirit::obj_type;
-using json_spirit::str_type;
-using json_spirit::array_type;
-using json_spirit::int_type;
+// json type alias provided by bitcoinrpc.h (using json = nlohmann::json)
 
 // Helper to save/restore Logger state across tests
 struct LoggerStateGuard {
@@ -377,34 +371,31 @@ BOOST_AUTO_TEST_SUITE(log_rpc_tests)
 
 BOOST_AUTO_TEST_CASE(setloglevel_help)
 {
-    Array p;
+    json p = json::array();
     BOOST_CHECK_THROW(setloglevel(p, true), std::runtime_error);
 }
 
 BOOST_AUTO_TEST_CASE(setloglevel_sets_level)
 {
     LoggerStateGuard guard;
-    Array p;
+    json p = json::array();
     p.push_back("debug");
 
-    Value result = setloglevel(p, false);
-    BOOST_CHECK_EQUAL(result.type(), obj_type);
+    json result = setloglevel(p, false);
+    BOOST_CHECK(result.is_object());
 
-    Object obj = result.get_obj();
-    Value levelVal = json_spirit::find_value(obj, "level");
-    BOOST_CHECK_EQUAL(levelVal.get_str(), "debug");
+    BOOST_CHECK_EQUAL(result["level"].get<std::string>(), "debug");
     BOOST_CHECK(Logger::GetInstance().GetLogLevel() == LogLevel::DEBUG);
 }
 
 BOOST_AUTO_TEST_CASE(setloglevel_sets_categories)
 {
     LoggerStateGuard guard;
-    Array p;
+    json p = json::array();
     p.push_back("debug");
     p.push_back("net,wallet");
 
-    Value result = setloglevel(p, false);
-    Object obj = result.get_obj();
+    json result = setloglevel(p, false);
 
     uint32_t expected = static_cast<uint32_t>(BCLog::NET) | static_cast<uint32_t>(BCLog::WALLET);
     BOOST_CHECK_EQUAL(Logger::GetInstance().GetCategories(), expected);
@@ -413,7 +404,7 @@ BOOST_AUTO_TEST_CASE(setloglevel_sets_categories)
 BOOST_AUTO_TEST_CASE(setloglevel_all_categories)
 {
     LoggerStateGuard guard;
-    Array p;
+    json p = json::array();
     p.push_back("info");
     p.push_back("all");
 
@@ -423,13 +414,13 @@ BOOST_AUTO_TEST_CASE(setloglevel_all_categories)
 
 BOOST_AUTO_TEST_CASE(setloglevel_no_args_throws)
 {
-    Array p;
+    json p = json::array();
     BOOST_CHECK_THROW(setloglevel(p, false), std::runtime_error);
 }
 
 BOOST_AUTO_TEST_CASE(getloglevel_help)
 {
-    Array p;
+    json p = json::array();
     BOOST_CHECK_THROW(getloglevel(p, true), std::runtime_error);
 }
 
@@ -440,18 +431,15 @@ BOOST_AUTO_TEST_CASE(getloglevel_returns_current_state)
     logger.SetLogLevel(LogLevel::WARN);
     logger.SetCategories(BCLog::NET | BCLog::STAKE);
 
-    Array p;
-    Value result = getloglevel(p, false);
-    BOOST_CHECK_EQUAL(result.type(), obj_type);
+    json p = json::array();
+    json result = getloglevel(p, false);
+    BOOST_CHECK(result.is_object());
 
-    Object obj = result.get_obj();
-    BOOST_CHECK_EQUAL(json_spirit::find_value(obj, "level").get_str(), "warn");
+    BOOST_CHECK_EQUAL(result["level"].get<std::string>(), "warn");
 
-    Value catsVal = json_spirit::find_value(obj, "categories");
-    BOOST_CHECK_EQUAL(catsVal.type(), array_type);
+    BOOST_CHECK(result["categories"].is_array());
 
-    Array cats = catsVal.get_array();
-    BOOST_CHECK_EQUAL(cats.size(), 2u);
+    BOOST_CHECK_EQUAL(result["categories"].size(), 2u);
 }
 
 BOOST_AUTO_TEST_CASE(setloglevel_roundtrip)
@@ -459,16 +447,15 @@ BOOST_AUTO_TEST_CASE(setloglevel_roundtrip)
     LoggerStateGuard guard;
 
     // Set via RPC
-    Array setParams;
+    json setParams = json::array();
     setParams.push_back("error");
     setParams.push_back("consensus,db");
     setloglevel(setParams, false);
 
     // Get via RPC
-    Array getParams;
-    Value result = getloglevel(getParams, false);
-    Object obj = result.get_obj();
-    BOOST_CHECK_EQUAL(json_spirit::find_value(obj, "level").get_str(), "error");
+    json getParams = json::array();
+    json result = getloglevel(getParams, false);
+    BOOST_CHECK_EQUAL(result["level"].get<std::string>(), "error");
 }
 
 BOOST_AUTO_TEST_SUITE_END()

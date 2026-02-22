@@ -12,8 +12,6 @@
 #include "bitcoinrpc.h"
 #include "init.h"
 
-using namespace json_spirit;
-
 int64_t nWalletUnlockTime;
 
 void accountingDeprecationCheck()
@@ -43,29 +41,29 @@ void EnsureWalletIsUnlocked()
         throw JSONRPCError(RPC_WALLET_UNLOCK_NEEDED, "Error: Wallet is unlocked for staking only.");
 }
 
-void WalletTxToJSON(const CWalletTx& wtx, Object& entry)
+void WalletTxToJSON(const CWalletTx& wtx, json& entry)
 {
     int confirms = wtx.GetDepthInMainChain();
-    entry.push_back(Pair("confirmations", confirms));
+    entry["confirmations"] = confirms;
     if (wtx.IsCoinBase() || wtx.IsCoinStake())
-        entry.push_back(Pair("generated", true));
+        entry["generated"] = true;
     if (confirms > 0)
     {
-        entry.push_back(Pair("blockhash", wtx.hashBlock.GetHex()));
-        entry.push_back(Pair("blockindex", wtx.nIndex));
-        entry.push_back(Pair("blocktime", static_cast<int64_t>(mapBlockIndex[wtx.hashBlock]->nTime)));
+        entry["blockhash"] = wtx.hashBlock.GetHex();
+        entry["blockindex"] = wtx.nIndex;
+        entry["blocktime"] = static_cast<int64_t>(mapBlockIndex[wtx.hashBlock]->nTime);
     }
-    entry.push_back(Pair("txid", wtx.GetHash().GetHex()));
-    entry.push_back(Pair("time", static_cast<int64_t>(wtx.GetTxTime())));
-    entry.push_back(Pair("timereceived", static_cast<int64_t>(wtx.nTimeReceived)));
+    entry["txid"] = wtx.GetHash().GetHex();
+    entry["time"] = static_cast<int64_t>(wtx.GetTxTime());
+    entry["timereceived"] = static_cast<int64_t>(wtx.nTimeReceived);
 
     for (const auto& item : wtx.mapValue)
-        entry.push_back(Pair(item.first, item.second));
+        entry[item.first] = item.second;
 }
 
-std::string AccountFromValue(const Value& value)
+std::string AccountFromValue(const json& value)
 {
-    std::string strAccount = value.get_str();
+    std::string strAccount = value.get<std::string>();
     if (strAccount == "*")
         throw JSONRPCError(RPC_WALLET_INVALID_ACCOUNT_NAME, "Invalid account name");
     return strAccount;

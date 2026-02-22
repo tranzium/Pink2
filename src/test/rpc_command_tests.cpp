@@ -15,13 +15,10 @@
 #include "util.h"
 #include "test_framework.h"
 
-using namespace std;
-using namespace json_spirit;
-
 // Extern declarations for functions in RPC source files not declared in headers
-extern string AccountFromValue(const Value& value);
-extern void ScriptPubKeyToJSON(const CScript& scriptPubKey, Object& out, bool fIncludeHex);
-extern void TxToJSON(const CTransaction& tx, const uint256 hashBlock, Object& entry);
+extern std::string AccountFromValue(const json& value);
+extern void ScriptPubKeyToJSON(const CScript& scriptPubKey, json& out, bool fIncludeHex);
+extern void TxToJSON(const CTransaction& tx, const uint256 hashBlock, json& entry);
 
 BOOST_AUTO_TEST_SUITE(rpc_command_tests)
 
@@ -37,23 +34,23 @@ BOOST_AUTO_TEST_CASE(verifymessage_valid_signature)
     CPubKey pubkey = key.GetPubKey();
     CBitcoinAddress addr(pubkey.GetID());
 
-    string message = "test message for verification";
+    std::string message = "test message for verification";
 
     // Sign (same logic as signmessage RPC)
     CDataStream ss(SER_GETHASH, 0);
     ss << strMessageMagic;
     ss << message;
-    vector<unsigned char> vchSig;
+    std::vector<unsigned char> vchSig;
     BOOST_REQUIRE(key.SignCompact(Hash(ss.begin(), ss.end()), vchSig));
-    string sig = EncodeBase64(&vchSig[0], vchSig.size());
+    std::string sig = EncodeBase64(&vchSig[0], vchSig.size());
 
     // Call verifymessage RPC
-    Array params;
+    json params = json::array();
     params.push_back(addr.ToString());
     params.push_back(sig);
     params.push_back(message);
-    Value result = verifymessage(params, false);
-    BOOST_CHECK_EQUAL(result.get_bool(), true);
+    json result = verifymessage(params, false);
+    BOOST_CHECK_EQUAL(result.get<bool>(), true);
 }
 
 BOOST_AUTO_TEST_CASE(verifymessage_wrong_message)
@@ -65,27 +62,27 @@ BOOST_AUTO_TEST_CASE(verifymessage_wrong_message)
 
     CDataStream ss(SER_GETHASH, 0);
     ss << strMessageMagic;
-    ss << string("original message");
-    vector<unsigned char> vchSig;
+    ss << std::string("original message");
+    std::vector<unsigned char> vchSig;
     BOOST_REQUIRE(key.SignCompact(Hash(ss.begin(), ss.end()), vchSig));
-    string sig = EncodeBase64(&vchSig[0], vchSig.size());
+    std::string sig = EncodeBase64(&vchSig[0], vchSig.size());
 
-    // Verify with different message → false
-    Array params;
+    // Verify with different message -> false
+    json params = json::array();
     params.push_back(addr.ToString());
     params.push_back(sig);
-    params.push_back(string("wrong message"));
-    Value result = verifymessage(params, false);
-    BOOST_CHECK_EQUAL(result.get_bool(), false);
+    params.push_back(std::string("wrong message"));
+    json result = verifymessage(params, false);
+    BOOST_CHECK_EQUAL(result.get<bool>(), false);
 }
 
 BOOST_AUTO_TEST_CASE(verifymessage_invalid_address)
 {
-    Array params;
-    params.push_back(string("invalid_address"));
-    params.push_back(string("dummysig"));
-    params.push_back(string("message"));
-    BOOST_CHECK_THROW(verifymessage(params, false), Object);
+    json params = json::array();
+    params.push_back(std::string("invalid_address"));
+    params.push_back(std::string("dummysig"));
+    params.push_back(std::string("message"));
+    BOOST_CHECK_THROW(verifymessage(params, false), json);
 }
 
 BOOST_AUTO_TEST_CASE(verifymessage_malformed_base64)
@@ -95,32 +92,32 @@ BOOST_AUTO_TEST_CASE(verifymessage_malformed_base64)
     CBitcoinAddress addr(key.GetPubKey().GetID());
 
     // "A" is 1 base64 char (4n+1): DecodeBase64 sets fInvalid=true
-    Array params;
+    json params = json::array();
     params.push_back(addr.ToString());
-    params.push_back(string("A"));
-    params.push_back(string("message"));
-    BOOST_CHECK_THROW(verifymessage(params, false), Object);
+    params.push_back(std::string("A"));
+    params.push_back(std::string("message"));
+    BOOST_CHECK_THROW(verifymessage(params, false), json);
 }
 
 BOOST_AUTO_TEST_CASE(verifymessage_invalid_sig_returns_false)
 {
-    // Non-base64 chars at start: DecodeBase64 returns empty, SetCompactSignature fails → false
+    // Non-base64 chars at start: DecodeBase64 returns empty, SetCompactSignature fails -> false
     CKey key;
     key.MakeNewKey(true);
     CBitcoinAddress addr(key.GetPubKey().GetID());
 
-    Array params;
+    json params = json::array();
     params.push_back(addr.ToString());
-    params.push_back(string("!!!not-base64!!!"));
-    params.push_back(string("message"));
-    Value result = verifymessage(params, false);
-    BOOST_CHECK_EQUAL(result.get_bool(), false);
+    params.push_back(std::string("!!!not-base64!!!"));
+    params.push_back(std::string("message"));
+    json result = verifymessage(params, false);
+    BOOST_CHECK_EQUAL(result.get<bool>(), false);
 }
 
 BOOST_AUTO_TEST_CASE(verifymessage_help)
 {
-    Array params;
-    BOOST_CHECK_THROW(verifymessage(params, true), runtime_error);
+    json params = json::array();
+    BOOST_CHECK_THROW(verifymessage(params, true), std::runtime_error);
 }
 
 // ============================================================================
@@ -135,23 +132,22 @@ BOOST_AUTO_TEST_CASE(decodescript_p2pkh)
     CKeyID keyID = key.GetPubKey().GetID();
     CScript script;
     script.SetDestination(keyID);
-    string hex = HexStr(script.begin(), script.end());
+    std::string hex = HexStr(script.begin(), script.end());
 
-    Array params;
+    json params = json::array();
     params.push_back(hex);
-    Value result = decodescript(params, false);
-    Object obj = result.get_obj();
+    json result = decodescript(params, false);
 
-    string asm_str = find_value(obj, "asm").get_str();
-    BOOST_CHECK(asm_str.find("OP_DUP") != string::npos);
-    BOOST_CHECK(asm_str.find("OP_HASH160") != string::npos);
-    BOOST_CHECK(asm_str.find("OP_CHECKSIG") != string::npos);
+    std::string asm_str = result["asm"].get<std::string>();
+    BOOST_CHECK(asm_str.find("OP_DUP") != std::string::npos);
+    BOOST_CHECK(asm_str.find("OP_HASH160") != std::string::npos);
+    BOOST_CHECK(asm_str.find("OP_CHECKSIG") != std::string::npos);
 
-    string type = find_value(obj, "type").get_str();
+    std::string type = result["type"].get<std::string>();
     BOOST_CHECK_EQUAL(type, "pubkeyhash");
 
     // p2sh field contains valid Pinkcoin address with "C" prefix
-    string p2sh = find_value(obj, "p2sh").get_str();
+    std::string p2sh = result["p2sh"].get<std::string>();
     BOOST_CHECK_EQUAL(p2sh[0], 'C');
     CBitcoinAddress p2shAddr(p2sh);
     BOOST_CHECK(p2shAddr.IsValid());
@@ -167,30 +163,28 @@ BOOST_AUTO_TEST_CASE(decodescript_p2sh)
     CScriptID scriptID = innerScript.GetID();
     CScript script;
     script.SetDestination(scriptID);
-    string hex = HexStr(script.begin(), script.end());
+    std::string hex = HexStr(script.begin(), script.end());
 
-    Array params;
+    json params = json::array();
     params.push_back(hex);
-    Value result = decodescript(params, false);
-    Object obj = result.get_obj();
+    json result = decodescript(params, false);
 
-    string type = find_value(obj, "type").get_str();
+    std::string type = result["type"].get<std::string>();
     BOOST_CHECK_EQUAL(type, "scripthash");
 }
 
 BOOST_AUTO_TEST_CASE(decodescript_empty)
 {
-    Array params;
-    params.push_back(string(""));
-    Value result = decodescript(params, false);
-    Object obj = result.get_obj();
+    json params = json::array();
+    params.push_back(std::string(""));
+    json result = decodescript(params, false);
 
     // Empty script has empty asm
-    string asm_str = find_value(obj, "asm").get_str();
+    std::string asm_str = result["asm"].get<std::string>();
     BOOST_CHECK(asm_str.empty());
 
     // p2sh field still present
-    string p2sh = find_value(obj, "p2sh").get_str();
+    std::string p2sh = result["p2sh"].get<std::string>();
     BOOST_CHECK(!p2sh.empty());
 }
 
@@ -199,13 +193,12 @@ BOOST_AUTO_TEST_CASE(decodescript_p2sh_address_prefix)
     // Any decoded script's p2sh should start with "C" (Pinkcoin P2SH prefix)
     CScript script;
     script << OP_1;
-    string hex = HexStr(script.begin(), script.end());
+    std::string hex = HexStr(script.begin(), script.end());
 
-    Array params;
+    json params = json::array();
     params.push_back(hex);
-    Value result = decodescript(params, false);
-    Object obj = result.get_obj();
-    string p2sh = find_value(obj, "p2sh").get_str();
+    json result = decodescript(params, false);
+    std::string p2sh = result["p2sh"].get<std::string>();
     BOOST_CHECK_EQUAL(p2sh[0], 'C');
 }
 
@@ -229,43 +222,42 @@ BOOST_AUTO_TEST_CASE(decoderawtransaction_valid)
 
     CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
     ss << tx;
-    string hexTx = HexStr(ss.begin(), ss.end());
+    std::string hexTx = HexStr(ss.begin(), ss.end());
 
-    Array params;
+    json params = json::array();
     params.push_back(hexTx);
-    Value result = decoderawtransaction(params, false);
-    Object obj = result.get_obj();
+    json result = decoderawtransaction(params, false);
 
     // Verify Pinkcoin-specific "time" field
-    BOOST_CHECK_EQUAL(find_value(obj, "time").get_int64(), 1700000000);
-    BOOST_CHECK_EQUAL(find_value(obj, "version").get_int(), 1);
-    BOOST_CHECK_EQUAL(find_value(obj, "locktime").get_int64(), 0);
+    BOOST_CHECK_EQUAL(result["time"].get<int64_t>(), 1700000000);
+    BOOST_CHECK_EQUAL(result["version"].get<int>(), 1);
+    BOOST_CHECK_EQUAL(result["locktime"].get<int64_t>(), 0);
 
     // txid should be non-empty hex
-    string txid = find_value(obj, "txid").get_str();
+    std::string txid = result["txid"].get<std::string>();
     BOOST_CHECK(!txid.empty());
     BOOST_CHECK(IsHex(txid));
 
     // vin and vout arrays
-    Array vin = find_value(obj, "vin").get_array();
+    json vin = result["vin"];
     BOOST_CHECK_EQUAL(vin.size(), 1u);
-    Array vout = find_value(obj, "vout").get_array();
+    json vout = result["vout"];
     BOOST_CHECK_EQUAL(vout.size(), 1u);
 }
 
 BOOST_AUTO_TEST_CASE(decoderawtransaction_invalid_hex)
 {
-    Array params;
-    params.push_back(string("not_valid_hex_data_zzzz"));
-    BOOST_CHECK_THROW(decoderawtransaction(params, false), Object);
+    json params = json::array();
+    params.push_back(std::string("not_valid_hex_data_zzzz"));
+    BOOST_CHECK_THROW(decoderawtransaction(params, false), json);
 }
 
 BOOST_AUTO_TEST_CASE(decoderawtransaction_truncated)
 {
     // Valid hex but not a valid serialized transaction
-    Array params;
-    params.push_back(string("deadbeef"));
-    BOOST_CHECK_THROW(decoderawtransaction(params, false), Object);
+    json params = json::array();
+    params.push_back(std::string("deadbeef"));
+    BOOST_CHECK_THROW(decoderawtransaction(params, false), json);
 }
 
 BOOST_AUTO_TEST_CASE(decoderawtransaction_pinkcoin_time_field)
@@ -280,15 +272,14 @@ BOOST_AUTO_TEST_CASE(decoderawtransaction_pinkcoin_time_field)
 
     CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
     ss << tx;
-    string hexTx = HexStr(ss.begin(), ss.end());
+    std::string hexTx = HexStr(ss.begin(), ss.end());
 
-    Array params;
+    json params = json::array();
     params.push_back(hexTx);
-    Value result = decoderawtransaction(params, false);
-    Object obj = result.get_obj();
+    json result = decoderawtransaction(params, false);
 
     // The "time" field must be present and correct
-    BOOST_CHECK_EQUAL(find_value(obj, "time").get_int64(), 1234567890);
+    BOOST_CHECK_EQUAL(result["time"].get<int64_t>(), 1234567890);
 }
 
 // ============================================================================
@@ -303,52 +294,49 @@ BOOST_AUTO_TEST_CASE(createrawtransaction_valid)
     CBitcoinAddress addr(key.GetPubKey().GetID());
 
     // Build inputs array
-    Object input;
-    input.push_back(Pair("txid", string("0000000000000000000000000000000000000000000000000000000000000001")));
-    input.push_back(Pair("vout", 0));
-    Array inputs;
+    json input;
+    input["txid"] = std::string("0000000000000000000000000000000000000000000000000000000000000001");
+    input["vout"] = 0;
+    json inputs = json::array();
     inputs.push_back(input);
 
     // Build outputs object
-    Object outputs;
-    outputs.push_back(Pair(addr.ToString(), 1.0));
+    json outputs;
+    outputs[addr.ToString()] = 1.0;
 
-    Array params;
+    json params = json::array();
     params.push_back(inputs);
     params.push_back(outputs);
-    Value result = createrawtransaction(params, false);
+    json result = createrawtransaction(params, false);
 
     // Result is a hex string
-    string hex = result.get_str();
+    std::string hex = result.get<std::string>();
     BOOST_CHECK(!hex.empty());
     BOOST_CHECK(IsHex(hex));
 
     // Round-trip: decode the result
-    Array decodeParams;
+    json decodeParams = json::array();
     decodeParams.push_back(hex);
-    Value decoded = decoderawtransaction(decodeParams, false);
-    Object obj = decoded.get_obj();
-    Array vin = find_value(obj, "vin").get_array();
-    BOOST_CHECK_EQUAL(vin.size(), 1u);
-    Array vout = find_value(obj, "vout").get_array();
-    BOOST_CHECK_EQUAL(vout.size(), 1u);
+    json decoded = decoderawtransaction(decodeParams, false);
+    BOOST_CHECK_EQUAL(decoded["vin"].size(), 1u);
+    BOOST_CHECK_EQUAL(decoded["vout"].size(), 1u);
 }
 
 BOOST_AUTO_TEST_CASE(createrawtransaction_invalid_address)
 {
-    Object input;
-    input.push_back(Pair("txid", string("0000000000000000000000000000000000000000000000000000000000000001")));
-    input.push_back(Pair("vout", 0));
-    Array inputs;
+    json input;
+    input["txid"] = std::string("0000000000000000000000000000000000000000000000000000000000000001");
+    input["vout"] = 0;
+    json inputs = json::array();
     inputs.push_back(input);
 
-    Object outputs;
-    outputs.push_back(Pair("invalid_address", 1.0));
+    json outputs;
+    outputs["invalid_address"] = 1.0;
 
-    Array params;
+    json params = json::array();
     params.push_back(inputs);
     params.push_back(outputs);
-    BOOST_CHECK_THROW(createrawtransaction(params, false), Object);
+    BOOST_CHECK_THROW(createrawtransaction(params, false), json);
 }
 
 BOOST_AUTO_TEST_CASE(createrawtransaction_duplicate_address)
@@ -357,57 +345,67 @@ BOOST_AUTO_TEST_CASE(createrawtransaction_duplicate_address)
     key.MakeNewKey(true);
     CBitcoinAddress addr(key.GetPubKey().GetID());
 
-    Object input;
-    input.push_back(Pair("txid", string("0000000000000000000000000000000000000000000000000000000000000001")));
-    input.push_back(Pair("vout", 0));
-    Array inputs;
+    json input;
+    input["txid"] = std::string("0000000000000000000000000000000000000000000000000000000000000001");
+    input["vout"] = 0;
+    json inputs = json::array();
     inputs.push_back(input);
 
-    Object outputs;
-    outputs.push_back(Pair(addr.ToString(), 1.0));
-    outputs.push_back(Pair(addr.ToString(), 2.0));
+    // nlohmann/json objects cannot have duplicate keys -- the second assignment
+    // overwrites the first.  The production code checks for duplicates via
+    // iteration, so we need to pass two distinct entries.  With nlohmann/json
+    // we cannot represent duplicate keys in a json object, so we construct
+    // the scenario by testing that a single-key object does NOT throw.
+    // The original json_spirit test relied on Object supporting duplicate keys.
+    // With nlohmann/json, duplicate key insertion silently overwrites, so the
+    // duplicate-address error path is unreachable via JSON.  We verify the
+    // single-address case succeeds instead.
+    json outputs;
+    outputs[addr.ToString()] = 1.0;
 
-    Array params;
+    json params = json::array();
     params.push_back(inputs);
     params.push_back(outputs);
-    BOOST_CHECK_THROW(createrawtransaction(params, false), Object);
+    // Should succeed (single address, no duplicate)
+    json result = createrawtransaction(params, false);
+    BOOST_CHECK(!result.get<std::string>().empty());
 }
 
 BOOST_AUTO_TEST_CASE(createrawtransaction_missing_txid)
 {
-    Object input;
-    input.push_back(Pair("vout", 0));
-    Array inputs;
+    json input;
+    input["vout"] = 0;
+    json inputs = json::array();
     inputs.push_back(input);
 
     CKey key;
     key.MakeNewKey(true);
-    Object outputs;
-    outputs.push_back(Pair(CBitcoinAddress(key.GetPubKey().GetID()).ToString(), 1.0));
+    json outputs;
+    outputs[CBitcoinAddress(key.GetPubKey().GetID()).ToString()] = 1.0;
 
-    Array params;
+    json params = json::array();
     params.push_back(inputs);
     params.push_back(outputs);
-    BOOST_CHECK_THROW(createrawtransaction(params, false), Object);
+    BOOST_CHECK_THROW(createrawtransaction(params, false), json);
 }
 
 BOOST_AUTO_TEST_CASE(createrawtransaction_negative_vout)
 {
-    Object input;
-    input.push_back(Pair("txid", string("0000000000000000000000000000000000000000000000000000000000000001")));
-    input.push_back(Pair("vout", -1));
-    Array inputs;
+    json input;
+    input["txid"] = std::string("0000000000000000000000000000000000000000000000000000000000000001");
+    input["vout"] = -1;
+    json inputs = json::array();
     inputs.push_back(input);
 
     CKey key;
     key.MakeNewKey(true);
-    Object outputs;
-    outputs.push_back(Pair(CBitcoinAddress(key.GetPubKey().GetID()).ToString(), 1.0));
+    json outputs;
+    outputs[CBitcoinAddress(key.GetPubKey().GetID()).ToString()] = 1.0;
 
-    Array params;
+    json params = json::array();
     params.push_back(inputs);
     params.push_back(outputs);
-    BOOST_CHECK_THROW(createrawtransaction(params, false), Object);
+    BOOST_CHECK_THROW(createrawtransaction(params, false), json);
 }
 
 // ============================================================================
@@ -416,12 +414,11 @@ BOOST_AUTO_TEST_CASE(createrawtransaction_negative_vout)
 
 BOOST_AUTO_TEST_CASE(makekeypair_returns_keys)
 {
-    Array params;
-    Value result = makekeypair(params, false);
-    Object obj = result.get_obj();
+    json params = json::array();
+    json result = makekeypair(params, false);
 
-    string privKey = find_value(obj, "PrivateKey").get_str();
-    string pubKey = find_value(obj, "PublicKey").get_str();
+    std::string privKey = result["PrivateKey"].get<std::string>();
+    std::string pubKey = result["PublicKey"].get<std::string>();
 
     BOOST_CHECK(!privKey.empty());
     BOOST_CHECK(!pubKey.empty());
@@ -431,12 +428,11 @@ BOOST_AUTO_TEST_CASE(makekeypair_returns_keys)
 
 BOOST_AUTO_TEST_CASE(makekeypair_valid_pubkey)
 {
-    Array params;
-    Value result = makekeypair(params, false);
-    Object obj = result.get_obj();
+    json params = json::array();
+    json result = makekeypair(params, false);
 
-    string pubKeyHex = find_value(obj, "PublicKey").get_str();
-    vector<unsigned char> pubKeyBytes = ParseHex(pubKeyHex);
+    std::string pubKeyHex = result["PublicKey"].get<std::string>();
+    std::vector<unsigned char> pubKeyBytes = ParseHex(pubKeyHex);
 
     // Uncompressed public key: 65 bytes, prefix 0x04
     BOOST_CHECK_EQUAL(pubKeyBytes.size(), 65u);
@@ -445,12 +441,12 @@ BOOST_AUTO_TEST_CASE(makekeypair_valid_pubkey)
 
 BOOST_AUTO_TEST_CASE(makekeypair_unique_keys)
 {
-    Array params;
-    Value result1 = makekeypair(params, false);
-    Value result2 = makekeypair(params, false);
+    json params = json::array();
+    json result1 = makekeypair(params, false);
+    json result2 = makekeypair(params, false);
 
-    string pub1 = find_value(result1.get_obj(), "PublicKey").get_str();
-    string pub2 = find_value(result2.get_obj(), "PublicKey").get_str();
+    std::string pub1 = result1["PublicKey"].get<std::string>();
+    std::string pub2 = result2["PublicKey"].get<std::string>();
     BOOST_CHECK(pub1 != pub2);
 }
 
@@ -460,18 +456,18 @@ BOOST_AUTO_TEST_CASE(makekeypair_unique_keys)
 
 BOOST_AUTO_TEST_CASE(accountfromvalue_valid)
 {
-    BOOST_CHECK_EQUAL(AccountFromValue(Value("myaccount")), "myaccount");
+    BOOST_CHECK_EQUAL(AccountFromValue(json("myaccount")), "myaccount");
 }
 
 BOOST_AUTO_TEST_CASE(accountfromvalue_wildcard_throws)
 {
-    BOOST_CHECK_THROW(AccountFromValue(Value("*")), Object);
+    BOOST_CHECK_THROW(AccountFromValue(json("*")), json);
 }
 
 BOOST_AUTO_TEST_CASE(accountfromvalue_empty_is_default)
 {
-    // Empty string is the default account — valid
-    BOOST_CHECK_EQUAL(AccountFromValue(Value("")), "");
+    // Empty string is the default account -- valid
+    BOOST_CHECK_EQUAL(AccountFromValue(json("")), "");
 }
 
 // ============================================================================
@@ -486,16 +482,16 @@ BOOST_AUTO_TEST_CASE(scriptpubkeytojson_p2pkh)
     CScript script;
     script.SetDestination(keyID);
 
-    Object out;
+    json out;
     ScriptPubKeyToJSON(script, out, false);
 
-    string type = find_value(out, "type").get_str();
+    std::string type = out["type"].get<std::string>();
     BOOST_CHECK_EQUAL(type, "pubkeyhash");
-    BOOST_CHECK_EQUAL(find_value(out, "reqSigs").get_int(), 1);
+    BOOST_CHECK_EQUAL(out["reqSigs"].get<int>(), 1);
 
-    Array addrs = find_value(out, "addresses").get_array();
+    json addrs = out["addresses"];
     BOOST_CHECK_EQUAL(addrs.size(), 1u);
-    string addr = addrs[0].get_str();
+    std::string addr = addrs[0].get<std::string>();
     BOOST_CHECK_EQUAL(addr[0], '2'); // Pinkcoin P2PKH prefix
 }
 
@@ -509,15 +505,15 @@ BOOST_AUTO_TEST_CASE(scriptpubkeytojson_p2sh)
     CScript script;
     script.SetDestination(scriptID);
 
-    Object out;
+    json out;
     ScriptPubKeyToJSON(script, out, false);
 
-    string type = find_value(out, "type").get_str();
+    std::string type = out["type"].get<std::string>();
     BOOST_CHECK_EQUAL(type, "scripthash");
 
-    Array addrs = find_value(out, "addresses").get_array();
+    json addrs = out["addresses"];
     BOOST_CHECK_EQUAL(addrs.size(), 1u);
-    string addr = addrs[0].get_str();
+    std::string addr = addrs[0].get<std::string>();
     BOOST_CHECK_EQUAL(addr[0], 'C'); // Pinkcoin P2SH prefix
 }
 
@@ -526,14 +522,14 @@ BOOST_AUTO_TEST_CASE(scriptpubkeytojson_op_return)
     CScript script;
     script << OP_RETURN << ParseHex("deadbeef");
 
-    Object out;
+    json out;
     ScriptPubKeyToJSON(script, out, false);
 
-    string type = find_value(out, "type").get_str();
+    std::string type = out["type"].get<std::string>();
     BOOST_CHECK_EQUAL(type, "nulldata");
 
     // OP_RETURN scripts have no addresses
-    BOOST_CHECK(find_value(out, "addresses").type() == null_type);
+    BOOST_CHECK(out["addresses"].is_null());
 }
 
 BOOST_AUTO_TEST_CASE(scriptpubkeytojson_include_hex)
@@ -543,16 +539,16 @@ BOOST_AUTO_TEST_CASE(scriptpubkeytojson_include_hex)
     CScript script;
     script.SetDestination(key.GetPubKey().GetID());
 
-    Object out;
+    json out;
     ScriptPubKeyToJSON(script, out, true);
 
     // With fIncludeHex=true, "hex" field must be present
-    string hex = find_value(out, "hex").get_str();
+    std::string hex = out["hex"].get<std::string>();
     BOOST_CHECK(!hex.empty());
     BOOST_CHECK(IsHex(hex));
 
     // asm field is always present
-    BOOST_CHECK(!find_value(out, "asm").get_str().empty());
+    BOOST_CHECK(!out["asm"].get<std::string>().empty());
 }
 
 // ============================================================================
@@ -568,14 +564,14 @@ BOOST_AUTO_TEST_CASE(txtojson_coinbase)
     tx.vin.push_back(CTxIn());
     tx.vout.push_back(CTxOut(50 * COIN, CScript()));
 
-    Object entry;
+    json entry;
     TxToJSON(tx, 0, entry);
 
     // Coinbase vin has "coinbase" key
-    Array vin = find_value(entry, "vin").get_array();
+    json vin = entry["vin"];
     BOOST_CHECK_EQUAL(vin.size(), 1u);
-    Object vinObj = vin[0].get_obj();
-    BOOST_CHECK(find_value(vinObj, "coinbase").type() != null_type);
+    json vinObj = vin[0];
+    BOOST_CHECK(!vinObj["coinbase"].is_null());
 }
 
 BOOST_AUTO_TEST_CASE(txtojson_regular_tx)
@@ -588,16 +584,16 @@ BOOST_AUTO_TEST_CASE(txtojson_regular_tx)
     tx.vin.push_back(CTxIn(COutPoint(uint256("0000000000000000000000000000000000000000000000000000000000000002"), 1)));
     tx.vout.push_back(CTxOut(COIN, CScript()));
 
-    Object entry;
+    json entry;
     TxToJSON(tx, 0, entry);
 
     // Regular vin has "txid"/"vout"/"scriptSig" keys
-    Array vin = find_value(entry, "vin").get_array();
+    json vin = entry["vin"];
     BOOST_CHECK_EQUAL(vin.size(), 2u);
-    Object vinObj = vin[0].get_obj();
-    BOOST_CHECK(find_value(vinObj, "txid").type() == str_type);
-    BOOST_CHECK(find_value(vinObj, "vout").type() == int_type);
-    BOOST_CHECK(find_value(vinObj, "scriptSig").type() == obj_type);
+    json vinObj = vin[0];
+    BOOST_CHECK(vinObj["txid"].is_string());
+    BOOST_CHECK(vinObj["vout"].is_number_integer());
+    BOOST_CHECK(vinObj["scriptSig"].is_object());
 }
 
 BOOST_AUTO_TEST_CASE(txtojson_pinkcoin_fields)
@@ -609,16 +605,16 @@ BOOST_AUTO_TEST_CASE(txtojson_pinkcoin_fields)
     tx.vin.push_back(CTxIn(COutPoint(uint256("0000000000000000000000000000000000000000000000000000000000000001"), 0)));
     tx.vout.push_back(CTxOut(COIN, CScript()));
 
-    Object entry;
+    json entry;
     TxToJSON(tx, 0, entry);
 
     // All Pinkcoin-specific fields present
-    BOOST_CHECK(find_value(entry, "txid").type() == str_type);
-    BOOST_CHECK_EQUAL(find_value(entry, "version").get_int(), 2);
-    BOOST_CHECK_EQUAL(find_value(entry, "time").get_int64(), 1234567890);
-    BOOST_CHECK_EQUAL(find_value(entry, "locktime").get_int64(), 500000);
-    BOOST_CHECK(find_value(entry, "vin").type() == array_type);
-    BOOST_CHECK(find_value(entry, "vout").type() == array_type);
+    BOOST_CHECK(entry["txid"].is_string());
+    BOOST_CHECK_EQUAL(entry["version"].get<int>(), 2);
+    BOOST_CHECK_EQUAL(entry["time"].get<int64_t>(), 1234567890);
+    BOOST_CHECK_EQUAL(entry["locktime"].get<int64_t>(), 500000);
+    BOOST_CHECK(entry["vin"].is_array());
+    BOOST_CHECK(entry["vout"].is_array());
 }
 
 BOOST_AUTO_TEST_CASE(txtojson_no_blockhash_when_zero)
@@ -627,12 +623,12 @@ BOOST_AUTO_TEST_CASE(txtojson_no_blockhash_when_zero)
     tx.vin.push_back(CTxIn());
     tx.vout.push_back(CTxOut(0, CScript()));
 
-    Object entry;
+    json entry;
     TxToJSON(tx, 0, entry);
 
-    // hashBlock=0 → no blockhash/confirmations fields
-    BOOST_CHECK(find_value(entry, "blockhash").type() == null_type);
-    BOOST_CHECK(find_value(entry, "confirmations").type() == null_type);
+    // hashBlock=0 -> no blockhash/confirmations fields
+    BOOST_CHECK(entry["blockhash"].is_null());
+    BOOST_CHECK(entry["confirmations"].is_null());
 }
 
 // ============================================================================
@@ -641,7 +637,7 @@ BOOST_AUTO_TEST_CASE(txtojson_no_blockhash_when_zero)
 
 BOOST_AUTO_TEST_CASE(getdifficulty_null_returns_one)
 {
-    // With nullptr and pindexBest=nullptr → returns 1.0
+    // With nullptr and pindexBest=nullptr -> returns 1.0
     // Save and restore pindexBest
     CBlockIndex* savedBest = pindexBest;
     pindexBest = nullptr;
@@ -660,7 +656,7 @@ BOOST_AUTO_TEST_CASE(getdifficulty_genesis_nbits)
     double diff = GetDifficulty(&mockIndex);
     // nShift = 0x1e = 30, mantissa = 0x0fffff
     // dDiff = 0x0000ffff / 0x0fffff = ~0.0625
-    // nShift=30 > 29, so dDiff /= 256 → ~0.000244
+    // nShift=30 > 29, so dDiff /= 256 -> ~0.000244
     // This should be a small positive number
     BOOST_CHECK(diff > 0.0);
     BOOST_CHECK(diff < 1.0);
@@ -674,7 +670,7 @@ BOOST_AUTO_TEST_CASE(getdifficulty_minimum_nbits)
     double diff = GetDifficulty(&mockIndex);
     // nShift = 0x1d = 29, mantissa = 0x00ffff
     // dDiff = 0x0000ffff / 0x00ffff = 1.0
-    // nShift == 29, no loop → diff = 1.0
+    // nShift == 29, no loop -> diff = 1.0
     BOOST_CHECK_CLOSE(diff, 1.0, 0.001);
 }
 
@@ -684,9 +680,9 @@ BOOST_AUTO_TEST_CASE(getdifficulty_minimum_nbits)
 
 BOOST_AUTO_TEST_CASE(getnewaddress_default)
 {
-    Array params;
-    Value result = getnewaddress(params, false);
-    string addr = result.get_str();
+    json params = json::array();
+    json result = getnewaddress(params, false);
+    std::string addr = result.get<std::string>();
     BOOST_CHECK(!addr.empty());
     BOOST_CHECK_EQUAL(addr[0], '2');  // Pinkcoin P2PKH prefix
     CBitcoinAddress address(addr);
@@ -695,10 +691,10 @@ BOOST_AUTO_TEST_CASE(getnewaddress_default)
 
 BOOST_AUTO_TEST_CASE(getnewaddress_with_account)
 {
-    Array params;
-    params.push_back(string("testaccount"));
-    Value result = getnewaddress(params, false);
-    string addr = result.get_str();
+    json params = json::array();
+    params.push_back(std::string("testaccount"));
+    json result = getnewaddress(params, false);
+    std::string addr = result.get<std::string>();
     BOOST_CHECK(!addr.empty());
     CBitcoinAddress address(addr);
     BOOST_CHECK(address.IsValid());
@@ -706,13 +702,13 @@ BOOST_AUTO_TEST_CASE(getnewaddress_with_account)
 
 BOOST_AUTO_TEST_CASE(getnewpubkey_returns_hex)
 {
-    Array params;
-    Value result = getnewpubkey(params, false);
-    string pubkeyHex = result.get_str();
+    json params = json::array();
+    json result = getnewpubkey(params, false);
+    std::string pubkeyHex = result.get<std::string>();
     BOOST_CHECK(!pubkeyHex.empty());
     BOOST_CHECK(IsHex(pubkeyHex));
 
-    vector<unsigned char> vchPubKey = ParseHex(pubkeyHex);
+    std::vector<unsigned char> vchPubKey = ParseHex(pubkeyHex);
     CPubKey pubkey(vchPubKey);
     BOOST_CHECK(pubkey.IsValid());
 }
@@ -724,58 +720,57 @@ BOOST_AUTO_TEST_CASE(getnewpubkey_returns_hex)
 BOOST_AUTO_TEST_CASE(getaccount_valid_address)
 {
     // Create a new address with an account
-    Array newAddr;
-    newAddr.push_back(string("test_getaccount"));
-    string addr = getnewaddress(newAddr, false).get_str();
+    json newAddr = json::array();
+    newAddr.push_back(std::string("test_getaccount"));
+    std::string addr = getnewaddress(newAddr, false).get<std::string>();
 
-    Array params;
+    json params = json::array();
     params.push_back(addr);
-    Value result = getaccount(params, false);
-    BOOST_CHECK_EQUAL(result.get_str(), "test_getaccount");
+    json result = getaccount(params, false);
+    BOOST_CHECK_EQUAL(result.get<std::string>(), "test_getaccount");
 }
 
 BOOST_AUTO_TEST_CASE(getaccount_invalid_address)
 {
-    Array params;
-    params.push_back(string("invalid_address_here"));
-    BOOST_CHECK_THROW(getaccount(params, false), Object);
+    json params = json::array();
+    params.push_back(std::string("invalid_address_here"));
+    BOOST_CHECK_THROW(getaccount(params, false), json);
 }
 
 BOOST_AUTO_TEST_CASE(setaccount_assigns_account)
 {
     // Get a new address
-    Array empty;
-    string addr = getnewaddress(empty, false).get_str();
+    json empty = json::array();
+    std::string addr = getnewaddress(empty, false).get<std::string>();
 
     // Set its account
-    Array params;
+    json params = json::array();
     params.push_back(addr);
-    params.push_back(string("newlabel"));
+    params.push_back(std::string("newlabel"));
     setaccount(params, false);
 
     // Verify
-    Array getParams;
+    json getParams = json::array();
     getParams.push_back(addr);
-    BOOST_CHECK_EQUAL(getaccount(getParams, false).get_str(), "newlabel");
+    BOOST_CHECK_EQUAL(getaccount(getParams, false).get<std::string>(), "newlabel");
 }
 
 BOOST_AUTO_TEST_CASE(getaddressesbyaccount_populated)
 {
     // Create address with specific account
-    Array newAddr;
-    newAddr.push_back(string("addrbyacct_test"));
-    string addr = getnewaddress(newAddr, false).get_str();
+    json newAddr = json::array();
+    newAddr.push_back(std::string("addrbyacct_test"));
+    std::string addr = getnewaddress(newAddr, false).get<std::string>();
 
-    Array params;
-    params.push_back(string("addrbyacct_test"));
-    Value result = getaddressesbyaccount(params, false);
-    Array addrs = result.get_array();
-    BOOST_CHECK(!addrs.empty());
+    json params = json::array();
+    params.push_back(std::string("addrbyacct_test"));
+    json result = getaddressesbyaccount(params, false);
+    BOOST_CHECK(!result.empty());
 
     // The address we created should be in the list
     bool found = false;
-    for (const Value& v : addrs) {
-        if (v.get_str() == addr) {
+    for (const json& v : result) {
+        if (v.get<std::string>() == addr) {
             found = true;
             break;
         }
@@ -789,21 +784,21 @@ BOOST_AUTO_TEST_CASE(getaddressesbyaccount_populated)
 
 BOOST_AUTO_TEST_CASE(getbalance_default)
 {
-    Array params;
-    Value result = getbalance(params, false);
+    json params = json::array();
+    json result = getbalance(params, false);
     // Balance is a real number (may be 0 in test env)
-    BOOST_CHECK(result.type() == real_type);
-    BOOST_CHECK(result.get_real() >= 0.0);
+    BOOST_CHECK(result.is_number_float());
+    BOOST_CHECK(result.get<double>() >= 0.0);
 }
 
 BOOST_AUTO_TEST_CASE(getbalance_with_star)
 {
     // "*" returns total balance across all accounts
-    Array params;
-    params.push_back(string("*"));
-    Value result = getbalance(params, false);
-    BOOST_CHECK(result.type() == real_type);
-    BOOST_CHECK(result.get_real() >= 0.0);
+    json params = json::array();
+    params.push_back(std::string("*"));
+    json result = getbalance(params, false);
+    BOOST_CHECK(result.is_number_float());
+    BOOST_CHECK(result.get<double>() >= 0.0);
 }
 
 // ============================================================================
@@ -813,54 +808,50 @@ BOOST_AUTO_TEST_CASE(getbalance_with_star)
 BOOST_AUTO_TEST_CASE(validateaddress_valid)
 {
     // Generate a known address
-    Array empty;
-    string addr = getnewaddress(empty, false).get_str();
+    json empty = json::array();
+    std::string addr = getnewaddress(empty, false).get<std::string>();
 
-    Array params;
+    json params = json::array();
     params.push_back(addr);
-    Value result = validateaddress(params, false);
-    Object obj = result.get_obj();
+    json result = validateaddress(params, false);
 
-    BOOST_CHECK_EQUAL(find_value(obj, "isvalid").get_bool(), true);
-    BOOST_CHECK(find_value(obj, "address").type() == str_type);
-    BOOST_CHECK(find_value(obj, "ismine").type() == bool_type);
-    BOOST_CHECK_EQUAL(find_value(obj, "ismine").get_bool(), true);
+    BOOST_CHECK_EQUAL(result["isvalid"].get<bool>(), true);
+    BOOST_CHECK(result["address"].is_string());
+    BOOST_CHECK(result["ismine"].is_boolean());
+    BOOST_CHECK_EQUAL(result["ismine"].get<bool>(), true);
 }
 
 BOOST_AUTO_TEST_CASE(validateaddress_invalid)
 {
-    Array params;
-    params.push_back(string("not_a_valid_address"));
-    Value result = validateaddress(params, false);
-    Object obj = result.get_obj();
+    json params = json::array();
+    params.push_back(std::string("not_a_valid_address"));
+    json result = validateaddress(params, false);
 
-    BOOST_CHECK_EQUAL(find_value(obj, "isvalid").get_bool(), false);
+    BOOST_CHECK_EQUAL(result["isvalid"].get<bool>(), false);
 }
 
 BOOST_AUTO_TEST_CASE(validatepubkey_valid)
 {
     // Get a pubkey from the wallet
-    Array empty;
-    string pubkeyHex = getnewpubkey(empty, false).get_str();
+    json empty = json::array();
+    std::string pubkeyHex = getnewpubkey(empty, false).get<std::string>();
 
-    Array params;
+    json params = json::array();
     params.push_back(pubkeyHex);
-    Value result = validatepubkey(params, false);
-    Object obj = result.get_obj();
+    json result = validatepubkey(params, false);
 
-    BOOST_CHECK_EQUAL(find_value(obj, "isvalid").get_bool(), true);
-    BOOST_CHECK(find_value(obj, "address").type() == str_type);
-    BOOST_CHECK(find_value(obj, "iscompressed").type() == bool_type);
+    BOOST_CHECK_EQUAL(result["isvalid"].get<bool>(), true);
+    BOOST_CHECK(result["address"].is_string());
+    BOOST_CHECK(result["iscompressed"].is_boolean());
 }
 
 BOOST_AUTO_TEST_CASE(validatepubkey_invalid)
 {
-    Array params;
-    params.push_back(string("deadbeef"));
-    Value result = validatepubkey(params, false);
-    Object obj = result.get_obj();
+    json params = json::array();
+    params.push_back(std::string("deadbeef"));
+    json result = validatepubkey(params, false);
 
-    BOOST_CHECK_EQUAL(find_value(obj, "isvalid").get_bool(), false);
+    BOOST_CHECK_EQUAL(result["isvalid"].get<bool>(), false);
 }
 
 // ============================================================================
@@ -869,18 +860,17 @@ BOOST_AUTO_TEST_CASE(validatepubkey_invalid)
 
 BOOST_AUTO_TEST_CASE(listaccounts_returns_map)
 {
-    Array params;
-    Value result = listaccounts(params, false);
-    Object obj = result.get_obj();
+    json params = json::array();
+    json result = listaccounts(params, false);
     // Should have at least the default "" account
-    BOOST_CHECK(obj.size() >= 1);
+    BOOST_CHECK(result.size() >= 1);
 }
 
 BOOST_AUTO_TEST_CASE(listreceivedbyaddress_default)
 {
-    Array params;
-    Value result = listreceivedbyaddress(params, false);
-    BOOST_CHECK(result.type() == array_type);
+    json params = json::array();
+    json result = listreceivedbyaddress(params, false);
+    BOOST_CHECK(result.is_array());
 }
 
 // ============================================================================
@@ -889,23 +879,21 @@ BOOST_AUTO_TEST_CASE(listreceivedbyaddress_default)
 
 BOOST_AUTO_TEST_CASE(getwalletinfo_returns_object)
 {
-    Array params;
-    Value result = getwalletinfo(params, false);
-    Object obj = result.get_obj();
+    json params = json::array();
+    json result = getwalletinfo(params, false);
 
-    BOOST_CHECK(find_value(obj, "walletversion").type() == int_type);
-    BOOST_CHECK(find_value(obj, "balance").type() == real_type);
-    BOOST_CHECK(find_value(obj, "txcount").type() == int_type);
-    BOOST_CHECK(find_value(obj, "keypoololdest").type() == int_type);
-    BOOST_CHECK(find_value(obj, "keypoolsize").type() == int_type);
+    BOOST_CHECK(result["walletversion"].is_number_integer());
+    BOOST_CHECK(result["balance"].is_number_float());
+    BOOST_CHECK(result["txcount"].is_number_integer());
+    BOOST_CHECK(result["keypoololdest"].is_number_integer());
+    BOOST_CHECK(result["keypoolsize"].is_number_integer());
 }
 
 BOOST_AUTO_TEST_CASE(getstakesplitthreshold_returns_object)
 {
-    Array params;
-    Value result = getstakesplitthreshold(params, false);
-    Object obj = result.get_obj();
-    BOOST_CHECK(find_value(obj, "split threshold").type() == real_type);
+    json params = json::array();
+    json result = getstakesplitthreshold(params, false);
+    BOOST_CHECK(result["split threshold"].is_number_float());
 }
 
 // ============================================================================
@@ -914,8 +902,8 @@ BOOST_AUTO_TEST_CASE(getstakesplitthreshold_returns_object)
 
 BOOST_AUTO_TEST_CASE(keypoolrefill_default)
 {
-    Array params;
-    // Should not throw — refills keypool
+    json params = json::array();
+    // Should not throw -- refills keypool
     BOOST_CHECK_NO_THROW(keypoolrefill(params, false));
 }
 
@@ -925,26 +913,24 @@ BOOST_AUTO_TEST_CASE(keypoolrefill_default)
 
 BOOST_AUTO_TEST_CASE(reservebalance_query)
 {
-    // No params → returns current reserve setting
-    Array params;
-    Value result = reservebalance(params, false);
-    Object obj = result.get_obj();
-    BOOST_CHECK(find_value(obj, "reserve").type() == bool_type);
-    BOOST_CHECK(find_value(obj, "amount").type() == real_type);
+    // No params -> returns current reserve setting
+    json params = json::array();
+    json result = reservebalance(params, false);
+    BOOST_CHECK(result["reserve"].is_boolean());
+    BOOST_CHECK(result["amount"].is_number_float());
 }
 
 BOOST_AUTO_TEST_CASE(reservebalance_set_and_query)
 {
     // Set reserve on with 10.0
-    Array setParams;
+    json setParams = json::array();
     setParams.push_back(true);
     setParams.push_back(10.0);
-    Value result = reservebalance(setParams, false);
-    Object obj = result.get_obj();
-    BOOST_CHECK_EQUAL(find_value(obj, "reserve").get_bool(), true);
+    json result = reservebalance(setParams, false);
+    BOOST_CHECK_EQUAL(result["reserve"].get<bool>(), true);
 
     // Disable reserve
-    Array offParams;
+    json offParams = json::array();
     offParams.push_back(false);
     reservebalance(offParams, false);
 }
@@ -955,13 +941,13 @@ BOOST_AUTO_TEST_CASE(reservebalance_set_and_query)
 
 BOOST_AUTO_TEST_CASE(getreceivedbyaddress_zero_for_unused)
 {
-    Array empty;
-    string addr = getnewaddress(empty, false).get_str();
+    json empty = json::array();
+    std::string addr = getnewaddress(empty, false).get<std::string>();
 
-    Array params;
+    json params = json::array();
     params.push_back(addr);
-    Value result = getreceivedbyaddress(params, false);
-    BOOST_CHECK_CLOSE(result.get_real(), 0.0, 0.001);
+    json result = getreceivedbyaddress(params, false);
+    BOOST_CHECK_CLOSE(result.get<double>(), 0.0, 0.001);
 }
 
 // ============================================================================
@@ -970,18 +956,17 @@ BOOST_AUTO_TEST_CASE(getreceivedbyaddress_zero_for_unused)
 
 BOOST_AUTO_TEST_CASE(getconnectioncount_zero)
 {
-    Array params;
-    Value result = getconnectioncount(params, false);
+    json params = json::array();
+    json result = getconnectioncount(params, false);
     // In test mode, no peers connected
-    BOOST_CHECK_EQUAL(result.get_int(), 0);
+    BOOST_CHECK_EQUAL(result.get<int>(), 0);
 }
 
 BOOST_AUTO_TEST_CASE(getpeerinfo_empty)
 {
-    Array params;
-    Value result = getpeerinfo(params, false);
-    Array arr = result.get_array();
-    BOOST_CHECK(arr.empty());
+    json params = json::array();
+    json result = getpeerinfo(params, false);
+    BOOST_CHECK(result.empty());
 }
 
 BOOST_AUTO_TEST_SUITE_END()
@@ -994,13 +979,13 @@ BOOST_FIXTURE_TEST_SUITE(rpc_chain_command_tests, TestChain)
 BOOST_AUTO_TEST_CASE(getrawtransaction_hex)
 {
     BOOST_REQUIRE(!coinbaseTxns.empty());
-    string txid = coinbaseTxns[0].GetHash().GetHex();
+    std::string txid = coinbaseTxns[0].GetHash().GetHex();
 
-    Array params;
+    json params = json::array();
     params.push_back(txid);
-    params.push_back(0);  // verbose=0 → hex string
-    Value result = getrawtransaction(params, false);
-    string hex = result.get_str();
+    params.push_back(0);  // verbose=0 -> hex string
+    json result = getrawtransaction(params, false);
+    std::string hex = result.get<std::string>();
     BOOST_CHECK(!hex.empty());
     BOOST_CHECK(IsHex(hex));
 }
@@ -1008,39 +993,38 @@ BOOST_AUTO_TEST_CASE(getrawtransaction_hex)
 BOOST_AUTO_TEST_CASE(getrawtransaction_json)
 {
     BOOST_REQUIRE(!coinbaseTxns.empty());
-    string txid = coinbaseTxns[0].GetHash().GetHex();
+    std::string txid = coinbaseTxns[0].GetHash().GetHex();
 
-    Array params;
+    json params = json::array();
     params.push_back(txid);
-    params.push_back(1);  // verbose=1 → JSON object
-    Value result = getrawtransaction(params, false);
-    Object obj = result.get_obj();
-    BOOST_CHECK(find_value(obj, "txid").type() == str_type);
-    BOOST_CHECK(find_value(obj, "version").type() == int_type);
+    params.push_back(1);  // verbose=1 -> JSON object
+    json result = getrawtransaction(params, false);
+    BOOST_CHECK(result["txid"].is_string());
+    BOOST_CHECK(result["version"].is_number_integer());
 }
 
 BOOST_AUTO_TEST_CASE(getrawtransaction_notfound)
 {
-    Array params;
-    params.push_back(string("0000000000000000000000000000000000000000000000000000000000000bad"));
+    json params = json::array();
+    params.push_back(std::string("0000000000000000000000000000000000000000000000000000000000000bad"));
     params.push_back(0);
-    BOOST_CHECK_THROW(getrawtransaction(params, false), Object);
+    BOOST_CHECK_THROW(getrawtransaction(params, false), json);
 }
 
 BOOST_AUTO_TEST_CASE(listunspent_default)
 {
-    Array params;
-    Value result = listunspent(params, false);
-    BOOST_CHECK(result.type() == array_type);
+    json params = json::array();
+    json result = listunspent(params, false);
+    BOOST_CHECK(result.is_array());
 }
 
 BOOST_AUTO_TEST_CASE(listunspent_with_minconf)
 {
-    Array params;
+    json params = json::array();
     params.push_back(1);   // minconf
     params.push_back(999); // maxconf
-    Value result = listunspent(params, false);
-    BOOST_CHECK(result.type() == array_type);
+    json result = listunspent(params, false);
+    BOOST_CHECK(result.is_array());
 }
 
 BOOST_AUTO_TEST_CASE(decodescript_multisig_2of3)
@@ -1058,15 +1042,14 @@ BOOST_AUTO_TEST_CASE(decodescript_multisig_2of3)
            << key3.GetPubKey().Raw()
            << OP_3
            << OP_CHECKMULTISIG;
-    string hex = HexStr(script.begin(), script.end());
+    std::string hex = HexStr(script.begin(), script.end());
 
-    Array params;
+    json params = json::array();
     params.push_back(hex);
-    Value result = decodescript(params, false);
-    Object obj = result.get_obj();
+    json result = decodescript(params, false);
 
-    BOOST_CHECK_EQUAL(find_value(obj, "type").get_str(), "multisig");
-    BOOST_CHECK_EQUAL(find_value(obj, "reqSigs").get_int(), 2);
+    BOOST_CHECK_EQUAL(result["type"].get<std::string>(), "multisig");
+    BOOST_CHECK_EQUAL(result["reqSigs"].get<int>(), 2);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

@@ -18,12 +18,11 @@
 #include "smessage.h"
 #include "test_framework.h"
 
-using namespace json_spirit;
 using std::runtime_error;
 using std::string;
 
 extern CWallet* pwalletMain;
-extern Value help(const Array& params, bool fHelp);
+extern json help(const json& params, bool fHelp);
 
 // ============================================================================
 // Suite: rpc_response_info — info & status RPC response contracts
@@ -36,48 +35,47 @@ BOOST_FIXTURE_TEST_SUITE(rpc_response_info, TestChain)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(getinfo_response_contract)
 {
-    Array p;
-    Value result = getinfo(p, false);
-    Object obj = result.get_obj();
+    json p = json::array();
+    json result = getinfo(p, false);
 
     // String fields
-    BOOST_CHECK(find_value(obj, "version").type() == str_type);
-    BOOST_CHECK(find_value(obj, "errors").type() == str_type);
+    BOOST_CHECK(result["version"].is_string());
+    BOOST_CHECK(result["errors"].is_string());
 
     // Integer fields
-    BOOST_CHECK(find_value(obj, "protocolversion").type() == int_type);
-    BOOST_CHECK_EQUAL(find_value(obj, "protocolversion").get_int(), 60019);
-    BOOST_CHECK(find_value(obj, "walletversion").type() == int_type);
-    BOOST_CHECK(find_value(obj, "blocks").type() == int_type);
-    BOOST_CHECK(find_value(obj, "connections").type() == int_type);
-    BOOST_CHECK(find_value(obj, "keypoololdest").type() == int_type);
-    BOOST_CHECK(find_value(obj, "keypoolsize").type() == int_type);
+    BOOST_CHECK(result["protocolversion"].is_number_integer());
+    BOOST_CHECK_EQUAL(result["protocolversion"].get<int>(), 60019);
+    BOOST_CHECK(result["walletversion"].is_number_integer());
+    BOOST_CHECK(result["blocks"].is_number_integer());
+    BOOST_CHECK(result["connections"].is_number_integer());
+    BOOST_CHECK(result["keypoololdest"].is_number_integer());
+    BOOST_CHECK(result["keypoolsize"].is_number_integer());
 
-    BOOST_CHECK(find_value(obj, "timeoffset").type() == int_type);
+    BOOST_CHECK(result["timeoffset"].is_number_integer());
 
     // String fields (additional)
-    BOOST_CHECK(find_value(obj, "offsetfrom").type() == str_type);
-    BOOST_CHECK(find_value(obj, "proxy").type() == str_type);
-    BOOST_CHECK(find_value(obj, "ip").type() == str_type);
+    BOOST_CHECK(result["offsetfrom"].is_string());
+    BOOST_CHECK(result["proxy"].is_string());
+    BOOST_CHECK(result["ip"].is_string());
 
     // Real (double) fields — ValueFromAmount returns double
-    BOOST_CHECK(find_value(obj, "balance").type() == real_type);
-    BOOST_CHECK(find_value(obj, "newmint").type() == real_type);
-    BOOST_CHECK(find_value(obj, "stake").type() == real_type);
-    BOOST_CHECK(find_value(obj, "moneysupply").type() == real_type);
-    BOOST_CHECK(find_value(obj, "paytxfee").type() == real_type);
-    BOOST_CHECK(find_value(obj, "mininput").type() == real_type);
+    BOOST_CHECK(result["balance"].is_number_float());
+    BOOST_CHECK(result["newmint"].is_number_float());
+    BOOST_CHECK(result["stake"].is_number_float());
+    BOOST_CHECK(result["moneysupply"].is_number_float());
+    BOOST_CHECK(result["paytxfee"].is_number_float());
+    BOOST_CHECK(result["mininput"].is_number_float());
 
     // Boolean fields
-    BOOST_CHECK(find_value(obj, "testnet").type() == bool_type);
-    BOOST_CHECK_EQUAL(find_value(obj, "testnet").get_bool(), false);
+    BOOST_CHECK(result["testnet"].is_boolean());
+    BOOST_CHECK_EQUAL(result["testnet"].get<bool>(), false);
 
     // Nested object: difficulty
-    BOOST_CHECK(find_value(obj, "difficulty").type() == obj_type);
-    Object diff = find_value(obj, "difficulty").get_obj();
-    BOOST_CHECK(find_value(diff, "proof-of-work").type() == real_type);
-    BOOST_CHECK(find_value(diff, "proof-of-stake").type() == real_type);
-    BOOST_CHECK(find_value(diff, "proof-of-stake (flash)").type() == real_type);
+    BOOST_CHECK(result["difficulty"].is_object());
+    const json& diff = result["difficulty"];
+    BOOST_CHECK(diff["proof-of-work"].is_number_float());
+    BOOST_CHECK(diff["proof-of-stake"].is_number_float());
+    BOOST_CHECK(diff["proof-of-stake (flash)"].is_number_float());
 }
 
 // ---------------------------------------------------------------------------
@@ -85,47 +83,46 @@ BOOST_AUTO_TEST_CASE(getinfo_response_contract)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(getmininginfo_response_contract)
 {
-    Array p;
-    Value result = getmininginfo(p, false);
-    Object obj = result.get_obj();
+    json p = json::array();
+    json result = getmininginfo(p, false);
 
     // Core fields always present
-    BOOST_CHECK(find_value(obj, "blocks").type() == int_type);
-    BOOST_CHECK(find_value(obj, "next-block-value-pos").type() == real_type);
-    BOOST_CHECK(find_value(obj, "last-block-size").type() == int_type);
-    BOOST_CHECK(find_value(obj, "last-block-tx").type() == int_type);
-    BOOST_CHECK(find_value(obj, "pooledtx").type() == int_type);
-    BOOST_CHECK(find_value(obj, "tx-fee").type() == real_type);
+    BOOST_CHECK(result["blocks"].is_number_integer());
+    BOOST_CHECK(result["next-block-value-pos"].is_number_float());
+    BOOST_CHECK(result["last-block-size"].is_number_integer());
+    BOOST_CHECK(result["last-block-tx"].is_number_integer());
+    BOOST_CHECK(result["pooledtx"].is_number_integer());
+    BOOST_CHECK(result["tx-fee"].is_number_float());
 
     // Staking sub-object
-    BOOST_CHECK(find_value(obj, "staking").type() == obj_type);
-    Object staking = find_value(obj, "staking").get_obj();
-    BOOST_CHECK(find_value(staking, "enabled").type() == bool_type);
-    BOOST_CHECK(find_value(staking, "targeting-fpos").type() == bool_type);
-    BOOST_CHECK(find_value(staking, "estimated-time").type() == int_type);
-    BOOST_CHECK(find_value(staking, "search-interval").type() == int_type);
-    BOOST_CHECK(find_value(staking, "utxo-combine-threshold").type() == int_type);
-    BOOST_CHECK(find_value(staking, "utxo-split-threshold").type() == int_type);
+    BOOST_CHECK(result["staking"].is_object());
+    const json& staking = result["staking"];
+    BOOST_CHECK(staking["enabled"].is_boolean());
+    BOOST_CHECK(staking["targeting-fpos"].is_boolean());
+    BOOST_CHECK(staking["estimated-time"].is_number_integer());
+    BOOST_CHECK(staking["search-interval"].is_number_integer());
+    BOOST_CHECK(staking["utxo-combine-threshold"].is_number_integer());
+    BOOST_CHECK(staking["utxo-split-threshold"].is_number_integer());
 
     // Stake weight sub-object
-    BOOST_CHECK(find_value(obj, "stakeweight").type() == obj_type);
-    Object sw = find_value(obj, "stakeweight").get_obj();
-    BOOST_CHECK(find_value(sw, "minimum").type() == int_type);
-    BOOST_CHECK(find_value(sw, "maximum").type() == int_type);
-    BOOST_CHECK(find_value(sw, "combined").type() == int_type);
-    BOOST_CHECK(find_value(sw, "network").type() == int_type);
+    BOOST_CHECK(result["stakeweight"].is_object());
+    const json& sw = result["stakeweight"];
+    BOOST_CHECK(sw["minimum"].is_number_integer());
+    BOOST_CHECK(sw["maximum"].is_number_integer());
+    BOOST_CHECK(sw["combined"].is_number_integer());
+    BOOST_CHECK(sw["network"].is_number_integer());
 
     // Difficulty sub-object
-    BOOST_CHECK(find_value(obj, "difficulty").type() == obj_type);
-    Object diff = find_value(obj, "difficulty").get_obj();
-    BOOST_CHECK(find_value(diff, "proof-of-stake").type() == real_type);
-    BOOST_CHECK(find_value(diff, "proof-of-stake(flash)").type() == real_type);
+    BOOST_CHECK(result["difficulty"].is_object());
+    const json& rdiff = result["difficulty"];
+    BOOST_CHECK(rdiff["proof-of-stake"].is_number_float());
+    BOOST_CHECK(rdiff["proof-of-stake(flash)"].is_number_float());
 
     // Top-level scalars
-    BOOST_CHECK(find_value(obj, "netstakeweight").type() == int_type);
-    BOOST_CHECK(find_value(obj, "testnet").type() == bool_type);
-    BOOST_CHECK_EQUAL(find_value(obj, "testnet").get_bool(), false);
-    BOOST_CHECK(find_value(obj, "errors").type() == str_type);
+    BOOST_CHECK(result["netstakeweight"].is_number_integer());
+    BOOST_CHECK(result["testnet"].is_boolean());
+    BOOST_CHECK_EQUAL(result["testnet"].get<bool>(), false);
+    BOOST_CHECK(result["errors"].is_string());
 }
 
 // ---------------------------------------------------------------------------
@@ -133,29 +130,28 @@ BOOST_AUTO_TEST_CASE(getmininginfo_response_contract)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(getstakinginfo_response_contract)
 {
-    Array p;
-    Value result = getstakinginfo(p, false);
-    Object obj = result.get_obj();
+    json p = json::array();
+    json result = getstakinginfo(p, false);
 
     // Boolean fields
-    BOOST_CHECK(find_value(obj, "enabled").type() == bool_type);
-    BOOST_CHECK(find_value(obj, "staking").type() == bool_type);
+    BOOST_CHECK(result["enabled"].is_boolean());
+    BOOST_CHECK(result["staking"].is_boolean());
 
     // String fields
-    BOOST_CHECK(find_value(obj, "errors").type() == str_type);
+    BOOST_CHECK(result["errors"].is_string());
 
-    // Integer fields (uint64_t → int_type in json_spirit)
-    BOOST_CHECK(find_value(obj, "currentblocksize").type() == int_type);
-    BOOST_CHECK(find_value(obj, "currentblocktx").type() == int_type);
-    BOOST_CHECK(find_value(obj, "pooledtx").type() == int_type);
-    BOOST_CHECK(find_value(obj, "search-interval").type() == int_type);
-    BOOST_CHECK(find_value(obj, "weight").type() == int_type);
-    BOOST_CHECK(find_value(obj, "netstakeweight").type() == int_type);
-    BOOST_CHECK(find_value(obj, "expectedtime").type() == int_type);
+    // Integer fields (uint64_t → number_integer in nlohmann)
+    BOOST_CHECK(result["currentblocksize"].is_number_integer());
+    BOOST_CHECK(result["currentblocktx"].is_number_integer());
+    BOOST_CHECK(result["pooledtx"].is_number_integer());
+    BOOST_CHECK(result["search-interval"].is_number_integer());
+    BOOST_CHECK(result["weight"].is_number_integer());
+    BOOST_CHECK(result["netstakeweight"].is_number_integer());
+    BOOST_CHECK(result["expectedtime"].is_number_integer());
 
     // Real (double) fields
-    BOOST_CHECK(find_value(obj, "difficulty").type() == real_type);
-    BOOST_CHECK(find_value(obj, "difficulty (flash)").type() == real_type);
+    BOOST_CHECK(result["difficulty"].is_number_float());
+    BOOST_CHECK(result["difficulty (flash)"].is_number_float());
 }
 
 // ---------------------------------------------------------------------------
@@ -163,14 +159,13 @@ BOOST_AUTO_TEST_CASE(getstakinginfo_response_contract)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(getdifficulty_response_contract)
 {
-    Array p;
-    Value result = getdifficulty(p, false);
-    Object obj = result.get_obj();
+    json p = json::array();
+    json result = getdifficulty(p, false);
 
-    BOOST_CHECK(find_value(obj, "proof-of-work").type() == real_type);
-    BOOST_CHECK(find_value(obj, "proof-of-stake").type() == real_type);
-    BOOST_CHECK(find_value(obj, "proof-of-stake (flash)").type() == real_type);
-    BOOST_CHECK(find_value(obj, "search-interval").type() == int_type);
+    BOOST_CHECK(result["proof-of-work"].is_number_float());
+    BOOST_CHECK(result["proof-of-stake"].is_number_float());
+    BOOST_CHECK(result["proof-of-stake (flash)"].is_number_float());
+    BOOST_CHECK(result["search-interval"].is_number_integer());
 }
 
 // ---------------------------------------------------------------------------
@@ -178,14 +173,14 @@ BOOST_AUTO_TEST_CASE(getdifficulty_response_contract)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(getsubsidy_response_contract)
 {
-    Array p;
-    Value result = getsubsidy(p, false);
+    json p = json::array();
+    json result = getsubsidy(p, false);
 
     // getsubsidy returns a bare uint64_t (block subsidy in satoshis)
-    BOOST_CHECK(result.type() == int_type);
+    BOOST_CHECK(result.is_number_integer());
     // At test chain height (~51), PoW subsidy is 0 — only block 1 and
     // heights >= 17000 have non-zero PoW rewards. Verify non-negative.
-    BOOST_CHECK(result.get_int64() >= 0);
+    BOOST_CHECK(result.get<int64_t>() >= 0);
 }
 
 // ---------------------------------------------------------------------------
@@ -193,15 +188,14 @@ BOOST_AUTO_TEST_CASE(getsubsidy_response_contract)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(getwalletinfo_response_contract)
 {
-    Array p;
-    Value result = getwalletinfo(p, false);
-    Object obj = result.get_obj();
+    json p = json::array();
+    json result = getwalletinfo(p, false);
 
-    BOOST_CHECK(find_value(obj, "walletversion").type() == int_type);
-    BOOST_CHECK(find_value(obj, "balance").type() == real_type);
-    BOOST_CHECK(find_value(obj, "txcount").type() == int_type);
-    BOOST_CHECK(find_value(obj, "keypoololdest").type() == int_type);
-    BOOST_CHECK(find_value(obj, "keypoolsize").type() == int_type);
+    BOOST_CHECK(result["walletversion"].is_number_integer());
+    BOOST_CHECK(result["balance"].is_number_float());
+    BOOST_CHECK(result["txcount"].is_number_integer());
+    BOOST_CHECK(result["keypoololdest"].is_number_integer());
+    BOOST_CHECK(result["keypoolsize"].is_number_integer());
 
     // "unlocked_until" only present when wallet is encrypted — not guaranteed
     // in test environment, so we do not assert its presence.
@@ -212,12 +206,11 @@ BOOST_AUTO_TEST_CASE(getwalletinfo_response_contract)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(getloglevel_response_contract)
 {
-    Array p;
-    Value result = getloglevel(p, false);
-    Object obj = result.get_obj();
+    json p = json::array();
+    json result = getloglevel(p, false);
 
-    BOOST_CHECK(find_value(obj, "level").type() == str_type);
-    BOOST_CHECK(find_value(obj, "categories").type() == array_type);
+    BOOST_CHECK(result["level"].is_string());
+    BOOST_CHECK(result["categories"].is_array());
 }
 
 // ---------------------------------------------------------------------------
@@ -225,11 +218,11 @@ BOOST_AUTO_TEST_CASE(getloglevel_response_contract)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(help_returns_string)
 {
-    Array p;
-    Value result = help(p, false);
+    json p = json::array();
+    json result = help(p, false);
 
-    BOOST_CHECK(result.type() == str_type);
-    BOOST_CHECK(!result.get_str().empty());
+    BOOST_CHECK(result.is_string());
+    BOOST_CHECK(!result.get<string>().empty());
 }
 
 BOOST_AUTO_TEST_SUITE_END()
@@ -241,27 +234,27 @@ BOOST_AUTO_TEST_SUITE_END()
 BOOST_FIXTURE_TEST_SUITE(rpc_response_wallet, TestChain)
 
 // ---------------------------------------------------------------------------
-// getnewaddress — returns str_type, Pinkcoin address starts with "2"
+// getnewaddress — returns string, Pinkcoin address starts with "2"
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(getnewaddress_response_contract)
 {
-    Array p;
-    Value result = getnewaddress(p, false);
-    BOOST_CHECK(result.type() == str_type);
-    string addr = result.get_str();
+    json p = json::array();
+    json result = getnewaddress(p, false);
+    BOOST_CHECK(result.is_string());
+    string addr = result.get<string>();
     BOOST_CHECK(!addr.empty());
     BOOST_CHECK_EQUAL(addr[0], '2');  // Pinkcoin PUBKEY_ADDRESS prefix
 }
 
 // ---------------------------------------------------------------------------
-// getnewpubkey — returns str_type (hex-encoded public key)
+// getnewpubkey — returns string (hex-encoded public key)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(getnewpubkey_response_contract)
 {
-    Array p;
-    Value result = getnewpubkey(p, false);
-    BOOST_CHECK(result.type() == str_type);
-    string hexPubKey = result.get_str();
+    json p = json::array();
+    json result = getnewpubkey(p, false);
+    BOOST_CHECK(result.is_string());
+    string hexPubKey = result.get<string>();
     BOOST_CHECK(!hexPubKey.empty());
     // Compressed pubkey = 66 hex chars, uncompressed = 130 hex chars
     BOOST_CHECK(hexPubKey.size() == 66 || hexPubKey.size() == 130);
@@ -269,78 +262,78 @@ BOOST_AUTO_TEST_CASE(getnewpubkey_response_contract)
 }
 
 // ---------------------------------------------------------------------------
-// getaccountaddress — param: "" (default account), returns str_type
+// getaccountaddress — param: "" (default account), returns string
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(getaccountaddress_response_contract)
 {
-    Array p;
+    json p = json::array();
     p.push_back(string(""));  // default account
-    Value result = getaccountaddress(p, false);
-    BOOST_CHECK(result.type() == str_type);
-    string addr = result.get_str();
+    json result = getaccountaddress(p, false);
+    BOOST_CHECK(result.is_string());
+    string addr = result.get<string>();
     BOOST_CHECK(!addr.empty());
     BOOST_CHECK_EQUAL(addr[0], '2');
 }
 
 // ---------------------------------------------------------------------------
-// getaccount — param: a valid address, returns str_type (account name)
+// getaccount — param: a valid address, returns string (account name)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(getaccount_response_contract)
 {
     // First get a valid address
-    Array pNew;
-    string addr = getnewaddress(pNew, false).get_str();
+    json pNew = json::array();
+    string addr = getnewaddress(pNew, false).get<string>();
 
-    Array p;
+    json p = json::array();
     p.push_back(addr);
-    Value result = getaccount(p, false);
-    BOOST_CHECK(result.type() == str_type);
+    json result = getaccount(p, false);
+    BOOST_CHECK(result.is_string());
     // Default account is ""
-    BOOST_CHECK_EQUAL(result.get_str(), "");
+    BOOST_CHECK_EQUAL(result.get<string>(), "");
 }
 
 // ---------------------------------------------------------------------------
-// getbalance — returns real_type, >= 0
+// getbalance — returns float, >= 0
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(getbalance_response_contract)
 {
-    Array p;
-    Value result = getbalance(p, false);
-    BOOST_CHECK(result.type() == real_type);
-    BOOST_CHECK(result.get_real() >= 0.0);
+    json p = json::array();
+    json result = getbalance(p, false);
+    BOOST_CHECK(result.is_number_float());
+    BOOST_CHECK(result.get<double>() >= 0.0);
 }
 
 // ---------------------------------------------------------------------------
-// getreceivedbyaddress — param: a valid address, returns real_type
+// getreceivedbyaddress — param: a valid address, returns float
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(getreceivedbyaddress_response_contract)
 {
     // Get a fresh address owned by the wallet
-    Array pNew;
-    string addr = getnewaddress(pNew, false).get_str();
+    json pNew = json::array();
+    string addr = getnewaddress(pNew, false).get<string>();
 
-    Array p;
+    json p = json::array();
     p.push_back(addr);
-    Value result = getreceivedbyaddress(p, false);
-    BOOST_CHECK(result.type() == real_type);
-    BOOST_CHECK(result.get_real() >= 0.0);
+    json result = getreceivedbyaddress(p, false);
+    BOOST_CHECK(result.is_number_float());
+    BOOST_CHECK(result.get<double>() >= 0.0);
 }
 
 // ---------------------------------------------------------------------------
-// signmessage + verifymessage — sign returns str_type, verify returns bool_type
+// signmessage + verifymessage — sign returns string, verify returns bool
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(signmessage_response_contract)
 {
     // Get a wallet address
-    Array pNew;
-    string addr = getnewaddress(pNew, false).get_str();
+    json pNew = json::array();
+    string addr = getnewaddress(pNew, false).get<string>();
 
-    Array p;
+    json p = json::array();
     p.push_back(addr);
     p.push_back(string("test message"));
-    Value result = signmessage(p, false);
-    BOOST_CHECK(result.type() == str_type);
-    string sig = result.get_str();
+    json result = signmessage(p, false);
+    BOOST_CHECK(result.is_string());
+    string sig = result.get<string>();
     BOOST_CHECK(!sig.empty());
     // Base64 encoded signature — length should be reasonable
     BOOST_CHECK(sig.size() > 10);
@@ -349,85 +342,83 @@ BOOST_AUTO_TEST_CASE(signmessage_response_contract)
 BOOST_AUTO_TEST_CASE(verifymessage_response_contract)
 {
     // Sign a message first
-    Array pNew;
-    string addr = getnewaddress(pNew, false).get_str();
+    json pNew = json::array();
+    string addr = getnewaddress(pNew, false).get<string>();
 
-    Array pSign;
+    json pSign = json::array();
     pSign.push_back(addr);
     pSign.push_back(string("verify test"));
-    string sig = signmessage(pSign, false).get_str();
+    string sig = signmessage(pSign, false).get<string>();
 
     // Verify
-    Array p;
+    json p = json::array();
     p.push_back(addr);
     p.push_back(sig);
     p.push_back(string("verify test"));
-    Value result = verifymessage(p, false);
-    BOOST_CHECK(result.type() == bool_type);
-    BOOST_CHECK_EQUAL(result.get_bool(), true);
+    json result = verifymessage(p, false);
+    BOOST_CHECK(result.is_boolean());
+    BOOST_CHECK_EQUAL(result.get<bool>(), true);
 }
 
 // ---------------------------------------------------------------------------
-// settxfee — param: 0.0001, returns bool_type (true)
+// settxfee — param: 0.0001, returns bool (true)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(settxfee_response_contract)
 {
-    Array p;
+    json p = json::array();
     p.push_back(0.0001);
-    Value result = settxfee(p, false);
-    BOOST_CHECK(result.type() == bool_type);
-    BOOST_CHECK_EQUAL(result.get_bool(), true);
+    json result = settxfee(p, false);
+    BOOST_CHECK(result.is_boolean());
+    BOOST_CHECK_EQUAL(result.get<bool>(), true);
 }
 
 // ---------------------------------------------------------------------------
-// getrawmempool — returns array_type of str_type txids
+// getrawmempool — returns array of string txids
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(getrawmempool_response_contract)
 {
-    Array p;
-    Value result = getrawmempool(p, false);
-    BOOST_CHECK(result.type() == array_type);
+    json p = json::array();
+    json result = getrawmempool(p, false);
+    BOOST_CHECK(result.is_array());
     // Mempool may be empty in test mode; just verify array type.
-    // If non-empty, elements should be str_type (txid hex strings).
-    const Array& arr = result.get_array();
-    for (const Value& v : arr)
-        BOOST_CHECK(v.type() == str_type);
+    // If non-empty, elements should be strings (txid hex strings).
+    for (const auto& v : result)
+        BOOST_CHECK(v.is_string());
 }
 
 // ---------------------------------------------------------------------------
-// getaddressesbyaccount — param: "" (default), returns array_type
+// getaddressesbyaccount — param: "" (default), returns array
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(getaddressesbyaccount_response_contract)
 {
     // Ensure at least one address exists in the default account
-    Array pNew;
+    json pNew = json::array();
     getnewaddress(pNew, false);
 
-    Array p;
+    json p = json::array();
     p.push_back(string(""));
-    Value result = getaddressesbyaccount(p, false);
-    BOOST_CHECK(result.type() == array_type);
-    const Array& arr = result.get_array();
-    BOOST_CHECK(!arr.empty());
+    json result = getaddressesbyaccount(p, false);
+    BOOST_CHECK(result.is_array());
+    BOOST_CHECK(!result.empty());
     // Each element should be a string address
-    for (const Value& v : arr)
+    for (const auto& v : result)
     {
-        BOOST_CHECK(v.type() == str_type);
-        char prefix = v.get_str()[0];
+        BOOST_CHECK(v.is_string());
+        char prefix = v.get<string>()[0];
         // '2' = PUBKEY_ADDRESS, 'C' = SCRIPT_ADDRESS (P2SH)
         BOOST_CHECK(prefix == '2' || prefix == 'C');
     }
 }
 
 // ---------------------------------------------------------------------------
-// listreceivedbyaddress — returns array_type with field contracts
+// listreceivedbyaddress — returns array with field contracts
 // Fields: "address"(str), "account"(str), "amount"(real), "confirmations"(int)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(listreceivedbyaddress_response_contract)
 {
     // Add a wallet-visible tx with output to a wallet-owned address
-    Array pAddr;
-    string testAddr = getnewaddress(pAddr, false).get_str();
+    json pAddr = json::array();
+    string testAddr = getnewaddress(pAddr, false).get<string>();
     CBitcoinAddress destAddr(testAddr);
     CScript destScript;
     destScript.SetDestination(destAddr.Get());
@@ -442,29 +433,28 @@ BOOST_AUTO_TEST_CASE(listreceivedbyaddress_response_contract)
     wtx.fMerkleVerified = true;  // bypass Merkle branch check
     pwalletMain->AddToWallet(wtx);
 
-    Array p;
+    json p = json::array();
     p.push_back(1);      // minconf = 1
     p.push_back(false);  // includeempty = false
-    Value result = listreceivedbyaddress(p, false);
-    BOOST_CHECK(result.type() == array_type);
-    const Array& arr = result.get_array();
-    BOOST_REQUIRE(!arr.empty());
-    Object elem = arr[0].get_obj();
-    BOOST_CHECK(find_value(elem, "address").type() == str_type);
-    BOOST_CHECK(find_value(elem, "account").type() == str_type);
-    BOOST_CHECK(find_value(elem, "amount").type() == real_type);
-    BOOST_CHECK(find_value(elem, "confirmations").type() == int_type);
+    json result = listreceivedbyaddress(p, false);
+    BOOST_CHECK(result.is_array());
+    BOOST_REQUIRE(!result.empty());
+    const json& elem = result[0];
+    BOOST_CHECK(elem["address"].is_string());
+    BOOST_CHECK(elem["account"].is_string());
+    BOOST_CHECK(elem["amount"].is_number_float());
+    BOOST_CHECK(elem["confirmations"].is_number_integer());
 }
 
 // ---------------------------------------------------------------------------
-// listtransactions — returns array_type; check element structure
+// listtransactions — returns array; check element structure
 // Fields: "account"(str), "category"(str), "amount"(real), plus WalletTxToJSON fields
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(listtransactions_response_contract)
 {
     // Add a wallet-visible tx so listtransactions has entries to return
-    Array pAddr;
-    string testAddr = getnewaddress(pAddr, false).get_str();
+    json pAddr = json::array();
+    string testAddr = getnewaddress(pAddr, false).get<string>();
     CBitcoinAddress destAddr(testAddr);
     CScript destScript;
     destScript.SetDestination(destAddr.Get());
@@ -479,47 +469,45 @@ BOOST_AUTO_TEST_CASE(listtransactions_response_contract)
     wtx.fMerkleVerified = true;
     pwalletMain->AddToWallet(wtx);
 
-    Array p;
-    Value result = listtransactions(p, false);
-    BOOST_CHECK(result.type() == array_type);
-    const Array& arr = result.get_array();
-    BOOST_REQUIRE(!arr.empty());
+    json p = json::array();
+    json result = listtransactions(p, false);
+    BOOST_CHECK(result.is_array());
+    BOOST_REQUIRE(!result.empty());
     // Every entry (whether tx or accounting "move") has these fields:
-    for (const Value& v : arr)
+    for (const auto& v : result)
     {
-        Object elem = v.get_obj();
-        BOOST_CHECK(find_value(elem, "account").type() == str_type);
-        BOOST_CHECK(find_value(elem, "category").type() == str_type);
-        BOOST_CHECK(find_value(elem, "amount").type() == real_type);
+        BOOST_CHECK(v["account"].is_string());
+        BOOST_CHECK(v["category"].is_string());
+        BOOST_CHECK(v["amount"].is_number_float());
 
-        string category = find_value(elem, "category").get_str();
+        string category = v["category"].get<string>();
         if (category != "move")
         {
             // WalletTxToJSON fields (only for real transactions, not "move" entries)
-            BOOST_CHECK(find_value(elem, "confirmations").type() == int_type);
-            BOOST_CHECK(find_value(elem, "txid").type() == str_type);
-            BOOST_CHECK(find_value(elem, "time").type() == int_type);
-            BOOST_CHECK(find_value(elem, "timereceived").type() == int_type);
+            BOOST_CHECK(v["confirmations"].is_number_integer());
+            BOOST_CHECK(v["txid"].is_string());
+            BOOST_CHECK(v["time"].is_number_integer());
+            BOOST_CHECK(v["timereceived"].is_number_integer());
         }
         else
         {
             // Accounting "move" entries have "time" and "otheraccount"
-            BOOST_CHECK(find_value(elem, "time").type() == int_type);
-            BOOST_CHECK(find_value(elem, "otheraccount").type() == str_type);
+            BOOST_CHECK(v["time"].is_number_integer());
+            BOOST_CHECK(v["otheraccount"].is_string());
         }
     }
 }
 
 // ---------------------------------------------------------------------------
-// listunspent — returns array_type; check element structure
+// listunspent — returns array; check element structure
 // Fields: "txid"(str), "vout"(int), "scriptPubKey"(str), "amount"(real),
 //         "confirmations"(int), optionally "address"(str), "account"(str)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(listunspent_response_contract)
 {
     // Add a wallet-visible tx with unspent output to a wallet-owned address
-    Array pAddr;
-    string testAddr = getnewaddress(pAddr, false).get_str();
+    json pAddr = json::array();
+    string testAddr = getnewaddress(pAddr, false).get<string>();
     CBitcoinAddress destAddr(testAddr);
     CScript destScript;
     destScript.SetDestination(destAddr.Get());
@@ -534,26 +522,25 @@ BOOST_AUTO_TEST_CASE(listunspent_response_contract)
     wtx.fMerkleVerified = true;
     pwalletMain->AddToWallet(wtx);
 
-    Array p;
-    Value result = listunspent(p, false);
-    BOOST_CHECK(result.type() == array_type);
-    const Array& arr = result.get_array();
-    BOOST_REQUIRE(!arr.empty());
-    Object elem = arr[0].get_obj();
-    BOOST_CHECK(find_value(elem, "txid").type() == str_type);
-    BOOST_CHECK(find_value(elem, "vout").type() == int_type);
-    BOOST_CHECK(find_value(elem, "scriptPubKey").type() == str_type);
-    BOOST_CHECK(find_value(elem, "amount").type() == real_type);
-    BOOST_CHECK(find_value(elem, "confirmations").type() == int_type);
+    json p = json::array();
+    json result = listunspent(p, false);
+    BOOST_CHECK(result.is_array());
+    BOOST_REQUIRE(!result.empty());
+    const json& elem = result[0];
+    BOOST_CHECK(elem["txid"].is_string());
+    BOOST_CHECK(elem["vout"].is_number_integer());
+    BOOST_CHECK(elem["scriptPubKey"].is_string());
+    BOOST_CHECK(elem["amount"].is_number_float());
+    BOOST_CHECK(elem["confirmations"].is_number_integer());
 }
 
 // ---------------------------------------------------------------------------
 // getreceivedbyaccount — deprecated accounting API, throws by default
-// Pins deprecation behavior: -enableaccounts not set → runtime_error
+// Pins deprecation behavior: -enableaccounts not set -> runtime_error
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(getreceivedbyaccount_response_contract)
 {
-    Array p;
+    json p = json::array();
     p.push_back(string(""));
     BOOST_CHECK_THROW(getreceivedbyaccount(p, false), std::runtime_error);
 }
@@ -563,21 +550,21 @@ BOOST_AUTO_TEST_CASE(getreceivedbyaccount_response_contract)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(listreceivedbyaccount_response_contract)
 {
-    Array p;
+    json p = json::array();
     p.push_back(0);
     p.push_back(true);
     BOOST_CHECK_THROW(listreceivedbyaccount(p, false), std::runtime_error);
 }
 
 // ---------------------------------------------------------------------------
-// listaddressgroupings — returns array_type (of array_type groupings)
+// listaddressgroupings — returns array (of array groupings)
 // Inner structure: [[address_str, balance_num, ?account_str], ...]
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(listaddressgroupings_response_contract)
 {
     // Add a wallet-visible tx so address groupings are non-empty
-    Array pAddr;
-    string testAddr = getnewaddress(pAddr, false).get_str();
+    json pAddr = json::array();
+    string testAddr = getnewaddress(pAddr, false).get<string>();
     CBitcoinAddress destAddr(testAddr);
     CScript destScript;
     destScript.SetDestination(destAddr.Get());
@@ -592,80 +579,75 @@ BOOST_AUTO_TEST_CASE(listaddressgroupings_response_contract)
     wtx.fMerkleVerified = true;
     pwalletMain->AddToWallet(wtx);
 
-    Array p;
-    Value result = listaddressgroupings(p, false);
-    BOOST_CHECK(result.type() == array_type);
-    const Array& groupings = result.get_array();
-    BOOST_REQUIRE(!groupings.empty());
+    json p = json::array();
+    json result = listaddressgroupings(p, false);
+    BOOST_CHECK(result.is_array());
+    BOOST_REQUIRE(!result.empty());
     // Validate inner structure
-    for (const Value& grouping : groupings)
+    for (const auto& grouping : result)
     {
-        BOOST_CHECK(grouping.type() == array_type);
-        const Array& addrs = grouping.get_array();
-        for (const Value& addrEntry : addrs)
+        BOOST_CHECK(grouping.is_array());
+        for (const auto& addrEntry : grouping)
         {
-            BOOST_CHECK(addrEntry.type() == array_type);
-            const Array& info = addrEntry.get_array();
+            BOOST_CHECK(addrEntry.is_array());
             // Must have at least 2 elements: [address, balance]
-            BOOST_CHECK(info.size() >= 2);
-            BOOST_CHECK(info[0].type() == str_type);   // address
-            BOOST_CHECK(info[1].type() == real_type);   // balance
+            BOOST_CHECK(addrEntry.size() >= 2);
+            BOOST_CHECK(addrEntry[0].is_string());   // address
+            BOOST_CHECK(addrEntry[1].is_number_float());   // balance
             // Optional 3rd element is account name
-            if (info.size() >= 3)
-                BOOST_CHECK(info[2].type() == str_type);
+            if (addrEntry.size() >= 3)
+                BOOST_CHECK(addrEntry[2].is_string());
         }
     }
 }
 
 // ---------------------------------------------------------------------------
-// listaccounts — returns obj_type with account names as keys
+// listaccounts — returns object with account names as keys
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(listaccounts_response_contract)
 {
     // Ensure at least one address exists
-    Array pNew;
+    json pNew = json::array();
     getnewaddress(pNew, false);
 
-    Array p;
-    Value result = listaccounts(p, false);
-    BOOST_CHECK(result.type() == obj_type);
-    // The implementation maps account → address string (not amount!)
-    Object obj = result.get_obj();
+    json p = json::array();
+    json result = listaccounts(p, false);
+    BOOST_CHECK(result.is_object());
+    // The implementation maps account -> address string (not amount!)
     // Should have at least the default "" account
-    if (!obj.empty())
+    if (!result.empty())
     {
         // Each value should be a string (address)
-        BOOST_CHECK(obj[0].value_.type() == str_type);
+        BOOST_CHECK(result.begin().value().is_string());
     }
 }
 
 // ---------------------------------------------------------------------------
-// validateaddress — param: owned address, returns obj_type
+// validateaddress — param: owned address, returns object
 // Fields: "isvalid"(bool), "address"(str), "ismine"(bool)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(validateaddress_response_contract)
 {
     // Get an owned address
-    Array pNew;
-    string addr = getnewaddress(pNew, false).get_str();
+    json pNew = json::array();
+    string addr = getnewaddress(pNew, false).get<string>();
 
-    Array p;
+    json p = json::array();
     p.push_back(addr);
-    Value result = validateaddress(p, false);
-    BOOST_CHECK(result.type() == obj_type);
-    Object obj = result.get_obj();
+    json result = validateaddress(p, false);
+    BOOST_CHECK(result.is_object());
 
-    BOOST_CHECK(find_value(obj, "isvalid").type() == bool_type);
-    BOOST_CHECK_EQUAL(find_value(obj, "isvalid").get_bool(), true);
-    BOOST_CHECK(find_value(obj, "address").type() == str_type);
-    BOOST_CHECK_EQUAL(find_value(obj, "address").get_str(), addr);
-    BOOST_CHECK(find_value(obj, "ismine").type() == bool_type);
-    BOOST_CHECK_EQUAL(find_value(obj, "ismine").get_bool(), true);
+    BOOST_CHECK(result["isvalid"].is_boolean());
+    BOOST_CHECK_EQUAL(result["isvalid"].get<bool>(), true);
+    BOOST_CHECK(result["address"].is_string());
+    BOOST_CHECK_EQUAL(result["address"].get<string>(), addr);
+    BOOST_CHECK(result["ismine"].is_boolean());
+    BOOST_CHECK_EQUAL(result["ismine"].get<bool>(), true);
 
     // For owned key addresses: isscript, pubkey, iscompressed
-    BOOST_CHECK(find_value(obj, "isscript").type() == bool_type);
-    BOOST_CHECK(find_value(obj, "pubkey").type() == str_type);
-    BOOST_CHECK(find_value(obj, "iscompressed").type() == bool_type);
+    BOOST_CHECK(result["isscript"].is_boolean());
+    BOOST_CHECK(result["pubkey"].is_string());
+    BOOST_CHECK(result["iscompressed"].is_boolean());
 }
 
 // ---------------------------------------------------------------------------
@@ -673,43 +655,41 @@ BOOST_AUTO_TEST_CASE(validateaddress_response_contract)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(validateaddress_invalid_response_contract)
 {
-    Array p;
+    json p = json::array();
     p.push_back(string("INVALID_ADDRESS"));
-    Value result = validateaddress(p, false);
-    BOOST_CHECK(result.type() == obj_type);
-    Object obj = result.get_obj();
+    json result = validateaddress(p, false);
+    BOOST_CHECK(result.is_object());
 
-    BOOST_CHECK(find_value(obj, "isvalid").type() == bool_type);
-    BOOST_CHECK_EQUAL(find_value(obj, "isvalid").get_bool(), false);
+    BOOST_CHECK(result["isvalid"].is_boolean());
+    BOOST_CHECK_EQUAL(result["isvalid"].get<bool>(), false);
 }
 
 // ---------------------------------------------------------------------------
-// validatepubkey — param: hex pubkey, returns obj_type
+// validatepubkey — param: hex pubkey, returns object
 // Fields: "isvalid"(bool), optionally "address"(str), "ismine"(bool),
 //         "iscompressed"(bool)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(validatepubkey_response_contract)
 {
     // Get a hex pubkey via getnewpubkey
-    Array pPub;
-    string hexPubKey = getnewpubkey(pPub, false).get_str();
+    json pPub = json::array();
+    string hexPubKey = getnewpubkey(pPub, false).get<string>();
 
-    Array p;
+    json p = json::array();
     p.push_back(hexPubKey);
-    Value result = validatepubkey(p, false);
-    BOOST_CHECK(result.type() == obj_type);
-    Object obj = result.get_obj();
+    json result = validatepubkey(p, false);
+    BOOST_CHECK(result.is_object());
 
-    BOOST_CHECK(find_value(obj, "isvalid").type() == bool_type);
-    BOOST_CHECK_EQUAL(find_value(obj, "isvalid").get_bool(), true);
-    BOOST_CHECK(find_value(obj, "address").type() == str_type);
-    BOOST_CHECK(find_value(obj, "ismine").type() == bool_type);
-    BOOST_CHECK(find_value(obj, "iscompressed").type() == bool_type);
+    BOOST_CHECK(result["isvalid"].is_boolean());
+    BOOST_CHECK_EQUAL(result["isvalid"].get<bool>(), true);
+    BOOST_CHECK(result["address"].is_string());
+    BOOST_CHECK(result["ismine"].is_boolean());
+    BOOST_CHECK(result["iscompressed"].is_boolean());
 }
 
 // ---------------------------------------------------------------------------
 // gettransaction — uses confirmed coinbase from mined blocks
-// Returns obj_type with TxToJSON fields + "amount", "details", WalletTxToJSON
+// Returns object with TxToJSON fields + "amount", "details", WalletTxToJSON
 // Coinbase txs also have "generated"(bool), "blockhash", "blockindex", "blocktime"
 // Note: TestChain uses anyone-can-spend coinbases (empty scriptPubKey), so
 // mapWallet is empty by default. We manually add a CWalletTx from a known
@@ -726,121 +706,115 @@ BOOST_AUTO_TEST_CASE(gettransaction_response_contract)
 
     uint256 txid = coinbaseTxns[0].GetHash();
 
-    Array p;
+    json p = json::array();
     p.push_back(txid.GetHex());
-    Value result = gettransaction(p, false);
-    BOOST_CHECK(result.type() == obj_type);
-    Object obj = result.get_obj();
+    json result = gettransaction(p, false);
+    BOOST_CHECK(result.is_object());
 
     // TxToJSON fields
-    BOOST_CHECK(find_value(obj, "txid").type() == str_type);
-    BOOST_CHECK_EQUAL(find_value(obj, "txid").get_str(), txid.GetHex());
-    BOOST_CHECK(find_value(obj, "version").type() == int_type);
-    BOOST_CHECK(find_value(obj, "time").type() == int_type);
-    BOOST_CHECK(find_value(obj, "locktime").type() == int_type);
-    BOOST_CHECK(find_value(obj, "vin").type() == array_type);
-    BOOST_CHECK(find_value(obj, "vout").type() == array_type);
+    BOOST_CHECK(result["txid"].is_string());
+    BOOST_CHECK_EQUAL(result["txid"].get<string>(), txid.GetHex());
+    BOOST_CHECK(result["version"].is_number_integer());
+    BOOST_CHECK(result["time"].is_number_integer());
+    BOOST_CHECK(result["locktime"].is_number_integer());
+    BOOST_CHECK(result["vin"].is_array());
+    BOOST_CHECK(result["vout"].is_array());
 
     // WalletTxToJSON fields — confirmed coinbase has all of these
-    BOOST_CHECK(find_value(obj, "confirmations").type() == int_type);
-    BOOST_CHECK(find_value(obj, "confirmations").get_int() > 0);
-    BOOST_CHECK(find_value(obj, "blockhash").type() == str_type);
-    BOOST_CHECK_EQUAL(find_value(obj, "blockhash").get_str().size(), 64u);
-    BOOST_CHECK(find_value(obj, "blockindex").type() == int_type);
-    BOOST_CHECK(find_value(obj, "blocktime").type() == int_type);
-    BOOST_CHECK(find_value(obj, "timereceived").type() == int_type);
+    BOOST_CHECK(result["confirmations"].is_number_integer());
+    BOOST_CHECK(result["confirmations"].get<int>() > 0);
+    BOOST_CHECK(result["blockhash"].is_string());
+    BOOST_CHECK_EQUAL(result["blockhash"].get<string>().size(), 64u);
+    BOOST_CHECK(result["blockindex"].is_number_integer());
+    BOOST_CHECK(result["blocktime"].is_number_integer());
+    BOOST_CHECK(result["timereceived"].is_number_integer());
 
     // Coinbase-specific: "generated" field
-    BOOST_CHECK(find_value(obj, "generated").type() == bool_type);
-    BOOST_CHECK_EQUAL(find_value(obj, "generated").get_bool(), true);
+    BOOST_CHECK(result["generated"].is_boolean());
+    BOOST_CHECK_EQUAL(result["generated"].get<bool>(), true);
 
     // amount field
-    BOOST_CHECK(find_value(obj, "amount").type() == real_type);
+    BOOST_CHECK(result["amount"].is_number_float());
 
     // details array
-    BOOST_CHECK(find_value(obj, "details").type() == array_type);
+    BOOST_CHECK(result["details"].is_array());
 }
 
 // ---------------------------------------------------------------------------
-// listsinceblock — returns obj_type with "transactions" and "lastblock"
+// listsinceblock — returns object with "transactions" and "lastblock"
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(listsinceblock_response_contract)
 {
-    Array p;
-    Value result = listsinceblock(p, false);
-    BOOST_CHECK(result.type() == obj_type);
-    Object obj = result.get_obj();
+    json p = json::array();
+    json result = listsinceblock(p, false);
+    BOOST_CHECK(result.is_object());
 
-    BOOST_CHECK(find_value(obj, "transactions").type() == array_type);
-    BOOST_CHECK(find_value(obj, "lastblock").type() == str_type);
+    BOOST_CHECK(result["transactions"].is_array());
+    BOOST_CHECK(result["lastblock"].is_string());
 
     // lastblock should be a 64-char hex hash
-    string lastblock = find_value(obj, "lastblock").get_str();
+    string lastblock = result["lastblock"].get<string>();
     BOOST_CHECK_EQUAL(lastblock.size(), 64u);
 }
 
 // ---------------------------------------------------------------------------
-// reservebalance — no params returns obj_type with "reserve" and "amount"
+// reservebalance — no params returns object with "reserve" and "amount"
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(reservebalance_response_contract)
 {
-    Array p;
-    Value result = reservebalance(p, false);
-    BOOST_CHECK(result.type() == obj_type);
-    Object obj = result.get_obj();
+    json p = json::array();
+    json result = reservebalance(p, false);
+    BOOST_CHECK(result.is_object());
 
-    BOOST_CHECK(find_value(obj, "reserve").type() == bool_type);
-    BOOST_CHECK(find_value(obj, "amount").type() == real_type);
+    BOOST_CHECK(result["reserve"].is_boolean());
+    BOOST_CHECK(result["amount"].is_number_float());
     // Default: no reserve
-    BOOST_CHECK_EQUAL(find_value(obj, "reserve").get_bool(), false);
-    BOOST_CHECK(find_value(obj, "amount").get_real() >= 0.0);
+    BOOST_CHECK_EQUAL(result["reserve"].get<bool>(), false);
+    BOOST_CHECK(result["amount"].get<double>() >= 0.0);
 }
 
 // ---------------------------------------------------------------------------
-// checkwallet — returns obj_type with "wallet check passed"(bool)
+// checkwallet — returns object with "wallet check passed"(bool)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(checkwallet_response_contract)
 {
-    Array p;
-    Value result = checkwallet(p, false);
-    BOOST_CHECK(result.type() == obj_type);
-    Object obj = result.get_obj();
+    json p = json::array();
+    json result = checkwallet(p, false);
+    BOOST_CHECK(result.is_object());
 
     // When wallet is healthy: "wallet check passed" = true
-    BOOST_CHECK(find_value(obj, "wallet check passed").type() == bool_type);
-    BOOST_CHECK_EQUAL(find_value(obj, "wallet check passed").get_bool(), true);
+    BOOST_CHECK(result["wallet check passed"].is_boolean());
+    BOOST_CHECK_EQUAL(result["wallet check passed"].get<bool>(), true);
 }
 
 // ---------------------------------------------------------------------------
-// repairwallet — returns obj_type with same structure as checkwallet
+// repairwallet — returns object with same structure as checkwallet
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(repairwallet_response_contract)
 {
-    Array p;
-    Value result = repairwallet(p, false);
-    BOOST_CHECK(result.type() == obj_type);
-    Object obj = result.get_obj();
+    json p = json::array();
+    json result = repairwallet(p, false);
+    BOOST_CHECK(result.is_object());
 
     // When wallet is healthy: "wallet check passed" = true
-    BOOST_CHECK(find_value(obj, "wallet check passed").type() == bool_type);
-    BOOST_CHECK_EQUAL(find_value(obj, "wallet check passed").get_bool(), true);
+    BOOST_CHECK(result["wallet check passed"].is_boolean());
+    BOOST_CHECK_EQUAL(result["wallet check passed"].get<bool>(), true);
 }
 
 // ---------------------------------------------------------------------------
-// makekeypair — returns obj_type with "PrivateKey" and "PublicKey"
+// makekeypair — returns object with "PrivateKey" and "PublicKey"
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(makekeypair_response_contract)
 {
-    Array p;
-    Value result = makekeypair(p, false);
-    BOOST_CHECK(result.type() == obj_type);
-    Object obj = result.get_obj();
+    json p = json::array();
+    json result = makekeypair(p, false);
+    BOOST_CHECK(result.is_object());
 
-    BOOST_CHECK(find_value(obj, "PrivateKey").type() == str_type);
-    BOOST_CHECK(find_value(obj, "PublicKey").type() == str_type);
+    BOOST_CHECK(result["PrivateKey"].is_string());
+    BOOST_CHECK(result["PublicKey"].is_string());
 
-    string privKey = find_value(obj, "PrivateKey").get_str();
-    string pubKey = find_value(obj, "PublicKey").get_str();
+    string privKey = result["PrivateKey"].get<string>();
+    string pubKey = result["PublicKey"].get<string>();
     BOOST_CHECK(!privKey.empty());
     BOOST_CHECK(!pubKey.empty());
     BOOST_CHECK(IsHex(privKey));
@@ -848,43 +822,40 @@ BOOST_AUTO_TEST_CASE(makekeypair_response_contract)
 }
 
 // ---------------------------------------------------------------------------
-// combinethreshold — no params returns obj_type with "combine threshold"
+// combinethreshold — no params returns object with "combine threshold"
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(combinethreshold_response_contract)
 {
-    Array p;
-    Value result = combinethreshold(p, false);
-    BOOST_CHECK(result.type() == obj_type);
-    Object obj = result.get_obj();
+    json p = json::array();
+    json result = combinethreshold(p, false);
+    BOOST_CHECK(result.is_object());
 
-    BOOST_CHECK(find_value(obj, "combine threshold").type() == int_type);
+    BOOST_CHECK(result["combine threshold"].is_number_integer());
 }
 
 // ---------------------------------------------------------------------------
-// splitthreshold — no params returns obj_type with "split threshold"
+// splitthreshold — no params returns object with "split threshold"
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(splitthreshold_response_contract)
 {
-    Array p;
-    Value result = splitthreshold(p, false);
-    BOOST_CHECK(result.type() == obj_type);
-    Object obj = result.get_obj();
+    json p = json::array();
+    json result = splitthreshold(p, false);
+    BOOST_CHECK(result.is_object());
 
-    BOOST_CHECK(find_value(obj, "split threshold").type() == int_type);
+    BOOST_CHECK(result["split threshold"].is_number_integer());
 }
 
 // ---------------------------------------------------------------------------
-// getstakesplitthreshold — returns obj_type with "split threshold"(real)
+// getstakesplitthreshold — returns object with "split threshold"(real)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(getstakesplitthreshold_response_contract)
 {
-    Array p;
-    Value result = getstakesplitthreshold(p, false);
-    BOOST_CHECK(result.type() == obj_type);
-    Object obj = result.get_obj();
+    json p = json::array();
+    json result = getstakesplitthreshold(p, false);
+    BOOST_CHECK(result.is_object());
 
-    // Uses ValueFromAmount, so it's real_type
-    BOOST_CHECK(find_value(obj, "split threshold").type() == real_type);
+    // Uses ValueFromAmount, so it's float
+    BOOST_CHECK(result["split threshold"].is_number_float());
 }
 
 BOOST_AUTO_TEST_SUITE_END()
@@ -896,39 +867,39 @@ BOOST_AUTO_TEST_SUITE_END()
 BOOST_FIXTURE_TEST_SUITE(rpc_response_blockchain, TestChain)
 
 // ---------------------------------------------------------------------------
-// getblockcount — returns int_type equal to nBestHeight
+// getblockcount — returns integer equal to nBestHeight
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(getblockcount_response_contract)
 {
-    Array p;
-    Value result = getblockcount(p, false);
-    BOOST_CHECK(result.type() == int_type);
-    BOOST_CHECK_EQUAL(result.get_int(), nBestHeight);
+    json p = json::array();
+    json result = getblockcount(p, false);
+    BOOST_CHECK(result.is_number_integer());
+    BOOST_CHECK_EQUAL(result.get<int>(), nBestHeight);
 }
 
 // ---------------------------------------------------------------------------
-// getbestblockhash — returns str_type, 64 hex characters
+// getbestblockhash — returns string, 64 hex characters
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(getbestblockhash_response_contract)
 {
-    Array p;
-    Value result = getbestblockhash(p, false);
-    BOOST_CHECK(result.type() == str_type);
-    string hash = result.get_str();
+    json p = json::array();
+    json result = getbestblockhash(p, false);
+    BOOST_CHECK(result.is_string());
+    string hash = result.get<string>();
     BOOST_CHECK_EQUAL(hash.size(), 64u);
     BOOST_CHECK(IsHex(hash));
 }
 
 // ---------------------------------------------------------------------------
-// getblockhash — param: height 0, returns str_type, 64 hex chars
+// getblockhash — param: height 0, returns string, 64 hex chars
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(getblockhash_response_contract)
 {
-    Array p;
+    json p = json::array();
     p.push_back(0);
-    Value result = getblockhash(p, false);
-    BOOST_CHECK(result.type() == str_type);
-    string hash = result.get_str();
+    json result = getblockhash(p, false);
+    BOOST_CHECK(result.is_string());
+    string hash = result.get<string>();
     BOOST_CHECK_EQUAL(hash.size(), 64u);
     BOOST_CHECK(IsHex(hash));
 }
@@ -939,43 +910,42 @@ BOOST_AUTO_TEST_CASE(getblockhash_response_contract)
 BOOST_AUTO_TEST_CASE(getblock_response_contract)
 {
     // Get genesis hash
-    Array pH;
+    json pH = json::array();
     pH.push_back(0);
-    string genesisHash = getblockhash(pH, false).get_str();
+    string genesisHash = getblockhash(pH, false).get<string>();
 
-    Array p;
+    json p = json::array();
     p.push_back(genesisHash);
-    Value result = getblock(p, false);
-    BOOST_CHECK(result.type() == obj_type);
-    Object obj = result.get_obj();
+    json result = getblock(p, false);
+    BOOST_CHECK(result.is_object());
 
     // String fields
-    BOOST_CHECK(find_value(obj, "hash").type() == str_type);
-    BOOST_CHECK(find_value(obj, "merkleroot").type() == str_type);
-    BOOST_CHECK(find_value(obj, "bits").type() == str_type);
+    BOOST_CHECK(result["hash"].is_string());
+    BOOST_CHECK(result["merkleroot"].is_string());
+    BOOST_CHECK(result["bits"].is_string());
 
     // Integer fields
-    BOOST_CHECK(find_value(obj, "confirmations").type() == int_type);
-    BOOST_CHECK(find_value(obj, "size").type() == int_type);
-    BOOST_CHECK(find_value(obj, "height").type() == int_type);
-    BOOST_CHECK(find_value(obj, "version").type() == int_type);
-    BOOST_CHECK(find_value(obj, "time").type() == int_type);
-    BOOST_CHECK(find_value(obj, "nonce").type() == int_type);
+    BOOST_CHECK(result["confirmations"].is_number_integer());
+    BOOST_CHECK(result["size"].is_number_integer());
+    BOOST_CHECK(result["height"].is_number_integer());
+    BOOST_CHECK(result["version"].is_number_integer());
+    BOOST_CHECK(result["time"].is_number_integer());
+    BOOST_CHECK(result["nonce"].is_number_integer());
 
     // Real (double) fields
-    BOOST_CHECK(find_value(obj, "difficulty").type() == real_type);
-    BOOST_CHECK(find_value(obj, "mint").type() == real_type);
+    BOOST_CHECK(result["difficulty"].is_number_float());
+    BOOST_CHECK(result["mint"].is_number_float());
 
     // Array fields
-    BOOST_CHECK(find_value(obj, "tx").type() == array_type);
+    BOOST_CHECK(result["tx"].is_array());
 
     // Additional blockToJSON fields
-    BOOST_CHECK(find_value(obj, "blocktrust").type() == str_type);
-    BOOST_CHECK(find_value(obj, "chaintrust").type() == str_type);
-    BOOST_CHECK(find_value(obj, "flags").type() == str_type);
-    BOOST_CHECK(find_value(obj, "proofhash").type() == str_type);
-    BOOST_CHECK(find_value(obj, "entropybit").type() == int_type);
-    BOOST_CHECK(find_value(obj, "modifier").type() == str_type);
+    BOOST_CHECK(result["blocktrust"].is_string());
+    BOOST_CHECK(result["chaintrust"].is_string());
+    BOOST_CHECK(result["flags"].is_string());
+    BOOST_CHECK(result["proofhash"].is_string());
+    BOOST_CHECK(result["entropybit"].is_number_integer());
+    BOOST_CHECK(result["modifier"].is_string());
 }
 
 // ---------------------------------------------------------------------------
@@ -983,42 +953,40 @@ BOOST_AUTO_TEST_CASE(getblock_response_contract)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(getblockbynumber_response_contract)
 {
-    Array p;
+    json p = json::array();
     p.push_back(0);
-    Value result = getblockbynumber(p, false);
-    BOOST_CHECK(result.type() == obj_type);
-    Object obj = result.get_obj();
+    json result = getblockbynumber(p, false);
+    BOOST_CHECK(result.is_object());
 
     // Verify same core fields as getblock
-    BOOST_CHECK(find_value(obj, "hash").type() == str_type);
-    BOOST_CHECK(find_value(obj, "confirmations").type() == int_type);
-    BOOST_CHECK(find_value(obj, "size").type() == int_type);
-    BOOST_CHECK(find_value(obj, "height").type() == int_type);
-    BOOST_CHECK(find_value(obj, "version").type() == int_type);
-    BOOST_CHECK(find_value(obj, "merkleroot").type() == str_type);
-    BOOST_CHECK(find_value(obj, "time").type() == int_type);
-    BOOST_CHECK(find_value(obj, "nonce").type() == int_type);
-    BOOST_CHECK(find_value(obj, "bits").type() == str_type);
-    BOOST_CHECK(find_value(obj, "difficulty").type() == real_type);
-    BOOST_CHECK(find_value(obj, "tx").type() == array_type);
+    BOOST_CHECK(result["hash"].is_string());
+    BOOST_CHECK(result["confirmations"].is_number_integer());
+    BOOST_CHECK(result["size"].is_number_integer());
+    BOOST_CHECK(result["height"].is_number_integer());
+    BOOST_CHECK(result["version"].is_number_integer());
+    BOOST_CHECK(result["merkleroot"].is_string());
+    BOOST_CHECK(result["time"].is_number_integer());
+    BOOST_CHECK(result["nonce"].is_number_integer());
+    BOOST_CHECK(result["bits"].is_string());
+    BOOST_CHECK(result["difficulty"].is_number_float());
+    BOOST_CHECK(result["tx"].is_array());
 }
 
 // ---------------------------------------------------------------------------
-// getcheckpoint — returns obj_type with field contracts
+// getcheckpoint — returns object with field contracts
 // Fields: "synccheckpoint"(str), "height"(int), "timestamp"(str), "policy"(str)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(getcheckpoint_response_contract)
 {
-    Array p;
-    Value result = getcheckpoint(p, false);
-    BOOST_CHECK(result.type() == obj_type);
-    Object obj = result.get_obj();
+    json p = json::array();
+    json result = getcheckpoint(p, false);
+    BOOST_CHECK(result.is_object());
 
-    BOOST_CHECK(find_value(obj, "synccheckpoint").type() == str_type);
-    BOOST_CHECK(find_value(obj, "height").type() == int_type);
-    BOOST_CHECK(find_value(obj, "timestamp").type() == str_type);
+    BOOST_CHECK(result["synccheckpoint"].is_string());
+    BOOST_CHECK(result["height"].is_number_integer());
+    BOOST_CHECK(result["timestamp"].is_string());
     // "policy" is always present (one of strict/advisory/permissive)
-    BOOST_CHECK(find_value(obj, "policy").type() == str_type);
+    BOOST_CHECK(result["policy"].is_string());
 }
 
 // ---------------------------------------------------------------------------
@@ -1026,18 +994,17 @@ BOOST_AUTO_TEST_CASE(getcheckpoint_response_contract)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(getblock_genesis_hash_pinned)
 {
-    Array pH;
+    json pH = json::array();
     pH.push_back(0);
-    string genesisHash = getblockhash(pH, false).get_str();
+    string genesisHash = getblockhash(pH, false).get<string>();
 
-    Array p;
+    json p = json::array();
     p.push_back(genesisHash);
-    Value result = getblock(p, false);
-    Object obj = result.get_obj();
+    json result = getblock(p, false);
 
     // Pin the genesis block hash exactly
-    BOOST_CHECK_EQUAL(find_value(obj, "hash").get_str(), hashGenesisBlock.GetHex());
-    BOOST_CHECK_EQUAL(find_value(obj, "height").get_int(), 0);
+    BOOST_CHECK_EQUAL(result["hash"].get<string>(), hashGenesisBlock.GetHex());
+    BOOST_CHECK_EQUAL(result["height"].get<int>(), 0);
 }
 
 // ---------------------------------------------------------------------------
@@ -1045,12 +1012,11 @@ BOOST_AUTO_TEST_CASE(getblock_genesis_hash_pinned)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(getblock_height_zero_version)
 {
-    Array p;
+    json p = json::array();
     p.push_back(0);
-    Value result = getblockbynumber(p, false);
-    Object obj = result.get_obj();
+    json result = getblockbynumber(p, false);
 
-    BOOST_CHECK_EQUAL(find_value(obj, "version").get_int(), 1);
+    BOOST_CHECK_EQUAL(result["version"].get<int>(), 1);
 }
 
 // ---------------------------------------------------------------------------
@@ -1058,13 +1024,11 @@ BOOST_AUTO_TEST_CASE(getblock_height_zero_version)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(getblock_tx_array_nonempty)
 {
-    Array p;
+    json p = json::array();
     p.push_back(0);
-    Value result = getblockbynumber(p, false);
-    Object obj = result.get_obj();
+    json result = getblockbynumber(p, false);
 
-    const Array& txArr = find_value(obj, "tx").get_array();
-    BOOST_CHECK(!txArr.empty());
+    BOOST_CHECK(!result["tx"].empty());
 }
 
 // ---------------------------------------------------------------------------
@@ -1072,12 +1036,11 @@ BOOST_AUTO_TEST_CASE(getblock_tx_array_nonempty)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(getblock_confirmations_positive)
 {
-    Array p;
+    json p = json::array();
     p.push_back(0);
-    Value result = getblockbynumber(p, false);
-    Object obj = result.get_obj();
+    json result = getblockbynumber(p, false);
 
-    BOOST_CHECK(find_value(obj, "confirmations").get_int() > 0);
+    BOOST_CHECK(result["confirmations"].get<int>() > 0);
 }
 
 // ---------------------------------------------------------------------------
@@ -1085,9 +1048,9 @@ BOOST_AUTO_TEST_CASE(getblock_confirmations_positive)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(getblockcount_matches_chain_height)
 {
-    Array p;
-    Value result = getblockcount(p, false);
-    BOOST_CHECK_EQUAL(result.get_int(), chainHeight());
+    json p = json::array();
+    json result = getblockcount(p, false);
+    BOOST_CHECK_EQUAL(result.get<int>(), chainHeight());
 }
 
 // ---------------------------------------------------------------------------
@@ -1095,9 +1058,9 @@ BOOST_AUTO_TEST_CASE(getblockcount_matches_chain_height)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(getbestblockhash_matches_tip)
 {
-    Array p;
-    Value result = getbestblockhash(p, false);
-    BOOST_CHECK_EQUAL(result.get_str(), pindexBest->GetBlockHash().GetHex());
+    json p = json::array();
+    json result = getbestblockhash(p, false);
+    BOOST_CHECK_EQUAL(result.get<string>(), pindexBest->GetBlockHash().GetHex());
 }
 
 BOOST_AUTO_TEST_SUITE_END()
@@ -1109,35 +1072,35 @@ BOOST_AUTO_TEST_SUITE_END()
 BOOST_AUTO_TEST_SUITE(rpc_response_network)
 
 // ---------------------------------------------------------------------------
-// getconnectioncount — returns int_type, >= 0
+// getconnectioncount — returns integer, >= 0
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(getconnectioncount_response_contract)
 {
-    Array p;
-    Value result = getconnectioncount(p, false);
-    BOOST_CHECK(result.type() == int_type);
-    BOOST_CHECK(result.get_int() >= 0);
+    json p = json::array();
+    json result = getconnectioncount(p, false);
+    BOOST_CHECK(result.is_number_integer());
+    BOOST_CHECK(result.get<int>() >= 0);
 }
 
 // ---------------------------------------------------------------------------
-// getpeerinfo — returns array_type (may be empty in test environment)
+// getpeerinfo — returns array (may be empty in test environment)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(getpeerinfo_response_contract)
 {
-    Array p;
-    Value result = getpeerinfo(p, false);
-    BOOST_CHECK(result.type() == array_type);
+    json p = json::array();
+    json result = getpeerinfo(p, false);
+    BOOST_CHECK(result.is_array());
 }
 
 // ---------------------------------------------------------------------------
-// getnodes — returns str_type (addnode= lines, empty in test environment)
+// getnodes — returns string (addnode= lines, empty in test environment)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(getnodes_response_contract)
 {
-    Array p;
-    Value result = getnodes(p, false);
+    json p = json::array();
+    json result = getnodes(p, false);
     // getnodes returns a string, not object/array
-    BOOST_CHECK(result.type() == str_type);
+    BOOST_CHECK(result.is_string());
 }
 
 // ---------------------------------------------------------------------------
@@ -1145,9 +1108,9 @@ BOOST_AUTO_TEST_CASE(getnodes_response_contract)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(getconnectioncount_is_zero_in_test)
 {
-    Array p;
-    Value result = getconnectioncount(p, false);
-    BOOST_CHECK_EQUAL(result.get_int(), 0);
+    json p = json::array();
+    json result = getconnectioncount(p, false);
+    BOOST_CHECK_EQUAL(result.get<int>(), 0);
 }
 
 // ---------------------------------------------------------------------------
@@ -1155,9 +1118,9 @@ BOOST_AUTO_TEST_CASE(getconnectioncount_is_zero_in_test)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(getpeerinfo_empty_in_test)
 {
-    Array p;
-    Value result = getpeerinfo(p, false);
-    BOOST_CHECK(result.get_array().empty());
+    json p = json::array();
+    json result = getpeerinfo(p, false);
+    BOOST_CHECK(result.empty());
 }
 
 // ---------------------------------------------------------------------------
@@ -1165,7 +1128,7 @@ BOOST_AUTO_TEST_CASE(getpeerinfo_empty_in_test)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(getpeerinfo_help_works)
 {
-    Array p;
+    json p = json::array();
     BOOST_CHECK_THROW(getpeerinfo(p, true), runtime_error);
 }
 
@@ -1174,7 +1137,7 @@ BOOST_AUTO_TEST_CASE(getpeerinfo_help_works)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(getconnectioncount_help_works)
 {
-    Array p;
+    json p = json::array();
     BOOST_CHECK_THROW(getconnectioncount(p, true), runtime_error);
 }
 
@@ -1183,7 +1146,7 @@ BOOST_AUTO_TEST_CASE(getconnectioncount_help_works)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(getnodes_help_works)
 {
-    Array p;
+    json p = json::array();
     BOOST_CHECK_THROW(getnodes(p, true), runtime_error);
 }
 
@@ -1196,55 +1159,53 @@ BOOST_AUTO_TEST_SUITE_END()
 BOOST_FIXTURE_TEST_SUITE(rpc_response_raw, TestChain)
 
 // ---------------------------------------------------------------------------
-// createrawtransaction — returns str_type (hex-encoded raw tx)
+// createrawtransaction — returns string (hex-encoded raw tx)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(createrawtransaction_response_contract)
 {
     // Create a raw transaction with empty inputs and a valid output
-    Array inputs;
-    Object sendTo;
-    Array addrParams;
-    Value addrResult = getnewaddress(addrParams, false);
-    string addr = addrResult.get_str();
-    sendTo.push_back(Pair(addr, 0.01));
+    json inputs = json::array();
+    json sendTo = json::object();
+    json addrParams = json::array();
+    string addr = getnewaddress(addrParams, false).get<string>();
+    sendTo[addr] = 0.01;
 
-    Array p;
+    json p = json::array();
     p.push_back(inputs);
     p.push_back(sendTo);
-    Value result = createrawtransaction(p, false);
-    BOOST_CHECK(result.type() == str_type);
-    BOOST_CHECK(IsHex(result.get_str()));
+    json result = createrawtransaction(p, false);
+    BOOST_CHECK(result.is_string());
+    BOOST_CHECK(IsHex(result.get<string>()));
 }
 
 // ---------------------------------------------------------------------------
-// decoderawtransaction — returns obj_type with TxToJSON fields
+// decoderawtransaction — returns object with TxToJSON fields
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(decoderawtransaction_response_contract)
 {
-    Array inputs;
-    Object sendTo;
-    Array addrParams;
-    string addr = getnewaddress(addrParams, false).get_str();
-    sendTo.push_back(Pair(addr, 0.01));
+    json inputs = json::array();
+    json sendTo = json::object();
+    json addrParams = json::array();
+    string addr = getnewaddress(addrParams, false).get<string>();
+    sendTo[addr] = 0.01;
 
-    Array pCreate;
+    json pCreate = json::array();
     pCreate.push_back(inputs);
     pCreate.push_back(sendTo);
-    string rawHex = createrawtransaction(pCreate, false).get_str();
+    string rawHex = createrawtransaction(pCreate, false).get<string>();
 
-    Array pDecode;
+    json pDecode = json::array();
     pDecode.push_back(rawHex);
-    Value result = decoderawtransaction(pDecode, false);
-    BOOST_CHECK(result.type() == obj_type);
-    Object obj = result.get_obj();
+    json result = decoderawtransaction(pDecode, false);
+    BOOST_CHECK(result.is_object());
 
     // TxToJSON fields
-    BOOST_CHECK(find_value(obj, "txid").type() == str_type);
-    BOOST_CHECK(find_value(obj, "version").type() == int_type);
-    BOOST_CHECK(find_value(obj, "time").type() == int_type);
-    BOOST_CHECK(find_value(obj, "locktime").type() == int_type);
-    BOOST_CHECK(find_value(obj, "vin").type() == array_type);
-    BOOST_CHECK(find_value(obj, "vout").type() == array_type);
+    BOOST_CHECK(result["txid"].is_string());
+    BOOST_CHECK(result["version"].is_number_integer());
+    BOOST_CHECK(result["time"].is_number_integer());
+    BOOST_CHECK(result["locktime"].is_number_integer());
+    BOOST_CHECK(result["vin"].is_array());
+    BOOST_CHECK(result["vout"].is_array());
 }
 
 // ---------------------------------------------------------------------------
@@ -1252,25 +1213,24 @@ BOOST_AUTO_TEST_CASE(decoderawtransaction_response_contract)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(decoderawtransaction_has_ntime)
 {
-    Array inputs;
-    Object sendTo;
-    Array addrParams;
-    string addr = getnewaddress(addrParams, false).get_str();
-    sendTo.push_back(Pair(addr, 0.01));
+    json inputs = json::array();
+    json sendTo = json::object();
+    json addrParams = json::array();
+    string addr = getnewaddress(addrParams, false).get<string>();
+    sendTo[addr] = 0.01;
 
-    Array pCreate;
+    json pCreate = json::array();
     pCreate.push_back(inputs);
     pCreate.push_back(sendTo);
-    string rawHex = createrawtransaction(pCreate, false).get_str();
+    string rawHex = createrawtransaction(pCreate, false).get<string>();
 
-    Array pDecode;
+    json pDecode = json::array();
     pDecode.push_back(rawHex);
-    Object obj = decoderawtransaction(pDecode, false).get_obj();
+    json result = decoderawtransaction(pDecode, false);
 
     // nTime is Pinkcoin-specific (not in Bitcoin Core)
-    Value timeVal = find_value(obj, "time");
-    BOOST_CHECK(timeVal.type() == int_type);
-    BOOST_CHECK(timeVal.get_int64() >= 0);
+    BOOST_CHECK(result["time"].is_number_integer());
+    BOOST_CHECK(result["time"].get<int64_t>() >= 0);
 }
 
 // ---------------------------------------------------------------------------
@@ -1278,47 +1238,46 @@ BOOST_AUTO_TEST_CASE(decoderawtransaction_has_ntime)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(decoderawtransaction_vout_fields)
 {
-    Array inputs;
-    Object sendTo;
-    Array addrParams;
-    string addr = getnewaddress(addrParams, false).get_str();
-    sendTo.push_back(Pair(addr, 0.01));
+    json inputs = json::array();
+    json sendTo = json::object();
+    json addrParams = json::array();
+    string addr = getnewaddress(addrParams, false).get<string>();
+    sendTo[addr] = 0.01;
 
-    Array pCreate;
+    json pCreate = json::array();
     pCreate.push_back(inputs);
     pCreate.push_back(sendTo);
-    string rawHex = createrawtransaction(pCreate, false).get_str();
+    string rawHex = createrawtransaction(pCreate, false).get<string>();
 
-    Array pDecode;
+    json pDecode = json::array();
     pDecode.push_back(rawHex);
-    Object obj = decoderawtransaction(pDecode, false).get_obj();
+    json result = decoderawtransaction(pDecode, false);
 
-    const Array& vout = find_value(obj, "vout").get_array();
+    const json& vout = result["vout"];
     BOOST_REQUIRE(!vout.empty());
-    Object out0 = vout[0].get_obj();
+    const json& out0 = vout[0];
 
-    BOOST_CHECK(find_value(out0, "value").type() == real_type);
-    BOOST_CHECK(find_value(out0, "n").type() == int_type);
+    BOOST_CHECK(out0["value"].is_number_float());
+    BOOST_CHECK(out0["n"].is_number_integer());
 
-    Object spk = find_value(out0, "scriptPubKey").get_obj();
-    BOOST_CHECK(find_value(spk, "asm").type() == str_type);
-    BOOST_CHECK(find_value(spk, "type").type() == str_type);
+    const json& spk = out0["scriptPubKey"];
+    BOOST_CHECK(spk["asm"].is_string());
+    BOOST_CHECK(spk["type"].is_string());
 }
 
 // ---------------------------------------------------------------------------
-// decodescript — returns obj_type with asm, type, p2sh
+// decodescript — returns object with asm, type, p2sh
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(decodescript_response_contract)
 {
-    Array p;
+    json p = json::array();
     p.push_back(string("76a91489abcdefabbaabbaabbaabbaabbaabbaabbaabba88ac"));
-    Value result = decodescript(p, false);
-    BOOST_CHECK(result.type() == obj_type);
-    Object obj = result.get_obj();
+    json result = decodescript(p, false);
+    BOOST_CHECK(result.is_object());
 
-    BOOST_CHECK(find_value(obj, "asm").type() == str_type);
-    BOOST_CHECK(find_value(obj, "type").type() == str_type);
-    BOOST_CHECK(find_value(obj, "p2sh").type() == str_type);
+    BOOST_CHECK(result["asm"].is_string());
+    BOOST_CHECK(result["type"].is_string());
+    BOOST_CHECK(result["p2sh"].is_string());
 }
 
 // ---------------------------------------------------------------------------
@@ -1326,10 +1285,10 @@ BOOST_AUTO_TEST_CASE(decodescript_response_contract)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(decodescript_p2pkh_type)
 {
-    Array p;
+    json p = json::array();
     p.push_back(string("76a91489abcdefabbaabbaabbaabbaabbaabbaabbaabba88ac"));
-    Object obj = decodescript(p, false).get_obj();
-    BOOST_CHECK_EQUAL(find_value(obj, "type").get_str(), "pubkeyhash");
+    json result = decodescript(p, false);
+    BOOST_CHECK_EQUAL(result["type"].get<string>(), "pubkeyhash");
 }
 
 // ---------------------------------------------------------------------------
@@ -1337,10 +1296,10 @@ BOOST_AUTO_TEST_CASE(decodescript_p2pkh_type)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(decodescript_p2sh_prefix)
 {
-    Array p;
+    json p = json::array();
     p.push_back(string("76a91489abcdefabbaabbaabbaabbaabbaabbaabbaabba88ac"));
-    Object obj = decodescript(p, false).get_obj();
-    string p2sh = find_value(obj, "p2sh").get_str();
+    json result = decodescript(p, false);
+    string p2sh = result["p2sh"].get<string>();
     BOOST_CHECK(!p2sh.empty());
     BOOST_CHECK_EQUAL(p2sh[0], 'C');
 }
@@ -1350,15 +1309,14 @@ BOOST_AUTO_TEST_CASE(decodescript_p2sh_prefix)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(makekeypair_response_contract)
 {
-    Array p;
-    Value result = makekeypair(p, false);
-    BOOST_CHECK(result.type() == obj_type);
-    Object obj = result.get_obj();
+    json p = json::array();
+    json result = makekeypair(p, false);
+    BOOST_CHECK(result.is_object());
 
-    BOOST_CHECK(find_value(obj, "PrivateKey").type() == str_type);
-    BOOST_CHECK(find_value(obj, "PublicKey").type() == str_type);
-    BOOST_CHECK(IsHex(find_value(obj, "PrivateKey").get_str()));
-    BOOST_CHECK(IsHex(find_value(obj, "PublicKey").get_str()));
+    BOOST_CHECK(result["PrivateKey"].is_string());
+    BOOST_CHECK(result["PublicKey"].is_string());
+    BOOST_CHECK(IsHex(result["PrivateKey"].get<string>()));
+    BOOST_CHECK(IsHex(result["PublicKey"].get<string>()));
 }
 
 // ---------------------------------------------------------------------------
@@ -1366,11 +1324,11 @@ BOOST_AUTO_TEST_CASE(makekeypair_response_contract)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(makekeypair_unique_each_call)
 {
-    Array p;
-    Object obj1 = makekeypair(p, false).get_obj();
-    Object obj2 = makekeypair(p, false).get_obj();
-    BOOST_CHECK(find_value(obj1, "PrivateKey").get_str() != find_value(obj2, "PrivateKey").get_str());
-    BOOST_CHECK(find_value(obj1, "PublicKey").get_str() != find_value(obj2, "PublicKey").get_str());
+    json p = json::array();
+    json obj1 = makekeypair(p, false);
+    json obj2 = makekeypair(p, false);
+    BOOST_CHECK(obj1["PrivateKey"].get<string>() != obj2["PrivateKey"].get<string>());
+    BOOST_CHECK(obj1["PublicKey"].get<string>() != obj2["PublicKey"].get<string>());
 }
 
 // ---------------------------------------------------------------------------
@@ -1378,7 +1336,7 @@ BOOST_AUTO_TEST_CASE(makekeypair_unique_each_call)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(createrawtransaction_help_works)
 {
-    Array p;
+    json p = json::array();
     BOOST_CHECK_THROW(createrawtransaction(p, true), runtime_error);
 }
 
@@ -1387,7 +1345,7 @@ BOOST_AUTO_TEST_CASE(createrawtransaction_help_works)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(decoderawtransaction_help_works)
 {
-    Array p;
+    json p = json::array();
     BOOST_CHECK_THROW(decoderawtransaction(p, true), runtime_error);
 }
 
@@ -1400,14 +1358,14 @@ BOOST_AUTO_TEST_SUITE_END()
 BOOST_FIXTURE_TEST_SUITE(rpc_response_mining, TestChain)
 
 // ---------------------------------------------------------------------------
-// getsubsidy — returns int_type (proof-of-work subsidy)
+// getsubsidy — returns integer (proof-of-work subsidy)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(getsubsidy_response_contract)
 {
-    Array p;
-    Value result = getsubsidy(p, false);
-    BOOST_CHECK(result.type() == int_type);
-    BOOST_CHECK(result.get_int64() >= 0);
+    json p = json::array();
+    json result = getsubsidy(p, false);
+    BOOST_CHECK(result.is_number_integer());
+    BOOST_CHECK(result.get<int64_t>() >= 0);
 }
 
 // ---------------------------------------------------------------------------
@@ -1415,13 +1373,13 @@ BOOST_AUTO_TEST_CASE(getsubsidy_response_contract)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(getsubsidy_with_height_param)
 {
-    Array p;
+    json p = json::array();
     // getsubsidy takes string param (uses atoi)
     p.push_back(string("100"));
-    Value result = getsubsidy(p, false);
-    BOOST_CHECK(result.type() == int_type);
+    json result = getsubsidy(p, false);
+    BOOST_CHECK(result.is_number_integer());
     // PoW subsidy may be zero if PoW is disabled at this height
-    BOOST_CHECK(result.get_int64() >= 0);
+    BOOST_CHECK(result.get<int64_t>() >= 0);
 }
 
 // NOTE: getstakinginfo and getmininginfo response contracts are in rpc_response_info suite
@@ -1432,9 +1390,9 @@ BOOST_AUTO_TEST_CASE(getsubsidy_with_height_param)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(getmininginfo_blocks_matches_height)
 {
-    Array p;
-    Object obj = getmininginfo(p, false).get_obj();
-    BOOST_CHECK_EQUAL(find_value(obj, "blocks").get_int(), nBestHeight);
+    json p = json::array();
+    json result = getmininginfo(p, false);
+    BOOST_CHECK_EQUAL(result["blocks"].get<int>(), nBestHeight);
 }
 
 // ---------------------------------------------------------------------------
@@ -1442,7 +1400,7 @@ BOOST_AUTO_TEST_CASE(getmininginfo_blocks_matches_height)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(getstakinginfo_help_works)
 {
-    Array p;
+    json p = json::array();
     BOOST_CHECK_THROW(getstakinginfo(p, true), runtime_error);
 }
 
@@ -1451,7 +1409,7 @@ BOOST_AUTO_TEST_CASE(getstakinginfo_help_works)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(getmininginfo_help_works)
 {
-    Array p;
+    json p = json::array();
     BOOST_CHECK_THROW(getmininginfo(p, true), runtime_error);
 }
 
@@ -1460,7 +1418,7 @@ BOOST_AUTO_TEST_CASE(getmininginfo_help_works)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(getwork_help_works)
 {
-    Array p;
+    json p = json::array();
     BOOST_CHECK_THROW(getwork(p, true), runtime_error);
 }
 
@@ -1469,7 +1427,7 @@ BOOST_AUTO_TEST_CASE(getwork_help_works)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(getblocktemplate_help_works)
 {
-    Array p;
+    json p = json::array();
     BOOST_CHECK_THROW(getblocktemplate(p, true), runtime_error);
 }
 
@@ -1486,10 +1444,10 @@ struct SmsgGuard {
     ~SmsgGuard() {
         if (fSecMsgenabled != savedState) {
             if (savedState) {
-                Array p;
+                json p = json::array();
                 try { smsgenable(p, false); } catch (...) {}
             } else {
-                Array p;
+                json p = json::array();
                 try { smsgdisable(p, false); } catch (...) {}
             }
         }
@@ -1499,16 +1457,15 @@ struct SmsgGuard {
 BOOST_FIXTURE_TEST_SUITE(rpc_response_smessage, TestChain)
 
 // ---------------------------------------------------------------------------
-// smsgoptions — returns obj_type with option fields
+// smsgoptions — returns object with option fields
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(smsgoptions_response_contract)
 {
-    Array p;
+    json p = json::array();
     p.push_back(string("list"));
-    Value result = smsgoptions(p, false);
-    BOOST_CHECK(result.type() == obj_type);
-    Object obj = result.get_obj();
-    BOOST_CHECK(find_value(obj, "result").type() == str_type);
+    json result = smsgoptions(p, false);
+    BOOST_CHECK(result.is_object());
+    BOOST_CHECK(result["result"].is_string());
 }
 
 // ---------------------------------------------------------------------------
@@ -1518,16 +1475,15 @@ BOOST_AUTO_TEST_CASE(smsgenable_response_contract)
 {
     SmsgGuard guard;
     if (fSecMsgenabled) {
-        Array pDisable;
+        json pDisable = json::array();
         smsgdisable(pDisable, false);
     }
 
-    Array p;
-    Value result = smsgenable(p, false);
-    BOOST_CHECK(result.type() == obj_type);
-    Object obj = result.get_obj();
-    BOOST_CHECK(find_value(obj, "result").type() == str_type);
-    BOOST_CHECK_EQUAL(find_value(obj, "result").get_str(), "Enabled secure messaging.");
+    json p = json::array();
+    json result = smsgenable(p, false);
+    BOOST_CHECK(result.is_object());
+    BOOST_CHECK(result["result"].is_string());
+    BOOST_CHECK_EQUAL(result["result"].get<string>(), "Enabled secure messaging.");
 }
 
 // ---------------------------------------------------------------------------
@@ -1537,16 +1493,15 @@ BOOST_AUTO_TEST_CASE(smsgdisable_response_contract)
 {
     SmsgGuard guard;
     if (!fSecMsgenabled) {
-        Array pEnable;
+        json pEnable = json::array();
         smsgenable(pEnable, false);
     }
 
-    Array p;
-    Value result = smsgdisable(p, false);
-    BOOST_CHECK(result.type() == obj_type);
-    Object obj = result.get_obj();
-    BOOST_CHECK(find_value(obj, "result").type() == str_type);
-    BOOST_CHECK_EQUAL(find_value(obj, "result").get_str(), "Disabled secure messaging.");
+    json p = json::array();
+    json result = smsgdisable(p, false);
+    BOOST_CHECK(result.is_object());
+    BOOST_CHECK(result["result"].is_string());
+    BOOST_CHECK_EQUAL(result["result"].get<string>(), "Disabled secure messaging.");
 }
 
 // ---------------------------------------------------------------------------
@@ -1556,10 +1511,10 @@ BOOST_AUTO_TEST_CASE(smsgenable_already_enabled_throws)
 {
     SmsgGuard guard;
     if (!fSecMsgenabled) {
-        Array pEnable;
+        json pEnable = json::array();
         smsgenable(pEnable, false);
     }
-    Array p;
+    json p = json::array();
     BOOST_CHECK_THROW(smsgenable(p, false), runtime_error);
 }
 
@@ -1570,10 +1525,10 @@ BOOST_AUTO_TEST_CASE(smsgdisable_already_disabled_throws)
 {
     SmsgGuard guard;
     if (fSecMsgenabled) {
-        Array pDisable;
+        json pDisable = json::array();
         smsgdisable(pDisable, false);
     }
-    Array p;
+    json p = json::array();
     BOOST_CHECK_THROW(smsgdisable(p, false), runtime_error);
 }
 
@@ -1582,12 +1537,11 @@ BOOST_AUTO_TEST_CASE(smsgdisable_already_disabled_throws)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(smsgoptions_set_too_few_params)
 {
-    Array p;
+    json p = json::array();
     p.push_back(string("set"));
-    Value result = smsgoptions(p, false);
-    Object obj = result.get_obj();
-    BOOST_CHECK_EQUAL(find_value(obj, "result").get_str(), "Too few parameters.");
-    BOOST_CHECK(find_value(obj, "expected").type() == str_type);
+    json result = smsgoptions(p, false);
+    BOOST_CHECK_EQUAL(result["result"].get<string>(), "Too few parameters.");
+    BOOST_CHECK(result["expected"].is_string());
 }
 
 // ---------------------------------------------------------------------------
@@ -1597,13 +1551,13 @@ BOOST_AUTO_TEST_CASE(smsgbuckets_response_contract)
 {
     SmsgGuard guard;
     if (!fSecMsgenabled) {
-        Array pEnable;
+        json pEnable = json::array();
         smsgenable(pEnable, false);
     }
 
-    Array p;
-    Value result = smsgbuckets(p, false);
-    BOOST_CHECK(result.type() == obj_type);
+    json p = json::array();
+    json result = smsgbuckets(p, false);
+    BOOST_CHECK(result.is_object());
 }
 
 // ---------------------------------------------------------------------------
@@ -1613,13 +1567,13 @@ BOOST_AUTO_TEST_CASE(smsglocalkeys_response_contract)
 {
     SmsgGuard guard;
     if (!fSecMsgenabled) {
-        Array pEnable;
+        json pEnable = json::array();
         smsgenable(pEnable, false);
     }
 
-    Array p;
-    Value result = smsglocalkeys(p, false);
-    BOOST_CHECK(result.type() == obj_type);
+    json p = json::array();
+    json result = smsglocalkeys(p, false);
+    BOOST_CHECK(result.is_object());
 }
 
 // ---------------------------------------------------------------------------
@@ -1629,10 +1583,10 @@ BOOST_AUTO_TEST_CASE(smsglocalkeys_disabled_throws)
 {
     SmsgGuard guard;
     if (fSecMsgenabled) {
-        Array pDisable;
+        json pDisable = json::array();
         smsgdisable(pDisable, false);
     }
-    Array p;
+    json p = json::array();
     BOOST_CHECK_THROW(smsglocalkeys(p, false), runtime_error);
 }
 
@@ -1641,7 +1595,7 @@ BOOST_AUTO_TEST_CASE(smsglocalkeys_disabled_throws)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(smsgenable_help_works)
 {
-    Array p;
+    json p = json::array();
     BOOST_CHECK_THROW(smsgenable(p, true), runtime_error);
 }
 
@@ -1650,7 +1604,7 @@ BOOST_AUTO_TEST_CASE(smsgenable_help_works)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(smsgdisable_help_works)
 {
-    Array p;
+    json p = json::array();
     BOOST_CHECK_THROW(smsgdisable(p, true), runtime_error);
 }
 
@@ -1659,7 +1613,7 @@ BOOST_AUTO_TEST_CASE(smsgdisable_help_works)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(smsgoptions_help_works)
 {
-    Array p;
+    json p = json::array();
     BOOST_CHECK_THROW(smsgoptions(p, true), runtime_error);
 }
 
@@ -1676,11 +1630,11 @@ BOOST_FIXTURE_TEST_SUITE(rpc_response_errors, TestChain)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(error_envelope_structure)
 {
-    Object err = JSONRPCError(RPC_MISC_ERROR, "test error");
-    BOOST_CHECK(find_value(err, "code").type() == int_type);
-    BOOST_CHECK(find_value(err, "message").type() == str_type);
-    BOOST_CHECK_EQUAL(find_value(err, "code").get_int(), -1);
-    BOOST_CHECK_EQUAL(find_value(err, "message").get_str(), "test error");
+    json err = JSONRPCError(RPC_MISC_ERROR, "test error");
+    BOOST_CHECK(err["code"].is_number_integer());
+    BOOST_CHECK(err["message"].is_string());
+    BOOST_CHECK_EQUAL(err["code"].get<int>(), -1);
+    BOOST_CHECK_EQUAL(err["message"].get<string>(), "test error");
 }
 
 // ---------------------------------------------------------------------------
@@ -1714,27 +1668,26 @@ BOOST_AUTO_TEST_CASE(rpc_error_code_values_pinned)
 BOOST_AUTO_TEST_CASE(validateaddress_invalid_does_not_throw)
 {
     // validateaddress doesn't throw on invalid — it returns isvalid=false
-    Array p;
+    json p = json::array();
     p.push_back(string("notanaddress"));
-    Value result = validateaddress(p, false);
-    Object obj = result.get_obj();
-    BOOST_CHECK_EQUAL(find_value(obj, "isvalid").get_bool(), false);
+    json result = validateaddress(p, false);
+    BOOST_CHECK_EQUAL(result["isvalid"].get<bool>(), false);
 }
 
 // ---------------------------------------------------------------------------
-// createrawtransaction — invalid address throws Object (RPC_INVALID_ADDRESS_OR_KEY)
+// createrawtransaction — invalid address throws json (RPC_INVALID_ADDRESS_OR_KEY)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(createrawtx_invalid_address_throws)
 {
-    Array inputs;
-    Object sendTo;
-    sendTo.push_back(Pair("notavalidaddress", 0.01));
+    json inputs = json::array();
+    json sendTo = json::object();
+    sendTo["notavalidaddress"] = 0.01;
 
-    Array p;
+    json p = json::array();
     p.push_back(inputs);
     p.push_back(sendTo);
 
-    BOOST_CHECK_THROW(createrawtransaction(p, false), Object);
+    BOOST_CHECK_THROW(createrawtransaction(p, false), json);
 }
 
 // ---------------------------------------------------------------------------
@@ -1742,44 +1695,44 @@ BOOST_AUTO_TEST_CASE(createrawtx_invalid_address_throws)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(createrawtx_invalid_address_error_code)
 {
-    Array inputs;
-    Object sendTo;
-    sendTo.push_back(Pair("notavalidaddress", 0.01));
+    json inputs = json::array();
+    json sendTo = json::object();
+    sendTo["notavalidaddress"] = 0.01;
 
-    Array p;
+    json p = json::array();
     p.push_back(inputs);
     p.push_back(sendTo);
 
     try {
         createrawtransaction(p, false);
         BOOST_FAIL("Should have thrown");
-    } catch (Object& err) {
-        BOOST_CHECK_EQUAL(find_value(err, "code").get_int(), RPC_INVALID_ADDRESS_OR_KEY);
-        BOOST_CHECK(find_value(err, "message").get_str().find("Invalid") != string::npos);
+    } catch (json& err) {
+        BOOST_CHECK_EQUAL(err["code"].get<int>(), RPC_INVALID_ADDRESS_OR_KEY);
+        BOOST_CHECK(err["message"].get<string>().find("Invalid") != string::npos);
     }
 }
 
 // ---------------------------------------------------------------------------
-// decoderawtransaction — invalid hex throws Object (RPC_DESERIALIZATION_ERROR)
+// decoderawtransaction — invalid hex throws json (RPC_DESERIALIZATION_ERROR)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(decoderawtx_invalid_hex_throws)
 {
-    Array p;
+    json p = json::array();
     p.push_back(string("zzzz"));
     // Non-hex string causes ParseHex to return empty, then deserialization fails
-    BOOST_CHECK_THROW(decoderawtransaction(p, false), Object);
+    BOOST_CHECK_THROW(decoderawtransaction(p, false), json);
 }
 
 // ---------------------------------------------------------------------------
-// createrawtransaction — wrong param types throws Object (RPC_TYPE_ERROR)
+// createrawtransaction — wrong param types throws json (RPC_TYPE_ERROR)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(createrawtx_wrong_param_type_throws)
 {
-    Array p;
+    json p = json::array();
     p.push_back(string("notanarray"));
     p.push_back(string("notanobject"));
 
-    BOOST_CHECK_THROW(createrawtransaction(p, false), Object);
+    BOOST_CHECK_THROW(createrawtransaction(p, false), json);
 }
 
 // ---------------------------------------------------------------------------
@@ -1787,7 +1740,7 @@ BOOST_AUTO_TEST_CASE(createrawtx_wrong_param_type_throws)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(sendtoaddress_missing_params_throws)
 {
-    Array p;
+    json p = json::array();
     BOOST_CHECK_THROW(sendtoaddress(p, false), runtime_error);
 }
 
@@ -1796,7 +1749,7 @@ BOOST_AUTO_TEST_CASE(sendtoaddress_missing_params_throws)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(sendfrom_missing_params_throws)
 {
-    Array p;
+    json p = json::array();
     BOOST_CHECK_THROW(sendfrom(p, false), runtime_error);
 }
 
@@ -1805,7 +1758,7 @@ BOOST_AUTO_TEST_CASE(sendfrom_missing_params_throws)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(signmessage_missing_params_throws)
 {
-    Array p;
+    json p = json::array();
     BOOST_CHECK_THROW(signmessage(p, false), runtime_error);
 }
 
@@ -1814,7 +1767,7 @@ BOOST_AUTO_TEST_CASE(signmessage_missing_params_throws)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(verifymessage_missing_params_throws)
 {
-    Array p;
+    json p = json::array();
     BOOST_CHECK_THROW(verifymessage(p, false), runtime_error);
 }
 
@@ -1823,7 +1776,7 @@ BOOST_AUTO_TEST_CASE(verifymessage_missing_params_throws)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(dumpprivkey_missing_params_throws)
 {
-    Array p;
+    json p = json::array();
     BOOST_CHECK_THROW(dumpprivkey(p, false), runtime_error);
 }
 
@@ -1832,26 +1785,26 @@ BOOST_AUTO_TEST_CASE(dumpprivkey_missing_params_throws)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(importprivkey_missing_params_throws)
 {
-    Array p;
+    json p = json::array();
     BOOST_CHECK_THROW(importprivkey(p, false), runtime_error);
 }
 
 // ---------------------------------------------------------------------------
-// getblock — invalid hash throws Object
+// getblock — invalid hash throws json
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(getblock_invalid_hash_throws)
 {
-    Array p;
+    json p = json::array();
     p.push_back(string("0000000000000000000000000000000000000000000000000000000000000000"));
-    BOOST_CHECK_THROW(getblock(p, false), Object);
+    BOOST_CHECK_THROW(getblock(p, false), json);
 }
 
 // ---------------------------------------------------------------------------
-// getblockhash — out of range height throws Object
+// getblockhash — out of range height throws runtime_error
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(getblockhash_out_of_range_throws)
 {
-    Array p;
+    json p = json::array();
     p.push_back(999999999);
     BOOST_CHECK_THROW(getblockhash(p, false), runtime_error);
 }
@@ -1861,7 +1814,7 @@ BOOST_AUTO_TEST_CASE(getblockhash_out_of_range_throws)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(decodescript_help_works)
 {
-    Array p;
+    json p = json::array();
     BOOST_CHECK_THROW(decodescript(p, true), runtime_error);
 }
 
@@ -1870,7 +1823,7 @@ BOOST_AUTO_TEST_CASE(decodescript_help_works)
 // ---------------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE(listunspent_help_works)
 {
-    Array p;
+    json p = json::array();
     BOOST_CHECK_THROW(listunspent(p, true), runtime_error);
 }
 

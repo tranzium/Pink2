@@ -13,9 +13,7 @@
 #include "base58.h"
 #include "stealth.h"
 
-using namespace json_spirit;
-
-Value sendtoaddress(const Array& params, bool fHelp)
+json sendtoaddress(const json& params, bool fHelp)
 {
     if (fHelp || params.size() < 2 || params.size() > 5)
         throw std::runtime_error(
@@ -28,12 +26,12 @@ Value sendtoaddress(const Array& params, bool fHelp)
         throw JSONRPCError(RPC_WALLET_UNLOCK_NEEDED, "Error: Please enter the wallet passphrase with walletpassphrase first.");
 
     // Is stealth address?
-    if (params[0].get_str().length() > 75
-        && IsStealthAddress(params[0].get_str()))
+    if (params[0].get<std::string>().length() > 75
+        && IsStealthAddress(params[0].get<std::string>()))
         return sendtostealthaddress(params, false);
 
     // Is standard Pinkcoin address?
-    CBitcoinAddress address(params[0].get_str());
+    CBitcoinAddress address(params[0].get<std::string>());
     if (!address.IsValid())
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Pinkcoin address");
 
@@ -44,13 +42,13 @@ Value sendtoaddress(const Array& params, bool fHelp)
     std::string sNarr;
 
     // Wallet comments
-    if (params.size() > 2 && params[2].type() != null_type && !params[2].get_str().empty())
-        wtx.mapValue["comment"] = params[2].get_str();
-    if (params.size() > 3 && params[3].type() != null_type && !params[3].get_str().empty())
-        wtx.mapValue["to"] = params[3].get_str();
+    if (params.size() > 2 && !params[2].is_null() && !params[2].get<std::string>().empty())
+        wtx.mapValue["comment"] = params[2].get<std::string>();
+    if (params.size() > 3 && !params[3].is_null() && !params[3].get<std::string>().empty())
+        wtx.mapValue["to"] = params[3].get<std::string>();
     // Note
-    if (params.size() > 4 && params[4].type() != null_type && !params[4].get_str().empty())
-        sNarr = params[4].get_str();
+    if (params.size() > 4 && !params[4].is_null() && !params[4].get<std::string>().empty())
+        sNarr = params[4].get<std::string>();
     if (sNarr.length() > 24)
         throw std::runtime_error("Note must be 24 characters or less.");
 
@@ -61,7 +59,7 @@ Value sendtoaddress(const Array& params, bool fHelp)
     return wtx.GetHash().GetHex();
 }
 
-Value movecmd(const Array& params, bool fHelp)
+json movecmd(const json& params, bool fHelp)
 {
     if (fHelp || params.size() < 3 || params.size() > 5)
         throw std::runtime_error(
@@ -76,10 +74,10 @@ Value movecmd(const Array& params, bool fHelp)
 
     if (params.size() > 3)
         // unused parameter, used to be nMinDepth, keep type-checking it though
-        (void)params[3].get_int();
+        (void)params[3].get<int>();
     std::string strComment;
     if (params.size() > 4)
-        strComment = params[4].get_str();
+        strComment = params[4].get<std::string>();
 
     CWalletDB walletdb(pwalletMain->strWalletFile);
     if (!walletdb.TxnBegin())
@@ -114,7 +112,7 @@ Value movecmd(const Array& params, bool fHelp)
 }
 
 
-Value sendfrom(const Array& params, bool fHelp)
+json sendfrom(const json& params, bool fHelp)
 {
     if (fHelp || params.size() < 3 || params.size() > 7)
         throw std::runtime_error(
@@ -123,29 +121,29 @@ Value sendfrom(const Array& params, bool fHelp)
             + HelpRequiringPassphrase());
 
     std::string strAccount = AccountFromValue(params[0]);
-    CBitcoinAddress address(params[1].get_str());
+    CBitcoinAddress address(params[1].get<std::string>());
     if (!address.IsValid())
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Pinkcoin address");
     int64_t nAmount = AmountFromValue(params[2]);
 
     int nMinDepth = 1;
     if (params.size() > 3)
-        nMinDepth = params[3].get_int();
+        nMinDepth = params[3].get<int>();
 
     CWalletTx wtx;
     wtx.strFromAccount = strAccount;
 
     std::string sNarr;
-    if (params.size() > 4 && params[4].type() != null_type && !params[4].get_str().empty())
-        sNarr = params[4].get_str();
+    if (params.size() > 4 && !params[4].is_null() && !params[4].get<std::string>().empty())
+        sNarr = params[4].get<std::string>();
 
     if (sNarr.length() > 24)
         throw std::runtime_error("Note must be 24 characters or less.");
 
-    if (params.size() > 5 && params[5].type() != null_type && !params[5].get_str().empty())
-        wtx.mapValue["comment"] = params[5].get_str();
-    if (params.size() > 6 && params[6].type() != null_type && !params[6].get_str().empty())
-        wtx.mapValue["to"]      = params[6].get_str();
+    if (params.size() > 5 && !params[5].is_null() && !params[5].get<std::string>().empty())
+        wtx.mapValue["comment"] = params[5].get<std::string>();
+    if (params.size() > 6 && !params[6].is_null() && !params[6].get<std::string>().empty())
+        wtx.mapValue["to"]      = params[6].get<std::string>();
 
     EnsureWalletIsUnlocked();
 
@@ -163,7 +161,7 @@ Value sendfrom(const Array& params, bool fHelp)
 }
 
 
-Value sendmany(const Array& params, bool fHelp)
+json sendmany(const json& params, bool fHelp)
 {
     if (fHelp || params.size() < 2 || params.size() > 4)
         throw std::runtime_error(
@@ -172,33 +170,33 @@ Value sendmany(const Array& params, bool fHelp)
             + HelpRequiringPassphrase());
 
     std::string strAccount = AccountFromValue(params[0]);
-    Object sendTo = params[1].get_obj();
+    const json& sendTo = params[1];
     int nMinDepth = 1;
     if (params.size() > 2)
-        nMinDepth = params[2].get_int();
+        nMinDepth = params[2].get<int>();
 
     CWalletTx wtx;
     wtx.strFromAccount = strAccount;
-    if (params.size() > 3 && params[3].type() != null_type && !params[3].get_str().empty())
-        wtx.mapValue["comment"] = params[3].get_str();
+    if (params.size() > 3 && !params[3].is_null() && !params[3].get<std::string>().empty())
+        wtx.mapValue["comment"] = params[3].get<std::string>();
 
     std::set<CBitcoinAddress> setAddress;
     std::vector<std::pair<CScript, int64_t> > vecSend;
 
     int64_t totalAmount = 0;
-    for (const Pair& s : sendTo)
+    for (const auto& [key, value] : sendTo.items())
     {
-        CBitcoinAddress address(s.name_);
+        CBitcoinAddress address(key);
         if (!address.IsValid())
-            throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, std::string("Invalid Pinkcoin address: ")+s.name_);
+            throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, std::string("Invalid Pinkcoin address: ")+key);
 
         if (setAddress.count(address))
-            throw JSONRPCError(RPC_INVALID_PARAMETER, std::string("Invalid parameter, duplicated address: ")+s.name_);
+            throw JSONRPCError(RPC_INVALID_PARAMETER, std::string("Invalid parameter, duplicated address: ")+key);
         setAddress.insert(address);
 
         CScript scriptPubKey;
         scriptPubKey.SetDestination(address.Get());
-        int64_t nAmount = AmountFromValue(s.value_);
+        int64_t nAmount = AmountFromValue(value);
 
         totalAmount += nAmount;
 
@@ -229,7 +227,7 @@ Value sendmany(const Array& params, bool fHelp)
     return wtx.GetHash().GetHex();
 }
 
-Value sendtostealthaddress(const Array& params, bool fHelp)
+json sendtostealthaddress(const json& params, bool fHelp)
 {
     if (fHelp || params.size() < 2 || params.size() > 5)
         throw std::runtime_error(
@@ -240,15 +238,15 @@ Value sendtostealthaddress(const Array& params, bool fHelp)
     if (pwalletMain->IsLocked())
         throw JSONRPCError(RPC_WALLET_UNLOCK_NEEDED, "Error: Please enter the wallet passphrase with walletpassphrase first.");
 
-    std::string sEncoded = params[0].get_str();
+    std::string sEncoded = params[0].get<std::string>();
     int64_t nAmount = AmountFromValue(params[1]);
 
     CStealthAddress sxAddr;
-    Object result;
+    json result;
 
     if (!sxAddr.SetEncoded(sEncoded))
     {
-        result.push_back(Pair("result", "Invalid Pinkcoin stealth address."));
+        result["result"] = "Invalid Pinkcoin stealth address.";
         return result;
     };
 
@@ -256,13 +254,13 @@ Value sendtostealthaddress(const Array& params, bool fHelp)
     std::string sNarr;
 
     // Comments
-    if (params.size() > 2 && params[2].type() != null_type && !params[2].get_str().empty())
-        wtx.mapValue["comment"] = params[2].get_str();
-    if (params.size() > 3 && params[3].type() != null_type && !params[3].get_str().empty())
-        wtx.mapValue["to"] = params[3].get_str();
+    if (params.size() > 2 && !params[2].is_null() && !params[2].get<std::string>().empty())
+        wtx.mapValue["comment"] = params[2].get<std::string>();
+    if (params.size() > 3 && !params[3].is_null() && !params[3].get<std::string>().empty())
+        wtx.mapValue["to"] = params[3].get<std::string>();
     // Note
-    if (params.size() > 4 && params[4].type() != null_type && !params[4].get_str().empty())
-        sNarr = params[4].get_str();
+    if (params.size() > 4 && !params[4].is_null() && !params[4].get<std::string>().empty())
+        sNarr = params[4].get<std::string>();
     if (sNarr.length() > 24)
         throw std::runtime_error("Note must be 24 characters or less.");
 

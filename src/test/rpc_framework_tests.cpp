@@ -12,22 +12,19 @@
 #include "util.h"
 #include "version.h"
 
-using namespace std;
-using namespace json_spirit;
-
 // Extern declarations for functions in bitcoinrpc.cpp not declared in header
-extern string HTTPPost(const string& strMsg, const map<string,string>& mapRequestHeaders);
-extern string rfc1123Time();
+extern std::string HTTPPost(const std::string& strMsg, const std::map<std::string,std::string>& mapRequestHeaders);
+extern std::string rfc1123Time();
 extern bool ReadHTTPRequestLine(std::basic_istream<char>& stream, int &proto,
-                                string& http_method, string& http_uri);
+                                std::string& http_method, std::string& http_uri);
 extern int ReadHTTPStatus(std::basic_istream<char>& stream, int &proto);
-extern int ReadHTTPHeaders(std::basic_istream<char>& stream, map<string, string>& mapHeadersRet);
-extern int ReadHTTPMessage(std::basic_istream<char>& stream, map<string, string>& mapHeadersRet,
-                           string& strMessageRet, int nProto);
-extern string JSONRPCRequest(const string& strMethod, const Array& params, const Value& id);
-extern Object JSONRPCReplyObj(const Value& result, const Value& error, const Value& id);
-extern string JSONRPCReply(const Value& result, const Value& error, const Value& id);
-extern void ErrorReply(std::ostream& stream, const Object& objError, const Value& id);
+extern int ReadHTTPHeaders(std::basic_istream<char>& stream, std::map<std::string, std::string>& mapHeadersRet);
+extern int ReadHTTPMessage(std::basic_istream<char>& stream, std::map<std::string, std::string>& mapHeadersRet,
+                           std::string& strMessageRet, int nProto);
+extern std::string JSONRPCRequest(const std::string& strMethod, const json& params, const json& id);
+extern json JSONRPCReplyObj(const json& result, const json& error, const json& id);
+extern std::string JSONRPCReply(const json& result, const json& error, const json& id);
+extern void ErrorReply(std::ostream& stream, const json& objError, const json& id);
 
 BOOST_AUTO_TEST_SUITE(rpc_framework_tests)
 
@@ -38,41 +35,41 @@ BOOST_AUTO_TEST_SUITE(rpc_framework_tests)
 BOOST_AUTO_TEST_CASE(httppost_format)
 {
     // Verify POST request formatting
-    map<string,string> headers;
-    string result = HTTPPost("test body", headers);
+    std::map<std::string,std::string> headers;
+    std::string result = HTTPPost("test body", headers);
 
-    BOOST_CHECK(result.find("POST / HTTP/1.1\r\n") != string::npos);
-    BOOST_CHECK(result.find("Content-Type: application/json\r\n") != string::npos);
-    BOOST_CHECK(result.find("Content-Length: 9\r\n") != string::npos);
-    BOOST_CHECK(result.find("Connection: close\r\n") != string::npos);
-    BOOST_CHECK(result.find("Accept: application/json\r\n") != string::npos);
-    BOOST_CHECK(result.find("Host: 127.0.0.1\r\n") != string::npos);
+    BOOST_CHECK(result.find("POST / HTTP/1.1\r\n") != std::string::npos);
+    BOOST_CHECK(result.find("Content-Type: application/json\r\n") != std::string::npos);
+    BOOST_CHECK(result.find("Content-Length: 9\r\n") != std::string::npos);
+    BOOST_CHECK(result.find("Connection: close\r\n") != std::string::npos);
+    BOOST_CHECK(result.find("Accept: application/json\r\n") != std::string::npos);
+    BOOST_CHECK(result.find("Host: 127.0.0.1\r\n") != std::string::npos);
     // Body appears after blank line
-    BOOST_CHECK(result.find("\r\n\r\ntest body") != string::npos);
+    BOOST_CHECK(result.find("\r\n\r\ntest body") != std::string::npos);
 }
 
 BOOST_AUTO_TEST_CASE(httppost_custom_headers)
 {
-    map<string,string> headers;
+    std::map<std::string,std::string> headers;
     headers["X-Custom"] = "value1";
     headers["Authorization"] = "Basic abc123";
-    string result = HTTPPost("{}", headers);
+    std::string result = HTTPPost("{}", headers);
 
-    BOOST_CHECK(result.find("X-Custom: value1\r\n") != string::npos);
-    BOOST_CHECK(result.find("Authorization: Basic abc123\r\n") != string::npos);
-    BOOST_CHECK(result.find("Content-Length: 2\r\n") != string::npos);
+    BOOST_CHECK(result.find("X-Custom: value1\r\n") != std::string::npos);
+    BOOST_CHECK(result.find("Authorization: Basic abc123\r\n") != std::string::npos);
+    BOOST_CHECK(result.find("Content-Length: 2\r\n") != std::string::npos);
 }
 
 BOOST_AUTO_TEST_CASE(httppost_empty_body)
 {
-    map<string,string> headers;
-    string result = HTTPPost("", headers);
-    BOOST_CHECK(result.find("Content-Length: 0\r\n") != string::npos);
+    std::map<std::string,std::string> headers;
+    std::string result = HTTPPost("", headers);
+    BOOST_CHECK(result.find("Content-Length: 0\r\n") != std::string::npos);
 }
 
 BOOST_AUTO_TEST_CASE(rfc1123time_format)
 {
-    string t = rfc1123Time();
+    std::string t = rfc1123Time();
 
     // RFC 1123 format: "Thu, 13 Feb 2026 00:00:00 +0000" (31 chars)
     BOOST_CHECK_EQUAL(t.size(), 31u);
@@ -81,15 +78,15 @@ BOOST_AUTO_TEST_CASE(rfc1123time_format)
     BOOST_CHECK_EQUAL(t.substr(t.size() - 5), "+0000");
 
     // Contains a comma after day-of-week
-    BOOST_CHECK(t.find(',') != string::npos);
+    BOOST_CHECK(t.find(',') != std::string::npos);
     BOOST_CHECK_EQUAL(t[3], ',');
 }
 
 BOOST_AUTO_TEST_CASE(readhttprequestline_valid_post)
 {
-    istringstream stream("POST / HTTP/1.1\r\n");
+    std::istringstream stream("POST / HTTP/1.1\r\n");
     int proto = 0;
-    string method, uri;
+    std::string method, uri;
     BOOST_CHECK(ReadHTTPRequestLine(stream, proto, method, uri));
     BOOST_CHECK_EQUAL(method, "POST");
     BOOST_CHECK_EQUAL(uri, "/");
@@ -98,9 +95,9 @@ BOOST_AUTO_TEST_CASE(readhttprequestline_valid_post)
 
 BOOST_AUTO_TEST_CASE(readhttprequestline_valid_get)
 {
-    istringstream stream("GET /index HTTP/1.0\r\n");
+    std::istringstream stream("GET /index HTTP/1.0\r\n");
     int proto = 0;
-    string method, uri;
+    std::string method, uri;
     BOOST_CHECK(ReadHTTPRequestLine(stream, proto, method, uri));
     BOOST_CHECK_EQUAL(method, "GET");
     BOOST_CHECK_EQUAL(uri, "/index");
@@ -109,24 +106,24 @@ BOOST_AUTO_TEST_CASE(readhttprequestline_valid_get)
 
 BOOST_AUTO_TEST_CASE(readhttprequestline_reject_invalid_method)
 {
-    istringstream stream("PUT / HTTP/1.1\r\n");
+    std::istringstream stream("PUT / HTTP/1.1\r\n");
     int proto = 0;
-    string method, uri;
+    std::string method, uri;
     BOOST_CHECK(!ReadHTTPRequestLine(stream, proto, method, uri));
 }
 
 BOOST_AUTO_TEST_CASE(readhttprequestline_reject_insufficient)
 {
     // Only one word — not enough
-    istringstream stream("POST\r\n");
+    std::istringstream stream("POST\r\n");
     int proto = 0;
-    string method, uri;
+    std::string method, uri;
     BOOST_CHECK(!ReadHTTPRequestLine(stream, proto, method, uri));
 }
 
 BOOST_AUTO_TEST_CASE(readhttpstatus_valid)
 {
-    istringstream stream("HTTP/1.1 200 OK\r\n");
+    std::istringstream stream("HTTP/1.1 200 OK\r\n");
     int proto = 0;
     int status = ReadHTTPStatus(stream, proto);
     BOOST_CHECK_EQUAL(status, 200);
@@ -135,7 +132,7 @@ BOOST_AUTO_TEST_CASE(readhttpstatus_valid)
 
 BOOST_AUTO_TEST_CASE(readhttpstatus_bad_input)
 {
-    istringstream stream("garbage\r\n");
+    std::istringstream stream("garbage\r\n");
     int proto = 0;
     int status = ReadHTTPStatus(stream, proto);
     BOOST_CHECK_EQUAL(status, HTTP_INTERNAL_SERVER_ERROR);
@@ -143,8 +140,8 @@ BOOST_AUTO_TEST_CASE(readhttpstatus_bad_input)
 
 BOOST_AUTO_TEST_CASE(readhttpheaders_content_length)
 {
-    istringstream stream("Content-Length: 42\r\nHost: localhost\r\n\r\n");
-    map<string,string> headers;
+    std::istringstream stream("Content-Length: 42\r\nHost: localhost\r\n\r\n");
+    std::map<std::string,std::string> headers;
     int nLen = ReadHTTPHeaders(stream, headers);
     BOOST_CHECK_EQUAL(nLen, 42);
     BOOST_CHECK_EQUAL(headers["content-length"], "42");
@@ -153,8 +150,8 @@ BOOST_AUTO_TEST_CASE(readhttpheaders_content_length)
 
 BOOST_AUTO_TEST_CASE(readhttpheaders_empty)
 {
-    istringstream stream("\r\n");
-    map<string,string> headers;
+    std::istringstream stream("\r\n");
+    std::map<std::string,std::string> headers;
     int nLen = ReadHTTPHeaders(stream, headers);
     BOOST_CHECK_EQUAL(nLen, 0);
     BOOST_CHECK(headers.empty());
@@ -162,10 +159,10 @@ BOOST_AUTO_TEST_CASE(readhttpheaders_empty)
 
 BOOST_AUTO_TEST_CASE(readhttpmessage_full_parse)
 {
-    string raw = "Content-Length: 5\r\n\r\nhello";
-    istringstream stream(raw);
-    map<string,string> headers;
-    string body;
+    std::string raw = "Content-Length: 5\r\n\r\nhello";
+    std::istringstream stream(raw);
+    std::map<std::string,std::string> headers;
+    std::string body;
     int status = ReadHTTPMessage(stream, headers, body, 1);
     BOOST_CHECK_EQUAL(status, HTTP_OK);
     BOOST_CHECK_EQUAL(body, "hello");
@@ -176,10 +173,10 @@ BOOST_AUTO_TEST_CASE(readhttpmessage_full_parse)
 
 BOOST_AUTO_TEST_CASE(readhttpmessage_http10_close)
 {
-    string raw = "Content-Length: 3\r\n\r\nabc";
-    istringstream stream(raw);
-    map<string,string> headers;
-    string body;
+    std::string raw = "Content-Length: 3\r\n\r\nabc";
+    std::istringstream stream(raw);
+    std::map<std::string,std::string> headers;
+    std::string body;
     int status = ReadHTTPMessage(stream, headers, body, 0);
     BOOST_CHECK_EQUAL(status, HTTP_OK);
     BOOST_CHECK_EQUAL(body, "abc");
@@ -193,81 +190,77 @@ BOOST_AUTO_TEST_CASE(readhttpmessage_http10_close)
 
 BOOST_AUTO_TEST_CASE(jsonrpc_request_format)
 {
-    Array params;
+    json params = json::array();
     params.push_back("arg1");
     params.push_back(42);
-    string req = JSONRPCRequest("testmethod", params, Value(1));
+    std::string req = JSONRPCRequest("testmethod", params, json(1));
 
     // Parse the result back
-    Value v;
-    BOOST_CHECK(read_string(req, v));
-    Object obj = v.get_obj();
-    BOOST_CHECK_EQUAL(find_value(obj, "method").get_str(), "testmethod");
-    BOOST_CHECK_EQUAL(find_value(obj, "id").get_int(), 1);
-    Array parsedParams = find_value(obj, "params").get_array();
+    json v = json::parse(req);
+    BOOST_CHECK_EQUAL(v["method"].get<std::string>(), "testmethod");
+    BOOST_CHECK_EQUAL(v["id"].get<int>(), 1);
+    json parsedParams = v["params"];
     BOOST_CHECK_EQUAL(parsedParams.size(), 2u);
-    BOOST_CHECK_EQUAL(parsedParams[0].get_str(), "arg1");
-    BOOST_CHECK_EQUAL(parsedParams[1].get_int(), 42);
+    BOOST_CHECK_EQUAL(parsedParams[0].get<std::string>(), "arg1");
+    BOOST_CHECK_EQUAL(parsedParams[1].get<int>(), 42);
 }
 
 BOOST_AUTO_TEST_CASE(jsonrpc_replyobj_success)
 {
     // No error → result present
-    Object reply = JSONRPCReplyObj(Value("ok"), Value::null, Value(1));
-    BOOST_CHECK_EQUAL(find_value(reply, "result").get_str(), "ok");
-    BOOST_CHECK(find_value(reply, "error").type() == null_type);
-    BOOST_CHECK_EQUAL(find_value(reply, "id").get_int(), 1);
+    json reply = JSONRPCReplyObj(json("ok"), nullptr, json(1));
+    BOOST_CHECK_EQUAL(reply["result"].get<std::string>(), "ok");
+    BOOST_CHECK(reply["error"].is_null());
+    BOOST_CHECK_EQUAL(reply["id"].get<int>(), 1);
 }
 
 BOOST_AUTO_TEST_CASE(jsonrpc_replyobj_error)
 {
     // Error present → result is null
-    Object error = JSONRPCError(RPC_METHOD_NOT_FOUND, "not found");
-    Object reply = JSONRPCReplyObj(Value("ignored"), error, Value(1));
-    BOOST_CHECK(find_value(reply, "result").type() == null_type);
-    BOOST_CHECK(find_value(reply, "error").type() != null_type);
+    json error = JSONRPCError(RPC_METHOD_NOT_FOUND, "not found");
+    json reply = JSONRPCReplyObj(json("ignored"), error, json(1));
+    BOOST_CHECK(reply["result"].is_null());
+    BOOST_CHECK(!reply["error"].is_null());
 }
 
 BOOST_AUTO_TEST_CASE(jsonrpc_reply_string)
 {
-    string reply = JSONRPCReply(Value("ok"), Value::null, Value(1));
+    std::string reply = JSONRPCReply(json("ok"), nullptr, json(1));
     // Must be valid JSON ending with newline
     BOOST_CHECK(!reply.empty());
     BOOST_CHECK_EQUAL(reply.back(), '\n');
-    Value v;
-    BOOST_CHECK(read_string(reply, v));
-    Object obj = v.get_obj();
-    BOOST_CHECK_EQUAL(find_value(obj, "result").get_str(), "ok");
+    json v = json::parse(reply);
+    BOOST_CHECK_EQUAL(v["result"].get<std::string>(), "ok");
 }
 
 BOOST_AUTO_TEST_CASE(errorreply_invalid_request)
 {
     // RPC_INVALID_REQUEST maps to HTTP 400
-    Object error = JSONRPCError(RPC_INVALID_REQUEST, "bad request");
-    ostringstream stream;
-    ErrorReply(stream, error, Value(1));
-    string output = stream.str();
-    BOOST_CHECK(output.find("400 Bad Request") != string::npos);
+    json error = JSONRPCError(RPC_INVALID_REQUEST, "bad request");
+    std::ostringstream stream;
+    ErrorReply(stream, error, json(1));
+    std::string output = stream.str();
+    BOOST_CHECK(output.find("400 Bad Request") != std::string::npos);
 }
 
 BOOST_AUTO_TEST_CASE(errorreply_method_not_found)
 {
     // RPC_METHOD_NOT_FOUND maps to HTTP 404
-    Object error = JSONRPCError(RPC_METHOD_NOT_FOUND, "not found");
-    ostringstream stream;
-    ErrorReply(stream, error, Value(1));
-    string output = stream.str();
-    BOOST_CHECK(output.find("404 Not Found") != string::npos);
+    json error = JSONRPCError(RPC_METHOD_NOT_FOUND, "not found");
+    std::ostringstream stream;
+    ErrorReply(stream, error, json(1));
+    std::string output = stream.str();
+    BOOST_CHECK(output.find("404 Not Found") != std::string::npos);
 }
 
 BOOST_AUTO_TEST_CASE(errorreply_other_maps_500)
 {
     // Any other error code maps to HTTP 500
-    Object error = JSONRPCError(RPC_INTERNAL_ERROR, "internal");
-    ostringstream stream;
-    ErrorReply(stream, error, Value(1));
-    string output = stream.str();
-    BOOST_CHECK(output.find("500 Internal Server Error") != string::npos);
+    json error = JSONRPCError(RPC_INTERNAL_ERROR, "internal");
+    std::ostringstream stream;
+    ErrorReply(stream, error, json(1));
+    std::string output = stream.str();
+    BOOST_CHECK(output.find("500 Internal Server Error") != std::string::npos);
 }
 
 // ============================================================================
@@ -290,7 +283,7 @@ BOOST_AUTO_TEST_CASE(command_table_lookup_unknown)
 BOOST_AUTO_TEST_CASE(command_table_completeness)
 {
     // All expected commands must be registered
-    vector<string> expected = {
+    std::vector<std::string> expected = {
         "help", "stop", "getbestblockhash", "getblockcount",
         "getconnectioncount", "getnodes", "getpeerinfo", "getdifficulty",
         "getinfo", "getsubsidy", "getmininginfo", "getstakinginfo",
@@ -323,7 +316,7 @@ BOOST_AUTO_TEST_CASE(command_table_completeness)
         "smsgsend", "smsgsendanon", "smsginbox", "smsgoutbox", "smsgbuckets",
     };
 
-    for (const string& name : expected) {
+    for (const std::string& name : expected) {
         const CRPCCommand* cmd = tableRPC[name];
         BOOST_CHECK_MESSAGE(cmd != nullptr, "Missing RPC command: " + name);
     }
@@ -360,18 +353,18 @@ BOOST_AUTO_TEST_CASE(command_help_text)
 {
     // Every RPC command should return help text when called with fHelp=true
     // The convention is to throw runtime_error containing the help string
-    vector<string> cmds = {
+    std::vector<std::string> cmds = {
         "help", "stop", "getbestblockhash", "getblockcount",
         "getdifficulty", "validateaddress", "verifymessage",
         "createrawtransaction", "decoderawtransaction", "decodescript",
         "makekeypair", "getinfo", "getbalance",
     };
 
-    for (const string& name : cmds) {
+    for (const std::string& name : cmds) {
         const CRPCCommand* cmd = tableRPC[name];
         BOOST_REQUIRE_MESSAGE(cmd != nullptr, "Command not found: " + name);
-        Array emptyParams;
-        BOOST_CHECK_THROW(cmd->actor(emptyParams, true), runtime_error);
+        json emptyParams = json::array();
+        BOOST_CHECK_THROW(cmd->actor(emptyParams, true), std::runtime_error);
     }
 }
 

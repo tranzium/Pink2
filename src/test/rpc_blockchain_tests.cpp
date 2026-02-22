@@ -12,9 +12,6 @@
 #include "main.h"
 #include "test_framework.h"
 
-using namespace std;
-using namespace json_spirit;
-
 extern int64_t nTransactionFee;
 
 // ============================================================================
@@ -24,45 +21,44 @@ BOOST_FIXTURE_TEST_SUITE(rpc_blockchain_tests, TestChain)
 
 BOOST_AUTO_TEST_CASE(getblockcount_returns_height)
 {
-    Array params;
-    Value result = getblockcount(params, false);
-    BOOST_CHECK_EQUAL(result.get_int(), nBestHeight);
-    BOOST_CHECK(result.get_int() >= 50);
+    json params = json::array();
+    json result = getblockcount(params, false);
+    BOOST_CHECK_EQUAL(result.get<int>(), nBestHeight);
+    BOOST_CHECK(result.get<int>() >= 50);
 }
 
 BOOST_AUTO_TEST_CASE(getblockcount_help_throws)
 {
-    Array params;
-    BOOST_CHECK_THROW(getblockcount(params, true), runtime_error);
+    json params = json::array();
+    BOOST_CHECK_THROW(getblockcount(params, true), std::runtime_error);
 }
 
 BOOST_AUTO_TEST_CASE(getbestblockhash_matches_chain)
 {
-    Array params;
-    Value result = getbestblockhash(params, false);
-    BOOST_CHECK_EQUAL(result.get_str(), hashBestChain.GetHex());
+    json params = json::array();
+    json result = getbestblockhash(params, false);
+    BOOST_CHECK_EQUAL(result.get<std::string>(), hashBestChain.GetHex());
 }
 
 BOOST_AUTO_TEST_CASE(getdifficulty_returns_object)
 {
-    Array params;
-    Value result = getdifficulty(params, false);
-    Object obj = result.get_obj();
+    json params = json::array();
+    json result = getdifficulty(params, false);
+    json obj = result;
 
     // Must contain all expected keys
-    BOOST_CHECK(find_value(obj, "proof-of-work").type() == real_type);
-    BOOST_CHECK(find_value(obj, "proof-of-stake").type() == real_type);
-    BOOST_CHECK(find_value(obj, "proof-of-stake (flash)").type() == real_type);
-    BOOST_CHECK(find_value(obj, "search-interval").type() == int_type);
+    BOOST_CHECK(obj["proof-of-work"].is_number_float());
+    BOOST_CHECK(obj["proof-of-stake"].is_number_float());
+    BOOST_CHECK(obj["proof-of-stake (flash)"].is_number_float());
+    BOOST_CHECK(obj["search-interval"].is_number_integer());
 }
 
 BOOST_AUTO_TEST_CASE(getdifficulty_pow_positive)
 {
-    Array params;
-    Value result = getdifficulty(params, false);
-    Object obj = result.get_obj();
+    json params = json::array();
+    json result = getdifficulty(params, false);
 
-    double powDiff = find_value(obj, "proof-of-work").get_real();
+    double powDiff = result["proof-of-work"].get<double>();
     BOOST_CHECK(powDiff > 0.0);
 }
 
@@ -70,10 +66,10 @@ BOOST_AUTO_TEST_CASE(settxfee_valid)
 {
     int64_t savedFee = nTransactionFee;
 
-    Array params;
+    json params = json::array();
     params.push_back(0.01);
-    Value result = settxfee(params, false);
-    BOOST_CHECK_EQUAL(result.get_bool(), true);
+    json result = settxfee(params, false);
+    BOOST_CHECK_EQUAL(result.get<bool>(), true);
     BOOST_CHECK(nTransactionFee >= MIN_TX_FEE);
 
     // Restore
@@ -82,10 +78,10 @@ BOOST_AUTO_TEST_CASE(settxfee_valid)
 
 BOOST_AUTO_TEST_CASE(settxfee_below_min_throws)
 {
-    // Fee of 0 → AmountFromValue throws JSONRPCError (Object) because 0.0 <= 0.0
-    Array params;
+    // Fee of 0 -> AmountFromValue throws JSONRPCError (json) because 0.0 <= 0.0
+    json params = json::array();
     params.push_back(0.0);
-    BOOST_CHECK_THROW(settxfee(params, false), Object);
+    BOOST_CHECK_THROW(settxfee(params, false), json);
 }
 
 BOOST_AUTO_TEST_CASE(getrawmempool_empty)
@@ -93,10 +89,9 @@ BOOST_AUTO_TEST_CASE(getrawmempool_empty)
     // Ensure mempool is empty
     ClearMempool();
 
-    Array params;
-    Value result = getrawmempool(params, false);
-    Array arr = result.get_array();
-    BOOST_CHECK(arr.empty());
+    json params = json::array();
+    json result = getrawmempool(params, false);
+    BOOST_CHECK(result.empty());
 }
 
 BOOST_AUTO_TEST_CASE(getrawmempool_with_tx)
@@ -106,16 +101,15 @@ BOOST_AUTO_TEST_CASE(getrawmempool_with_tx)
     CTransaction tx = CreateSpendTx(0, CScript() << OP_TRUE, 1 * COIN);
     AddToMempool(tx);
 
-    Array params;
-    Value result = getrawmempool(params, false);
-    Array arr = result.get_array();
-    BOOST_CHECK(!arr.empty());
+    json params = json::array();
+    json result = getrawmempool(params, false);
+    BOOST_CHECK(!result.empty());
 
     // The tx hash should appear in the result
     bool found = false;
-    string txhash = tx.GetHash().ToString();
-    for (const Value& v : arr) {
-        if (v.get_str() == txhash) {
+    std::string txhash = tx.GetHash().ToString();
+    for (const json& v : result) {
+        if (v.get<std::string>() == txhash) {
             found = true;
             break;
         }
@@ -127,11 +121,11 @@ BOOST_AUTO_TEST_CASE(getrawmempool_with_tx)
 
 BOOST_AUTO_TEST_CASE(getblockhash_genesis)
 {
-    Array params;
+    json params = json::array();
     params.push_back(0);
-    Value result = getblockhash(params, false);
+    json result = getblockhash(params, false);
 
-    string hashHex = result.get_str();
+    std::string hashHex = result.get<std::string>();
     BOOST_CHECK(!hashHex.empty());
     BOOST_CHECK(IsHex(hashHex));
     BOOST_CHECK_EQUAL(hashHex, pindexGenesisBlock->GetBlockHash().GetHex());
@@ -139,61 +133,58 @@ BOOST_AUTO_TEST_CASE(getblockhash_genesis)
 
 BOOST_AUTO_TEST_CASE(getblockhash_out_of_range)
 {
-    Array params;
+    json params = json::array();
     params.push_back(nBestHeight + 100);
-    BOOST_CHECK_THROW(getblockhash(params, false), runtime_error);
+    BOOST_CHECK_THROW(getblockhash(params, false), std::runtime_error);
 }
 
 BOOST_AUTO_TEST_CASE(getblock_by_hash)
 {
     // Get genesis hash, then query getblock
-    string genesisHash = pindexGenesisBlock->GetBlockHash().GetHex();
+    std::string genesisHash = pindexGenesisBlock->GetBlockHash().GetHex();
 
-    Array params;
+    json params = json::array();
     params.push_back(genesisHash);
-    Value result = getblock(params, false);
-    Object obj = result.get_obj();
+    json result = getblock(params, false);
 
-    BOOST_CHECK_EQUAL(find_value(obj, "hash").get_str(), genesisHash);
-    BOOST_CHECK_EQUAL(find_value(obj, "height").get_int(), 0);
-    BOOST_CHECK(find_value(obj, "tx").get_array().size() >= 1);
+    BOOST_CHECK_EQUAL(result["hash"].get<std::string>(), genesisHash);
+    BOOST_CHECK_EQUAL(result["height"].get<int>(), 0);
+    BOOST_CHECK(result["tx"].size() >= 1);
 }
 
 BOOST_AUTO_TEST_CASE(getblock_unknown_hash_throws)
 {
-    Array params;
-    params.push_back(string("0000000000000000000000000000000000000000000000000000000000000bad"));
-    BOOST_CHECK_THROW(getblock(params, false), Object);
+    json params = json::array();
+    params.push_back(std::string("0000000000000000000000000000000000000000000000000000000000000bad"));
+    BOOST_CHECK_THROW(getblock(params, false), json);
 }
 
 BOOST_AUTO_TEST_CASE(getblockbynumber_height_one)
 {
-    Array params;
+    json params = json::array();
     params.push_back(1);
-    Value result = getblockbynumber(params, false);
-    Object obj = result.get_obj();
+    json result = getblockbynumber(params, false);
 
-    BOOST_CHECK_EQUAL(find_value(obj, "height").get_int(), 1);
-    BOOST_CHECK(find_value(obj, "hash").type() == str_type);
-    BOOST_CHECK(find_value(obj, "tx").get_array().size() >= 1);
+    BOOST_CHECK_EQUAL(result["height"].get<int>(), 1);
+    BOOST_CHECK(result["hash"].is_string());
+    BOOST_CHECK(result["tx"].size() >= 1);
 }
 
 BOOST_AUTO_TEST_CASE(getblockbynumber_out_of_range)
 {
-    Array params;
+    json params = json::array();
     params.push_back(nBestHeight + 100);
-    BOOST_CHECK_THROW(getblockbynumber(params, false), runtime_error);
+    BOOST_CHECK_THROW(getblockbynumber(params, false), std::runtime_error);
 }
 
 BOOST_AUTO_TEST_CASE(getcheckpoint_returns_object)
 {
-    Array params;
-    Value result = getcheckpoint(params, false);
-    Object obj = result.get_obj();
+    json params = json::array();
+    json result = getcheckpoint(params, false);
 
-    BOOST_CHECK(find_value(obj, "synccheckpoint").type() == str_type);
-    BOOST_CHECK(find_value(obj, "height").type() == int_type);
-    BOOST_CHECK(find_value(obj, "timestamp").type() == str_type);
+    BOOST_CHECK(result["synccheckpoint"].is_string());
+    BOOST_CHECK(result["height"].is_number_integer());
+    BOOST_CHECK(result["timestamp"].is_string());
 }
 
 BOOST_AUTO_TEST_SUITE_END()

@@ -7,16 +7,18 @@
 #ifndef PINKCOIN_RPCWALLET_UTIL_H
 #define PINKCOIN_RPCWALLET_UTIL_H
 
-#include "json/json_spirit_value.h"
+#include "json/nlohmann/json.hpp"
 #include "main.h"
+
+using json = nlohmann::json;
 
 class CWalletTx;
 class CWalletDB;
 
 extern int64_t nWalletUnlockTime;
 
-void WalletTxToJSON(const CWalletTx& wtx, json_spirit::Object& entry);
-std::string AccountFromValue(const json_spirit::Value& value);
+void WalletTxToJSON(const CWalletTx& wtx, json& entry);
+std::string AccountFromValue(const json& value);
 void accountingDeprecationCheck();
 int64_t GetAccountBalance(CWalletDB& walletdb, const std::string& strAccount, int nMinDepth);
 int64_t GetAccountBalance(const std::string& strAccount, int nMinDepth);

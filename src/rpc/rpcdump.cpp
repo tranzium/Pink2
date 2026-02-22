@@ -19,7 +19,6 @@
 
 #define printf OutputDebugStringF
 
-using namespace json_spirit;
 using namespace std;
 
 void EnsureWalletIsUnlocked();
@@ -75,7 +74,7 @@ std::string DecodeDumpString(const std::string &str) {
     for (unsigned int pos = 0; pos < str.length(); pos++) {
         unsigned char c = str[pos];
         if (c == '%' && pos+2 < str.length()) {
-            c = (((str[pos+1]>>6)*9+((str[pos+1]-'0')&15)) << 4) | 
+            c = (((str[pos+1]>>6)*9+((str[pos+1]-'0')&15)) << 4) |
                 ((str[pos+2]>>6)*9+((str[pos+2]-'0')&15));
             pos += 2;
         }
@@ -102,17 +101,17 @@ public:
     }
 };
 
-Value importprivkey(const Array& params, bool fHelp)
+json importprivkey(const json& params, bool fHelp)
 {
     if (fHelp || params.size() < 1 || params.size() > 2)
         throw runtime_error(
             "importprivkey <pinkcoinprivkey> [label]\n"
             "Adds a private key (as returned by dumpprivkey) to your wallet.");
 
-    string strSecret = params[0].get_str();
+    string strSecret = params[0].get<std::string>();
     string strLabel = "";
     if (params.size() > 1)
-        strLabel = params[1].get_str();
+        strLabel = params[1].get<std::string>();
     CBitcoinSecret vchSecret;
     bool fGood = vchSecret.SetString(strSecret);
 
@@ -133,7 +132,7 @@ Value importprivkey(const Array& params, bool fHelp)
 
         // Don't throw error in case a key is already there
         if (pwalletMain->HaveKey(vchAddress))
-            return Value::null;
+            return nullptr;
 
         pwalletMain->mapKeyMetadata[vchAddress].nCreateTime = 1;
 
@@ -147,10 +146,10 @@ Value importprivkey(const Array& params, bool fHelp)
         pwalletMain->ReacceptWalletTransactions();
     }
 
-    return Value::null;
+    return nullptr;
 }
 
-Value importwallet(const Array& params, bool fHelp)
+json importwallet(const json& params, bool fHelp)
 {
     if (fHelp || params.size() != 1)
         throw runtime_error(
@@ -160,7 +159,7 @@ Value importwallet(const Array& params, bool fHelp)
     EnsureWalletIsUnlocked();
 
     ifstream file;
-    file.open(params[0].get_str().c_str());
+    file.open(params[0].get<std::string>().c_str());
     if (!file.is_open())
         throw JSONRPCError(RPC_INVALID_PARAMETER, "Cannot open wallet dump file");
 
@@ -233,11 +232,11 @@ Value importwallet(const Array& params, bool fHelp)
     if (!fGood)
         throw JSONRPCError(RPC_WALLET_ERROR, "Error adding some keys to wallet");
 
-    return Value::null;
+    return nullptr;
 }
 
 
-Value dumpprivkey(const Array& params, bool fHelp)
+json dumpprivkey(const json& params, bool fHelp)
 {
     if (fHelp || params.size() != 1)
         throw runtime_error(
@@ -246,7 +245,7 @@ Value dumpprivkey(const Array& params, bool fHelp)
 
     EnsureWalletIsUnlocked();
 
-    string strAddress = params[0].get_str();
+    string strAddress = params[0].get<std::string>();
     CBitcoinAddress address;
     if (!address.SetString(strAddress))
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Pinkcoin address");
@@ -262,7 +261,7 @@ Value dumpprivkey(const Array& params, bool fHelp)
     return CBitcoinSecret(vchSecret, fCompressed).ToString();
 }
 
-Value dumpwallet(const Array& params, bool fHelp)
+json dumpwallet(const json& params, bool fHelp)
 {
     if (fHelp || params.size() != 1)
         throw runtime_error(
@@ -272,7 +271,7 @@ Value dumpwallet(const Array& params, bool fHelp)
     EnsureWalletIsUnlocked();
 
     ofstream file;
-    file.open(params[0].get_str().c_str());
+    file.open(params[0].get<std::string>().c_str());
     if (!file.is_open())
         throw JSONRPCError(RPC_INVALID_PARAMETER, "Cannot open wallet dump file");
 
@@ -321,5 +320,5 @@ Value dumpwallet(const Array& params, bool fHelp)
     file << "\n";
     file << "# End of dump\n";
     file.close();
-    return Value::null;
+    return nullptr;
 }

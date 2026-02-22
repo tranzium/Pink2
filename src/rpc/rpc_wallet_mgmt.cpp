@@ -13,27 +13,25 @@
 #include "init.h"
 #include "base58.h"
 
-using namespace json_spirit;
-
 
 static CCriticalSection cs_nWalletUnlockTime;
 
-Value backupwallet(const Array& params, bool fHelp)
+json backupwallet(const json& params, bool fHelp)
 {
     if (fHelp || params.size() != 1)
         throw std::runtime_error(
             "backupwallet <destination>\n"
             "Safely copies wallet.dat to destination, which can be a directory or a path with filename.");
 
-    std::string strDest = params[0].get_str();
+    std::string strDest = params[0].get<std::string>();
     if (!BackupWallet(*pwalletMain, strDest))
         throw JSONRPCError(RPC_WALLET_ERROR, "Error: Wallet backup failed!");
 
-    return Value::null;
+    return nullptr;
 }
 
 
-Value keypoolrefill(const Array& params, bool fHelp)
+json keypoolrefill(const json& params, bool fHelp)
 {
     if (fHelp || params.size() > 1)
         throw std::runtime_error(
@@ -43,9 +41,9 @@ Value keypoolrefill(const Array& params, bool fHelp)
 
     unsigned int nSize = std::max(GetArg("-keypool", 100), static_cast<int64_t>(0));
     if (!params.empty()) {
-        if (params[0].get_int() < 0)
+        if (params[0].get<int>() < 0)
             throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid parameter, expected valid size");
-        nSize = static_cast<unsigned int>(params[0].get_int());
+        nSize = static_cast<unsigned int>(params[0].get<int>());
     }
 
     EnsureWalletIsUnlocked();
@@ -55,7 +53,7 @@ Value keypoolrefill(const Array& params, bool fHelp)
     if (pwalletMain->GetKeyPoolSize() < nSize)
         throw JSONRPCError(RPC_WALLET_ERROR, "Error refreshing keypool.");
 
-    return Value::null;
+    return nullptr;
 }
 
 
@@ -110,7 +108,7 @@ void ThreadCleanWalletPassphrase(void* parg)
     LEAVE_CRITICAL_SECTION(cs_nWalletUnlockTime);
 }
 
-Value walletpassphrase(const Array& params, bool fHelp)
+json walletpassphrase(const json& params, bool fHelp)
 {
     if (pwalletMain->IsCrypted() && (fHelp || params.size() < 2 || params.size() > 3))
         throw std::runtime_error(
@@ -125,18 +123,18 @@ Value walletpassphrase(const Array& params, bool fHelp)
     if (!pwalletMain->IsLocked())
         throw JSONRPCError(RPC_WALLET_ALREADY_UNLOCKED, "Error: Wallet is already unlocked, use walletlock first if need to change unlock settings.");
 
-    int64_t nSleepTime = params[1].get_int64();
+    int64_t nSleepTime = params[1].get<int64_t>();
     if (nSleepTime <= 0 || nSleepTime >= std::numeric_limits<int64_t>::max() / 1000000000)
         throw std::runtime_error("timeout is out of bounds");
 
     // Note that the walletpassphrase is stored in params[0] which is not mlock()ed
     SecureString strWalletPass;
     strWalletPass.reserve(100);
-    strWalletPass = params[0].get_str().c_str();
+    strWalletPass = params[0].get<std::string>().c_str();
 
     // Cleanse non-mlocked source to prevent paging passphrase to swap
     {
-        std::string& src = const_cast<std::string&>(params[0].get_str());
+        auto& src = const_cast<json&>(params)[0].get_ref<std::string&>();
         OPENSSL_cleanse(src.data(), src.size());
     }
 
@@ -156,15 +154,15 @@ Value walletpassphrase(const Array& params, bool fHelp)
 
     // ppcoin: if user OS account compromised prevent trivial sendmoney commands
     if (params.size() > 2)
-        fWalletUnlockStakingOnly = params[2].get_bool();
+        fWalletUnlockStakingOnly = params[2].get<bool>();
     else
         fWalletUnlockStakingOnly = false;
 
-    return Value::null;
+    return nullptr;
 }
 
 
-Value walletpassphrasechange(const Array& params, bool fHelp)
+json walletpassphrasechange(const json& params, bool fHelp)
 {
     if (pwalletMain->IsCrypted() && (fHelp || params.size() != 2))
         throw std::runtime_error(
@@ -177,17 +175,17 @@ Value walletpassphrasechange(const Array& params, bool fHelp)
 
     SecureString strOldWalletPass;
     strOldWalletPass.reserve(100);
-    strOldWalletPass = params[0].get_str().c_str();
+    strOldWalletPass = params[0].get<std::string>().c_str();
 
     SecureString strNewWalletPass;
     strNewWalletPass.reserve(100);
-    strNewWalletPass = params[1].get_str().c_str();
+    strNewWalletPass = params[1].get<std::string>().c_str();
 
     // Cleanse non-mlocked sources to prevent paging passphrases to swap
     {
-        std::string& src0 = const_cast<std::string&>(params[0].get_str());
+        auto& src0 = const_cast<json&>(params)[0].get_ref<std::string&>();
         OPENSSL_cleanse(src0.data(), src0.size());
-        std::string& src1 = const_cast<std::string&>(params[1].get_str());
+        auto& src1 = const_cast<json&>(params)[1].get_ref<std::string&>();
         OPENSSL_cleanse(src1.data(), src1.size());
     }
 
@@ -199,11 +197,11 @@ Value walletpassphrasechange(const Array& params, bool fHelp)
     if (!pwalletMain->ChangeWalletPassphrase(strOldWalletPass, strNewWalletPass))
         throw JSONRPCError(RPC_WALLET_PASSPHRASE_INCORRECT, "Error: The wallet passphrase entered was incorrect.");
 
-    return Value::null;
+    return nullptr;
 }
 
 
-Value walletlock(const Array& params, bool fHelp)
+json walletlock(const json& params, bool fHelp)
 {
     if (pwalletMain->IsCrypted() && (fHelp || !params.empty()))
         throw std::runtime_error(
@@ -222,11 +220,11 @@ Value walletlock(const Array& params, bool fHelp)
         nWalletUnlockTime = 0;
     }
 
-    return Value::null;
+    return nullptr;
 }
 
 
-Value encryptwallet(const Array& params, bool fHelp)
+json encryptwallet(const json& params, bool fHelp)
 {
     if (!pwalletMain->IsCrypted() && (fHelp || params.size() != 1))
         throw std::runtime_error(
@@ -239,11 +237,11 @@ Value encryptwallet(const Array& params, bool fHelp)
 
     SecureString strWalletPass;
     strWalletPass.reserve(100);
-    strWalletPass = params[0].get_str().c_str();
+    strWalletPass = params[0].get<std::string>().c_str();
 
     // Cleanse non-mlocked source to prevent paging passphrase to swap
     {
-        std::string& src = const_cast<std::string&>(params[0].get_str());
+        auto& src = const_cast<json&>(params)[0].get_ref<std::string&>();
         OPENSSL_cleanse(src.data(), src.size());
     }
 
@@ -263,7 +261,7 @@ Value encryptwallet(const Array& params, bool fHelp)
 }
 
 // ppcoin: reserve balance from being staked for network protection
-Value reservebalance(const Array& params, bool fHelp)
+json reservebalance(const json& params, bool fHelp)
 {
     if (fHelp || params.size() > 2)
         throw std::runtime_error(
@@ -275,7 +273,7 @@ Value reservebalance(const Array& params, bool fHelp)
 
     if (!params.empty())
     {
-        bool fReserve = params[0].get_bool();
+        bool fReserve = params[0].get<bool>();
         if (fReserve)
         {
             if (params.size() == 1)
@@ -294,16 +292,16 @@ Value reservebalance(const Array& params, bool fHelp)
         }
     }
 
-    Object result;
-    result.push_back(Pair("reserve", (nReserveBalance > 0)));
-    result.push_back(Pair("amount", ValueFromAmount(nReserveBalance)));
+    json result;
+    result["reserve"] = (nReserveBalance > 0);
+    result["amount"] = ValueFromAmount(nReserveBalance);
     return result;
 }
 
 
 // Set the minimum coin chunk size.
 // Stakes of coins smaller than this will be combined with other chunks in the wallet.
-Value combinethreshold(const Array& params, bool fHelp)
+json combinethreshold(const json& params, bool fHelp)
 {
     if (fHelp || params.size() > 1)
         throw std::runtime_error(
@@ -316,7 +314,7 @@ Value combinethreshold(const Array& params, bool fHelp)
     {
        if (params.size() == 1)
         {
-           int64_t nAmount = params[0].get_int64();
+           int64_t nAmount = params[0].get<int64_t>();
            if (nAmount < 100)
                throw std::runtime_error("Cannot set combine threshold lower than 100 coins.\n");
            if (nAmount >= nSplitThreshold)
@@ -325,14 +323,14 @@ Value combinethreshold(const Array& params, bool fHelp)
         }
     }
 
-    Object result;
-    result.push_back(Pair("combine threshold", nCombineThreshold));
+    json result;
+    result["combine threshold"] = nCombineThreshold;
     return result;
 }
 
 // Set the maximum coin chunk size.
 // Stakes of coins larger than this will be split evenly into two chunks in the wallet.
-Value splitthreshold(const Array& params, bool fHelp)
+json splitthreshold(const json& params, bool fHelp)
 {
     if (fHelp || params.size() > 1)
         throw std::runtime_error(
@@ -345,7 +343,7 @@ Value splitthreshold(const Array& params, bool fHelp)
     {
        if (params.size() == 1)
         {
-           int64_t nAmount = params[0].get_int64();
+           int64_t nAmount = params[0].get<int64_t>();
            if (nAmount > 1000000)
                throw std::runtime_error("Cannot set split threshold higher than 1000000 coins.\n");
            if (nAmount <= nCombineThreshold)
@@ -354,13 +352,13 @@ Value splitthreshold(const Array& params, bool fHelp)
         }
     }
 
-    Object result;
-    result.push_back(Pair("split threshold", nSplitThreshold));
+    json result;
+    result["split threshold"] = nSplitThreshold;
     return result;
 }
 
 // ppcoin: check wallet integrity
-Value checkwallet(const Array& params, bool fHelp)
+json checkwallet(const json& params, bool fHelp)
 {
     if (fHelp || !params.empty())
         throw std::runtime_error(
@@ -371,20 +369,20 @@ Value checkwallet(const Array& params, bool fHelp)
     int64_t nBalanceInQuestion;
     int nOrphansFound;
     pwalletMain->FixSpentCoins(nMismatchSpent, nBalanceInQuestion, nOrphansFound, true);
-    Object result;
+    json result;
     if (nMismatchSpent == 0)
-        result.push_back(Pair("wallet check passed", true));
+        result["wallet check passed"] = true;
     else
     {
-        result.push_back(Pair("mismatched spent coins", nMismatchSpent));
-        result.push_back(Pair("amount in question", ValueFromAmount(nBalanceInQuestion)));
+        result["mismatched spent coins"] = nMismatchSpent;
+        result["amount in question"] = ValueFromAmount(nBalanceInQuestion);
     }
     return result;
 }
 
 
 // ppcoin: repair wallet
-Value repairwallet(const Array& params, bool fHelp)
+json repairwallet(const json& params, bool fHelp)
 {
     if (fHelp || !params.empty())
         throw std::runtime_error(
@@ -395,19 +393,19 @@ Value repairwallet(const Array& params, bool fHelp)
     int64_t nBalanceInQuestion;
     int nOrphansFound;
     pwalletMain->FixSpentCoins(nMismatchSpent, nBalanceInQuestion, nOrphansFound, false);
-    Object result;
+    json result;
     if (nMismatchSpent == 0)
-        result.push_back(Pair("wallet check passed", true));
+        result["wallet check passed"] = true;
     else
     {
-        result.push_back(Pair("mismatched spent coins", nMismatchSpent));
-        result.push_back(Pair("amount affected by repair", ValueFromAmount(nBalanceInQuestion)));
+        result["mismatched spent coins"] = nMismatchSpent;
+        result["amount affected by repair"] = ValueFromAmount(nBalanceInQuestion);
     }
     return result;
 }
 
 // NovaCoin: resend unconfirmed wallet transactions
-Value resendtx(const Array& params, bool fHelp)
+json resendtx(const json& params, bool fHelp)
 {
     if (fHelp || params.size() > 1)
         throw std::runtime_error(
@@ -417,10 +415,10 @@ Value resendtx(const Array& params, bool fHelp)
 
     ResendWalletTransactions(true);
 
-    return Value::null;
+    return nullptr;
 }
 
-Value clearwallettransactions(const Array& params, bool fHelp)
+json clearwallettransactions(const json& params, bool fHelp)
 {
     if (fHelp || !params.empty())
         throw std::runtime_error(
@@ -430,7 +428,7 @@ Value clearwallettransactions(const Array& params, bool fHelp)
 
 
 
-    Object result;
+    json result;
 
     uint32_t nTransactions = 0;
 
@@ -537,28 +535,28 @@ Value clearwallettransactions(const Array& params, bool fHelp)
     }
 
     snprintf(cbuf, sizeof(cbuf), "Removed %u transactions.", nTransactions);
-    result.push_back(Pair("complete", std::string(cbuf)));
-    result.push_back(Pair("", "Reload with scanforstealthtxns or re-download blockchain."));
+    result["complete"] = std::string(cbuf);
+    result[""] = "Reload with scanforstealthtxns or re-download blockchain.";
 
 
     return result;
 }
 
-Value scanforalltxns(const Array& params, bool fHelp)
+json scanforalltxns(const json& params, bool fHelp)
 {
     if (fHelp || params.size() > 1)
         throw std::runtime_error(
             "scanforalltxns [fromHeight]\n"
             "Scan blockchain for owned transactions.");
 
-    Object result;
+    json result;
     int32_t nFromHeight = 0;
 
     CBlockIndex *pindex = pindexGenesisBlock;
 
 
     if (!params.empty())
-        nFromHeight = params[0].get_int();
+        nFromHeight = params[0].get<int>();
 
 
     if (nFromHeight > 0)
@@ -581,19 +579,19 @@ Value scanforalltxns(const Array& params, bool fHelp)
         pwalletMain->ReacceptWalletTransactions();
     }
 
-    result.push_back(Pair("result", "Scan complete."));
+    result["result"] = "Scan complete.";
 
     return result;
 }
 
-Value scanforstealthtxns(const Array& params, bool fHelp)
+json scanforstealthtxns(const json& params, bool fHelp)
 {
     if (fHelp || params.size() > 1)
         throw std::runtime_error(
             "scanforstealthtxns [fromHeight]\n"
             "Scan blockchain for owned stealth transactions.");
 
-    Object result;
+    json result;
     uint32_t nBlocks = 0;
     uint32_t nTransactions = 0;
     int32_t nFromHeight = 0;
@@ -602,7 +600,7 @@ Value scanforstealthtxns(const Array& params, bool fHelp)
 
 
     if (!params.empty())
-        nFromHeight = params[0].get_int();
+        nFromHeight = params[0].get<int>();
 
 
     if (nFromHeight > 0)
@@ -648,14 +646,14 @@ Value scanforstealthtxns(const Array& params, bool fHelp)
     char cbuf[256];
     snprintf(cbuf, sizeof(cbuf), "%u new stealth transactions.", pwalletMain->nFoundStealth);
 
-    result.push_back(Pair("result", "Scan complete."));
-    result.push_back(Pair("found", std::string(cbuf)));
+    result["result"] = "Scan complete.";
+    result["found"] = std::string(cbuf);
 
     return result;
 }
 
 // presstab HyperStake
-Value setstakesplitthreshold(const Array& params, bool fHelp)
+json setstakesplitthreshold(const json& params, bool fHelp)
 {
 
     if (fHelp || params.size() != 1)
@@ -677,13 +675,13 @@ Value setstakesplitthreshold(const Array& params, bool fHelp)
         }
     }
 
-    Object result;
-    result.push_back(Pair("split threshold", ValueFromAmount(nSplitThreshold)));
+    json result;
+    result["split threshold"] = ValueFromAmount(nSplitThreshold);
     return result;
 }
 
 // presstab HyperStake
-Value getstakesplitthreshold(const Array& params, bool fHelp)
+json getstakesplitthreshold(const json& params, bool fHelp)
 {
     if (fHelp || !params.empty())
         throw std::runtime_error(
@@ -691,12 +689,12 @@ Value getstakesplitthreshold(const Array& params, bool fHelp)
             "Returns the set splitstakethreshold\n"
             "Note: This function is depreciated in favor of splitthreshold\n");
 
-    Object result;
-    result.push_back(Pair("split threshold", ValueFromAmount(nSplitThreshold)));
+    json result;
+    result["split threshold"] = ValueFromAmount(nSplitThreshold);
     return result;
 }
 
-Value addstakeout(const Array &params, bool fHelp)
+json addstakeout(const json &params, bool fHelp)
 {
     if (fHelp || params.size() != 3)
         throw std::runtime_error(
@@ -704,21 +702,21 @@ Value addstakeout(const Array &params, bool fHelp)
             "Creates a rule to send a portion of your stakes to another address.\n"
             "Usage: addstakeout <name> <address> <% of stake>\n");
 
-    std::string name = params[0].get_str();
+    std::string name = params[0].get<std::string>();
 
     if (name.length() > 100)
     {
         throw std::runtime_error("Please use a shorter name for this address");
     }
 
-    std::string a = params[1].get_str();
+    std::string a = params[1].get<std::string>();
     CBitcoinAddress address(a);
     if (!address.IsValid())
     {
         throw std::runtime_error("Please enter a valid Pinkcoin address.");
     }
 
-    std::string sPercent = params[2].get_str();
+    std::string sPercent = params[2].get<std::string>();
 
     if (sPercent[0] == '-')
         throw std::runtime_error("Negative Percentages are not allowed");
@@ -795,14 +793,14 @@ Value addstakeout(const Array &params, bool fHelp)
 
 }
 
-Value delstakeout(const Array &params, bool fHelp)
+json delstakeout(const json &params, bool fHelp)
 {
     if (fHelp || params.size() != 1)
         throw std::runtime_error(
             "delstakeout <address>\n"
             "Deletes stakeout address from stake database.\n");
 
-    std::string a = params[0].get_str();
+    std::string a = params[0].get<std::string>();
     CBitcoinAddress address(a);
 
     if (!address.IsValid())
@@ -828,17 +826,17 @@ Value delstakeout(const Array &params, bool fHelp)
     return success;
 }
 
-Value liststakeout(const Array &params, bool fHelp)
+json liststakeout(const json &params, bool fHelp)
 {
     if (fHelp || !params.empty())
         throw std::runtime_error(
             "liststakeout\n"
             "Returns the current Stakeout entries in stake database.\n");
 
-    Array stakeOut;
+    json stakeOut = json::array();
     for (CWallet::mapAddress address : pstakeDB->mapAddressBook)
     {
-            Object addressInfo;
+            json addressInfo;
             LOCK(pstakeDB->cs_wallet);
             {
                 if(pstakeDB->mapAddressBook.find(CBitcoinAddress(address.first).Get()) != pstakeDB->mapAddressBook.end())
@@ -849,9 +847,9 @@ Value liststakeout(const Array &params, bool fHelp)
 
                     aPercent = aPercent + "%";
 
-                    addressInfo.push_back(Pair("Name: ", aName));
-                    addressInfo.push_back(Pair("Address: ", CBitcoinAddress(address.first).ToString()));
-                    addressInfo.push_back(Pair("Percentage: ", aPercent));
+                    addressInfo["Name: "] = aName;
+                    addressInfo["Address: "] = CBitcoinAddress(address.first).ToString();
+                    addressInfo["Percentage: "] = aPercent;
                 }
             }
             stakeOut.push_back(addressInfo);
@@ -861,7 +859,7 @@ Value liststakeout(const Array &params, bool fHelp)
 
 }
 
-Value getstakeoutinfo(const Array &params, bool fHelp)
+json getstakeoutinfo(const json &params, bool fHelp)
 {
     if (fHelp || !params.empty())
         throw std::runtime_error(

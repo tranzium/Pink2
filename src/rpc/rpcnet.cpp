@@ -9,10 +9,9 @@
 #include "db.h"
 #include "walletdb.h"
 
-using namespace json_spirit;
 using namespace std;
 
-Value getconnectioncount(const Array& params, bool fHelp)
+json getconnectioncount(const json& params, bool fHelp)
 {
     if (fHelp || !params.empty())
         throw runtime_error(
@@ -36,7 +35,7 @@ static void CopyNodeStats(std::vector<CNodeStats>& vstats)
     }
 }
 
-Value getpeerinfo(const Array& params, bool fHelp)
+json getpeerinfo(const json& params, bool fHelp)
 {
     if (fHelp || !params.empty())
         throw runtime_error(
@@ -46,21 +45,21 @@ Value getpeerinfo(const Array& params, bool fHelp)
     vector<CNodeStats> vstats;
     CopyNodeStats(vstats);
 
-    Array ret;
+    json ret = json::array();
 
     for (const CNodeStats& stats : vstats) {
-        Object obj;
+        json obj;
 
-        obj.push_back(Pair("addr", stats.addrName));
-        obj.push_back(Pair("services", strprintf("%08" PRIx64, stats.nServices)));
-        obj.push_back(Pair("lastsend", static_cast<int64_t>(stats.nLastSend)));
-        obj.push_back(Pair("lastrecv", static_cast<int64_t>(stats.nLastRecv)));
-        obj.push_back(Pair("conntime", static_cast<int64_t>(stats.nTimeConnected)));
-        obj.push_back(Pair("version", stats.nVersion));
-        obj.push_back(Pair("subver", stats.strSubVer));
-        obj.push_back(Pair("inbound", stats.fInbound));
-        obj.push_back(Pair("startingheight", stats.nStartingHeight));
-        obj.push_back(Pair("banscore", stats.nMisbehavior));
+        obj["addr"] = stats.addrName;
+        obj["services"] = strprintf("%08" PRIx64, stats.nServices);
+        obj["lastsend"] = static_cast<int64_t>(stats.nLastSend);
+        obj["lastrecv"] = static_cast<int64_t>(stats.nLastRecv);
+        obj["conntime"] = static_cast<int64_t>(stats.nTimeConnected);
+        obj["version"] = stats.nVersion;
+        obj["subver"] = stats.strSubVer;
+        obj["inbound"] = stats.fInbound;
+        obj["startingheight"] = stats.nStartingHeight;
+        obj["banscore"] = stats.nMisbehavior;
 
         ret.push_back(obj);
     }
@@ -68,7 +67,7 @@ Value getpeerinfo(const Array& params, bool fHelp)
     return ret;
 }
 
-Value getnodes(const Array& params, bool fHelp)
+json getnodes(const json& params, bool fHelp)
 {
     if (fHelp || !params.empty())
         throw runtime_error(
@@ -87,14 +86,14 @@ Value getnodes(const Array& params, bool fHelp)
         }
     }
 
-    return (Value)pNode;
+    return json(pNode);
 }
- 
-// ppcoin: send alert.  
+
+// ppcoin: send alert.
 // There is a known deadlock situation with ThreadMessageHandler
 // ThreadMessageHandler: holds cs_vSend and acquiring cs_main in SendMessages()
 // ThreadRPCServer: holds cs_main and acquiring cs_vSend in alert.RelayTo()/PushMessage()/BeginMessage()
-Value sendalert(const Array& params, bool fHelp)
+json sendalert(const json& params, bool fHelp)
 {
     if (fHelp || params.size() < 6)
         throw runtime_error(
@@ -111,13 +110,13 @@ Value sendalert(const Array& params, bool fHelp)
     CAlert alert;
     CKey key;
 
-    alert.strStatusBar = params[0].get_str();
-    alert.nMinVer = params[2].get_int();
-    alert.nMaxVer = params[3].get_int();
-    alert.nPriority = params[4].get_int();
-    alert.nID = params[5].get_int();
+    alert.strStatusBar = params[0].get<std::string>();
+    alert.nMinVer = params[2].get<int>();
+    alert.nMaxVer = params[3].get<int>();
+    alert.nPriority = params[4].get<int>();
+    alert.nID = params[5].get<int>();
     if (params.size() > 6)
-        alert.nCancel = params[6].get_int();
+        alert.nCancel = params[6].get<int>();
     alert.nVersion = PROTOCOL_VERSION;
     alert.nRelayUntil = GetAdjustedTime() + 365*24*60*60;
     alert.nExpiration = GetAdjustedTime() + 365*24*60*60;
@@ -126,12 +125,12 @@ Value sendalert(const Array& params, bool fHelp)
     sMsg << (CUnsignedAlert)alert;
     alert.vchMsg = vector<unsigned char>(sMsg.begin(), sMsg.end());
 
-    vector<unsigned char> vchPrivKey = ParseHex(params[1].get_str());
+    vector<unsigned char> vchPrivKey = ParseHex(params[1].get<std::string>());
     key.SetPrivKey(CPrivKey(vchPrivKey.begin(), vchPrivKey.end())); // if key is not correct openssl may crash
     if (!key.Sign(Hash(alert.vchMsg.begin(), alert.vchMsg.end()), alert.vchSig))
         throw runtime_error(
-            "Unable to sign alert, check private key?\n");  
-    if(!alert.ProcessAlert()) 
+            "Unable to sign alert, check private key?\n");
+    if(!alert.ProcessAlert())
         throw runtime_error(
             "Failed to process alert.\n");
     // Relay alert
@@ -141,14 +140,14 @@ Value sendalert(const Array& params, bool fHelp)
             alert.RelayTo(pnode);
     }
 
-    Object result;
-    result.push_back(Pair("strStatusBar", alert.strStatusBar));
-    result.push_back(Pair("nVersion", alert.nVersion));
-    result.push_back(Pair("nMinVer", alert.nMinVer));
-    result.push_back(Pair("nMaxVer", alert.nMaxVer));
-    result.push_back(Pair("nPriority", alert.nPriority));
-    result.push_back(Pair("nID", alert.nID));
+    json result;
+    result["strStatusBar"] = alert.strStatusBar;
+    result["nVersion"] = alert.nVersion;
+    result["nMinVer"] = alert.nMinVer;
+    result["nMaxVer"] = alert.nMaxVer;
+    result["nPriority"] = alert.nPriority;
+    result["nID"] = alert.nID;
     if (alert.nCancel > 0)
-        result.push_back(Pair("nCancel", alert.nCancel));
+        result["nCancel"] = alert.nCancel;
     return result;
 }

@@ -12,9 +12,7 @@
 #include "base58.h"
 #include "stealth.h"
 
-using namespace json_spirit;
-
-Value getnewpubkey(const Array& params, bool fHelp)
+json getnewpubkey(const json& params, bool fHelp)
 {
     if (fHelp || params.size() > 1)
         throw std::runtime_error(
@@ -42,7 +40,7 @@ Value getnewpubkey(const Array& params, bool fHelp)
 }
 
 
-Value getnewaddress(const Array& params, bool fHelp)
+json getnewaddress(const json& params, bool fHelp)
 {
     if (fHelp || params.size() > 1)
         throw std::runtime_error(
@@ -70,7 +68,7 @@ Value getnewaddress(const Array& params, bool fHelp)
     return CBitcoinAddress(keyID).ToString();
 }
 
-Value signmessage(const Array& params, bool fHelp)
+json signmessage(const json& params, bool fHelp)
 {
     if (fHelp || params.size() != 2)
         throw std::runtime_error(
@@ -79,8 +77,8 @@ Value signmessage(const Array& params, bool fHelp)
 
     EnsureWalletIsUnlocked();
 
-    std::string strAddress = params[0].get_str();
-    std::string strMessage = params[1].get_str();
+    std::string strAddress = params[0].get<std::string>();
+    std::string strMessage = params[1].get<std::string>();
 
     CBitcoinAddress addr(strAddress);
     if (!addr.IsValid())
@@ -105,16 +103,16 @@ Value signmessage(const Array& params, bool fHelp)
     return EncodeBase64(&vchSig[0], vchSig.size());
 }
 
-Value verifymessage(const Array& params, bool fHelp)
+json verifymessage(const json& params, bool fHelp)
 {
     if (fHelp || params.size() != 3)
         throw std::runtime_error(
             "verifymessage <pinkcoinaddress> <signature> <message>\n"
             "Verify a signed message");
 
-    std::string strAddress  = params[0].get_str();
-    std::string strSign     = params[1].get_str();
-    std::string strMessage  = params[2].get_str();
+    std::string strAddress  = params[0].get<std::string>();
+    std::string strSign     = params[1].get<std::string>();
+    std::string strMessage  = params[2].get<std::string>();
 
     CBitcoinAddress addr(strAddress);
     if (!addr.IsValid())
@@ -141,7 +139,7 @@ Value verifymessage(const Array& params, bool fHelp)
     return (key.GetPubKey().GetID() == keyID);
 }
 
-Value addmultisigaddress(const Array& params, bool fHelp)
+json addmultisigaddress(const json& params, bool fHelp)
 {
     if (fHelp || params.size() < 2 || params.size() > 3)
     {
@@ -152,8 +150,8 @@ Value addmultisigaddress(const Array& params, bool fHelp)
         throw std::runtime_error(msg);
     }
 
-    int nRequired = params[0].get_int();
-    const Array& keys = params[1].get_array();
+    int nRequired = params[0].get<int>();
+    const json& keys = params[1];
     std::string strAccount;
     if (params.size() > 2)
         strAccount = AccountFromValue(params[2]);
@@ -169,7 +167,7 @@ Value addmultisigaddress(const Array& params, bool fHelp)
     pubkeys.resize(keys.size());
     for (unsigned int i = 0; i < keys.size(); i++)
     {
-        const std::string& ks = keys[i].get_str();
+        const std::string& ks = keys[i].get<std::string>();
 
         // Case 1: Bitcoin address and we have full public key:
         CBitcoinAddress address(ks);
@@ -211,7 +209,7 @@ Value addmultisigaddress(const Array& params, bool fHelp)
     return CBitcoinAddress(innerID).ToString();
 }
 
-Value addredeemscript(const Array& params, bool fHelp)
+json addredeemscript(const json& params, bool fHelp)
 {
     if (fHelp || params.size() < 1 || params.size() > 2)
     {
@@ -239,82 +237,82 @@ Value addredeemscript(const Array& params, bool fHelp)
 class DescribeAddressVisitor
 {
 public:
-    Object operator()(const CNoDestination &dest) const { return Object(); }
+    json operator()(const CNoDestination &dest) const { return json::object(); }
 
-    Object operator()(const CKeyID &keyID) const {
-        Object obj;
+    json operator()(const CKeyID &keyID) const {
+        json obj;
         CPubKey vchPubKey;
         pwalletMain->GetPubKey(keyID, vchPubKey);
-        obj.push_back(Pair("isscript", false));
-        obj.push_back(Pair("pubkey", HexStr(vchPubKey.Raw())));
-        obj.push_back(Pair("iscompressed", vchPubKey.IsCompressed()));
+        obj["isscript"] = false;
+        obj["pubkey"] = HexStr(vchPubKey.Raw());
+        obj["iscompressed"] = vchPubKey.IsCompressed();
         return obj;
     }
 
-    Object operator()(const CScriptID &scriptID) const {
-        Object obj;
-        obj.push_back(Pair("isscript", true));
+    json operator()(const CScriptID &scriptID) const {
+        json obj;
+        obj["isscript"] = true;
         CScript subscript;
         pwalletMain->GetCScript(scriptID, subscript);
         std::vector<CTxDestination> addresses;
         txnouttype whichType;
         int nRequired;
         ExtractDestinations(subscript, whichType, addresses, nRequired);
-        obj.push_back(Pair("script", GetTxnOutputType(whichType)));
-        obj.push_back(Pair("hex", HexStr(subscript.begin(), subscript.end())));
-        Array a;
+        obj["script"] = GetTxnOutputType(whichType);
+        obj["hex"] = HexStr(subscript.begin(), subscript.end());
+        json a = json::array();
         for (const CTxDestination& addr : addresses)
             a.push_back(CBitcoinAddress(addr).ToString());
-        obj.push_back(Pair("addresses", a));
+        obj["addresses"] = a;
         if (whichType == TX_MULTISIG)
-            obj.push_back(Pair("sigsrequired", nRequired));
+            obj["sigsrequired"] = nRequired;
         return obj;
     }
 
-    Object operator()(const CStealthAddress &stxAddr) const {
-        Object obj;
-        obj.push_back(Pair("todo", true));
+    json operator()(const CStealthAddress &stxAddr) const {
+        json obj;
+        obj["todo"] = true;
         return obj;
     }
 };
 
-Value validateaddress(const Array& params, bool fHelp)
+json validateaddress(const json& params, bool fHelp)
 {
     if (fHelp || params.size() != 1)
         throw std::runtime_error(
             "validateaddress <pinkcoinaddress>\n"
             "Return information about <pinkcoinaddress>.");
 
-    CBitcoinAddress address(params[0].get_str());
+    CBitcoinAddress address(params[0].get<std::string>());
     bool isValid = address.IsValid();
 
-    Object ret;
-    ret.push_back(Pair("isvalid", isValid));
+    json ret;
+    ret["isvalid"] = isValid;
     if (isValid)
     {
         CTxDestination dest = address.Get();
         std::string currentAddress = address.ToString();
-        ret.push_back(Pair("address", currentAddress));
+        ret["address"] = currentAddress;
         bool fMine = IsMine(*pwalletMain, dest);
-        ret.push_back(Pair("ismine", fMine));
+        ret["ismine"] = fMine;
         if (fMine) {
-            Object detail = std::visit(DescribeAddressVisitor(), dest);
-            ret.insert(ret.end(), detail.begin(), detail.end());
+            json detail = std::visit(DescribeAddressVisitor(), dest);
+            ret.update(detail);
         }
         if (pwalletMain->mapAddressBook.count(dest))
-            ret.push_back(Pair("account", pwalletMain->mapAddressBook[dest]));
+            ret["account"] = pwalletMain->mapAddressBook[dest];
     }
     return ret;
 }
 
-Value validatepubkey(const Array& params, bool fHelp)
+json validatepubkey(const json& params, bool fHelp)
 {
     if (fHelp || !params.size() || params.size() > 2)
         throw std::runtime_error(
             "validatepubkey <pinkcoinpubkey>\n"
             "Return information about <pinkcoinpubkey>.");
 
-    std::vector<unsigned char> vchPubKey = ParseHex(params[0].get_str());
+    std::vector<unsigned char> vchPubKey = ParseHex(params[0].get<std::string>());
     CPubKey pubKey(vchPubKey);
 
     bool isValid = pubKey.IsValid();
@@ -324,28 +322,28 @@ Value validatepubkey(const Array& params, bool fHelp)
     CBitcoinAddress address;
     address.Set(keyID);
 
-    Object ret;
-    ret.push_back(Pair("isvalid", isValid));
+    json ret;
+    ret["isvalid"] = isValid;
     if (isValid)
     {
         CTxDestination dest = address.Get();
         std::string currentAddress = address.ToString();
-        ret.push_back(Pair("address", currentAddress));
+        ret["address"] = currentAddress;
         bool fMine = IsMine(*pwalletMain, dest);
-        ret.push_back(Pair("ismine", fMine));
-        ret.push_back(Pair("iscompressed", isCompressed));
+        ret["ismine"] = fMine;
+        ret["iscompressed"] = isCompressed;
         if (fMine) {
-            Object detail = std::visit(DescribeAddressVisitor(), dest);
-            ret.insert(ret.end(), detail.begin(), detail.end());
+            json detail = std::visit(DescribeAddressVisitor(), dest);
+            ret.update(detail);
         }
         if (pwalletMain->mapAddressBook.count(dest))
-            ret.push_back(Pair("account", pwalletMain->mapAddressBook[dest]));
+            ret["account"] = pwalletMain->mapAddressBook[dest];
     }
     return ret;
 }
 
 // ppcoin: make a public-private key pair
-Value makekeypair(const Array& params, bool fHelp)
+json makekeypair(const json& params, bool fHelp)
 {
     if (fHelp || params.size() > 1)
         throw std::runtime_error(
@@ -355,21 +353,21 @@ Value makekeypair(const Array& params, bool fHelp)
 
     std::string strPrefix = "";
     if (!params.empty())
-        strPrefix = params[0].get_str();
+        strPrefix = params[0].get<std::string>();
 
     CKey key;
     key.MakeNewKey(false);
 
     CPrivKey vchPrivKey = key.GetPrivKey();
-    Object result;
-    result.push_back(Pair("PrivateKey", HexStr<CPrivKey::iterator>(vchPrivKey.begin(), vchPrivKey.end())));
-    result.push_back(Pair("PublicKey", HexStr(key.GetPubKey().Raw())));
+    json result;
+    result["PrivateKey"] = HexStr<CPrivKey::iterator>(vchPrivKey.begin(), vchPrivKey.end());
+    result["PublicKey"] = HexStr(key.GetPubKey().Raw());
     return result;
 }
 
 
 
-Value getnewstealthaddress(const Array& params, bool fHelp)
+json getnewstealthaddress(const json& params, bool fHelp)
 {
     if (fHelp || params.size() > 1)
         throw std::runtime_error(
@@ -381,7 +379,7 @@ Value getnewstealthaddress(const Array& params, bool fHelp)
 
     std::string sLabel;
     if (!params.empty())
-        sLabel = params[0].get_str();
+        sLabel = params[0].get<std::string>();
 
     CStealthAddress sxAddr;
     std::string sError;
@@ -394,7 +392,7 @@ Value getnewstealthaddress(const Array& params, bool fHelp)
     return sxAddr.Encoded();
 }
 
-Value liststealthaddresses(const Array& params, bool fHelp)
+json liststealthaddresses(const json& params, bool fHelp)
 {
     if (fHelp || params.size() > 1)
         throw std::runtime_error(
@@ -405,7 +403,7 @@ Value liststealthaddresses(const Array& params, bool fHelp)
 
     if (!params.empty())
     {
-        std::string str = params[0].get_str();
+        std::string str = params[0].get<std::string>();
 
         if (str == "0" || str == "n" || str == "no" || str == "-" || str == "false")
             fShowSecrets = false;
@@ -419,27 +417,27 @@ Value liststealthaddresses(const Array& params, bool fHelp)
             throw std::runtime_error("Failed: Wallet must be unlocked.");
     };
 
-    Array result;
+    json result = json::array();
 
     for (const auto& sxAddr : pwalletMain->stealthAddresses)
     {
         if (sxAddr.scan_secret.size() < 1)
             continue; // stealth address is not owned
 
-        Object obj;
+        json obj;
 
         if (fShowSecrets)
         {
-            obj.push_back(Pair("label", sxAddr.label));
-            obj.push_back(Pair("address", sxAddr.Encoded()));
-            obj.push_back(Pair("scan-secret", HexStr(sxAddr.scan_secret.begin(), sxAddr.scan_secret.end())));
-            obj.push_back(Pair("spend-secret", HexStr(sxAddr.spend_secret.begin(), sxAddr.spend_secret.end())));
+            obj["label"] = sxAddr.label;
+            obj["address"] = sxAddr.Encoded();
+            obj["scan-secret"] = HexStr(sxAddr.scan_secret.begin(), sxAddr.scan_secret.end());
+            obj["spend-secret"] = HexStr(sxAddr.spend_secret.begin(), sxAddr.spend_secret.end());
             result.push_back(obj);
         }
         else
         {
-            obj.push_back(Pair("label", sxAddr.label));
-            obj.push_back(Pair("address", sxAddr.Encoded()));
+            obj["label"] = sxAddr.label;
+            obj["address"] = sxAddr.Encoded();
             result.push_back(obj);
         };
     };
@@ -447,21 +445,21 @@ Value liststealthaddresses(const Array& params, bool fHelp)
     return result;
 }
 
-Value importstealthaddress(const Array& params, bool fHelp)
+json importstealthaddress(const json& params, bool fHelp)
 {
     if (fHelp || params.size() < 2)
         throw std::runtime_error(
             "importstealthaddress <scan_secret> <spend_secret> [label]\n"
             "Import an owned stealth addresses.");
 
-    std::string sScanSecret  = params[0].get_str();
-    std::string sSpendSecret = params[1].get_str();
+    std::string sScanSecret  = params[0].get<std::string>();
+    std::string sSpendSecret = params[1].get<std::string>();
     std::string sLabel;
 
 
     if (params.size() > 2)
     {
-        sLabel = params[2].get_str();
+        sLabel = params[2].get<std::string>();
     };
 
     std::vector<uint8_t> vchScanSecret;
@@ -513,7 +511,7 @@ Value importstealthaddress(const Array& params, bool fHelp)
     sxAddr.scan_secret = vchScanSecret;
     sxAddr.spend_secret = vchSpendSecret;
 
-    Object result;
+    json result;
     bool fFound = false;
     // -- find if address already exists
     std::set<CStealthAddress>::iterator it;
@@ -531,18 +529,18 @@ Value importstealthaddress(const Array& params, bool fHelp)
                 break;
             };
 
-            result.push_back(Pair("result", "Import failed - stealth address exists."));
+            result["result"] = "Import failed - stealth address exists.";
             return result;
         };
     };
 
     if (fFound)
     {
-        result.push_back(Pair("result", "Success, updated " + sxAddr.Encoded()));
+        result["result"] = "Success, updated " + sxAddr.Encoded();
     } else
     {
         pwalletMain->stealthAddresses.insert(sxAddr);
-        result.push_back(Pair("result", "Success, imported " + sxAddr.Encoded()));
+        result["result"] = "Success, imported " + sxAddr.Encoded();
     };
 
 

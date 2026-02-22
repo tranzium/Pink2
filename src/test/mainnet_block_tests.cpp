@@ -11,9 +11,9 @@
 // be caught immediately.
 
 #include <boost/test/unit_test.hpp>
+#include <boost/preprocessor/stringize.hpp>
 
-#include "json/json_spirit_reader_template.h"
-#include "json/json_spirit_utils.h"
+#include "json/nlohmann/json.hpp"
 
 #include "main.h"
 #include "kernel.h"
@@ -22,9 +22,31 @@
 #include <string>
 #include <vector>
 #include <cstdlib>
+#include <fstream>
+#include <filesystem>
 
-using namespace json_spirit;
-extern Array read_json(const std::string& filename);
+using json = nlohmann::json;
+
+// Local read_json that returns nlohmann::json (independent of json_spirit version in script_tests.cpp)
+static json read_json(const std::string& filename)
+{
+    namespace fs = std::filesystem;
+    fs::path testFile = fs::current_path() / "test" / "data" / filename;
+
+#ifdef TEST_DATA_DIR
+    if (!fs::exists(testFile))
+    {
+        testFile = fs::path(BOOST_PP_STRINGIZE(TEST_DATA_DIR)) / filename;
+    }
+#endif
+
+    std::ifstream ifs(testFile.string().c_str(), std::ifstream::in);
+    BOOST_REQUIRE_MESSAGE(ifs.good(), "Could not find/open " << filename);
+
+    json v = json::parse(ifs);
+    BOOST_REQUIRE_MESSAGE(v.is_array(), filename << " does not contain a json array");
+    return v;
+}
 
 // Compute merkle root from a vector of tx hashes using the same algorithm
 // as CBlock::BuildMerkleTree(), without needing full CTransaction objects.
@@ -48,18 +70,18 @@ static uint256 ComputeMerkleRootFromHashes(const std::vector<uint256>& leaves)
 }
 
 // Helper: construct a CBlock header from JSON object fields
-static CBlock BlockFromJson(const Object& obj)
+static CBlock BlockFromJson(const json& obj)
 {
     CBlock blk;
-    blk.nVersion       = find_value(obj, "version").get_int();
-    blk.hashPrevBlock  = uint256("0x" + find_value(obj, "previousblockhash").get_str());
-    blk.hashMerkleRoot = uint256("0x" + find_value(obj, "merkleroot").get_str());
-    blk.nTime          = (unsigned int)find_value(obj, "time").get_int64();
+    blk.nVersion       = obj["version"].get<int>();
+    blk.hashPrevBlock  = uint256("0x" + obj["previousblockhash"].get<std::string>());
+    blk.hashMerkleRoot = uint256("0x" + obj["merkleroot"].get<std::string>());
+    blk.nTime          = static_cast<unsigned int>(obj["time"].get<int64_t>());
 
-    std::string bitsHex = find_value(obj, "bits").get_str();
-    blk.nBits = (unsigned int)strtoul(bitsHex.c_str(), nullptr, 16);
+    std::string bitsHex = obj["bits"].get<std::string>();
+    blk.nBits = static_cast<unsigned int>(strtoul(bitsHex.c_str(), nullptr, 16));
 
-    blk.nNonce = (unsigned int)find_value(obj, "nonce").get_int64();
+    blk.nNonce = static_cast<unsigned int>(obj["nonce"].get<int64_t>());
     return blk;
 }
 
@@ -71,14 +93,13 @@ BOOST_AUTO_TEST_SUITE(mainnet_block_tests)
 
 BOOST_AUTO_TEST_CASE(mainnet_block_header_hashes)
 {
-    Array blocks = read_json("mainnet_blocks.json");
+    json blocks = read_json("mainnet_blocks.json");
     BOOST_REQUIRE(blocks.size() >= 4);
 
-    for (const Value& bv : blocks)
+    for (const auto& obj : blocks)
     {
-        Object obj = bv.get_obj();
-        std::string desc = find_value(obj, "description").get_str();
-        uint256 expectedHash("0x" + find_value(obj, "hash").get_str());
+        std::string desc = obj["description"].get<std::string>();
+        uint256 expectedHash("0x" + obj["hash"].get<std::string>());
 
         CBlock blk = BlockFromJson(obj);
         uint256 computedHash = blk.GetHash();
@@ -96,18 +117,17 @@ BOOST_AUTO_TEST_CASE(mainnet_block_header_hashes)
 
 BOOST_AUTO_TEST_CASE(mainnet_merkle_roots)
 {
-    Array blocks = read_json("mainnet_blocks.json");
+    json blocks = read_json("mainnet_blocks.json");
 
-    for (const Value& bv : blocks)
+    for (const auto& obj : blocks)
     {
-        Object obj = bv.get_obj();
-        std::string desc = find_value(obj, "description").get_str();
-        uint256 expectedMerkle("0x" + find_value(obj, "merkleroot").get_str());
+        std::string desc = obj["description"].get<std::string>();
+        uint256 expectedMerkle("0x" + obj["merkleroot"].get<std::string>());
 
-        Array txArr = find_value(obj, "tx").get_array();
+        const json& txArr = obj["tx"];
         std::vector<uint256> txHashes;
-        for (const Value& tv : txArr)
-            txHashes.push_back(uint256("0x" + tv.get_str()));
+        for (const auto& tv : txArr)
+            txHashes.push_back(uint256("0x" + tv.get<std::string>()));
 
         uint256 computedMerkle = ComputeMerkleRootFromHashes(txHashes);
 
@@ -124,21 +144,20 @@ BOOST_AUTO_TEST_CASE(mainnet_merkle_roots)
 
 BOOST_AUTO_TEST_CASE(mainnet_pow_block_identification)
 {
-    Array blocks = read_json("mainnet_blocks.json");
+    json blocks = read_json("mainnet_blocks.json");
 
-    for (const Value& bv : blocks)
+    for (const auto& obj : blocks)
     {
-        Object obj = bv.get_obj();
-        std::string flags = find_value(obj, "flags").get_str();
-        unsigned int nonce = (unsigned int)find_value(obj, "nonce").get_int64();
-        Array txArr = find_value(obj, "tx").get_array();
+        std::string flags = obj["flags"].get<std::string>();
+        unsigned int nonce = static_cast<unsigned int>(obj["nonce"].get<int64_t>());
+        const json& txArr = obj["tx"];
 
         if (flags.find("proof-of-work") != std::string::npos)
         {
             // PoW blocks have nonzero nonce and single coinbase tx
             BOOST_CHECK_MESSAGE(nonce > 0,
                 "PoW block should have nonzero nonce: " +
-                find_value(obj, "description").get_str());
+                obj["description"].get<std::string>());
             BOOST_CHECK_EQUAL(txArr.size(), 1u);
         }
     }
@@ -146,24 +165,23 @@ BOOST_AUTO_TEST_CASE(mainnet_pow_block_identification)
 
 BOOST_AUTO_TEST_CASE(mainnet_pos_block_identification)
 {
-    Array blocks = read_json("mainnet_blocks.json");
+    json blocks = read_json("mainnet_blocks.json");
 
-    for (const Value& bv : blocks)
+    for (const auto& obj : blocks)
     {
-        Object obj = bv.get_obj();
-        std::string flags = find_value(obj, "flags").get_str();
-        unsigned int nonce = (unsigned int)find_value(obj, "nonce").get_int64();
-        Array txArr = find_value(obj, "tx").get_array();
+        std::string flags = obj["flags"].get<std::string>();
+        unsigned int nonce = static_cast<unsigned int>(obj["nonce"].get<int64_t>());
+        const json& txArr = obj["tx"];
 
         if (flags.find("proof-of-stake") != std::string::npos)
         {
             // PoS blocks have zero nonce and 2+ transactions (coinbase + coinstake)
             BOOST_CHECK_MESSAGE(nonce == 0,
                 "PoS block should have zero nonce: " +
-                find_value(obj, "description").get_str());
+                obj["description"].get<std::string>());
             BOOST_CHECK_MESSAGE(txArr.size() >= 2,
                 "PoS block should have 2+ txs: " +
-                find_value(obj, "description").get_str());
+                obj["description"].get<std::string>());
         }
     }
 }
@@ -174,13 +192,12 @@ BOOST_AUTO_TEST_CASE(mainnet_pos_block_identification)
 
 BOOST_AUTO_TEST_CASE(mainnet_flash_pos_identification)
 {
-    Array blocks = read_json("mainnet_blocks.json");
+    json blocks = read_json("mainnet_blocks.json");
 
-    for (const Value& bv : blocks)
+    for (const auto& obj : blocks)
     {
-        Object obj = bv.get_obj();
-        std::string desc = find_value(obj, "description").get_str();
-        unsigned int nTime = (unsigned int)find_value(obj, "time").get_int64();
+        std::string desc = obj["description"].get<std::string>();
+        unsigned int nTime = static_cast<unsigned int>(obj["time"].get<int64_t>());
 
         // The FPoS block (hour 1 UTC) should be identified as flash stake
         if (desc.find("Flash PoS") != std::string::npos)
@@ -205,16 +222,15 @@ BOOST_AUTO_TEST_CASE(mainnet_flash_pos_identification)
 BOOST_AUTO_TEST_CASE(mainnet_checkpoint_block_50000)
 {
     // Block 50000 is a hardened checkpoint — verify from fixture
-    Array blocks = read_json("mainnet_blocks.json");
+    json blocks = read_json("mainnet_blocks.json");
 
-    for (const Value& bv : blocks)
+    for (const auto& obj : blocks)
     {
-        Object obj = bv.get_obj();
-        int64_t height = find_value(obj, "height").get_int64();
+        int64_t height = obj["height"].get<int64_t>();
 
         if (height == 50000)
         {
-            uint256 hash("0x" + find_value(obj, "hash").get_str());
+            uint256 hash("0x" + obj["hash"].get<std::string>());
             BOOST_CHECK(Checkpoints::CheckHardened(50000, hash));
         }
     }
@@ -226,27 +242,26 @@ BOOST_AUTO_TEST_CASE(mainnet_checkpoint_block_50000)
 
 BOOST_AUTO_TEST_CASE(mainnet_block_1_genesis_link)
 {
-    Array blocks = read_json("mainnet_blocks.json");
+    json blocks = read_json("mainnet_blocks.json");
 
-    for (const Value& bv : blocks)
+    for (const auto& obj : blocks)
     {
-        Object obj = bv.get_obj();
-        int64_t height = find_value(obj, "height").get_int64();
+        int64_t height = obj["height"].get<int64_t>();
 
         if (height == 1)
         {
             // Block 1's previous hash must be the genesis hash
-            uint256 prevHash("0x" + find_value(obj, "previousblockhash").get_str());
+            uint256 prevHash("0x" + obj["previousblockhash"].get<std::string>());
             uint256 genesisHash("0x00000f79b700e6444665c4d090c9b8833664c4e2597c7087a6ba6391b956cc89");
             BOOST_CHECK(prevHash == genesisHash);
 
             // PoW premine block — single tx
-            Array txArr = find_value(obj, "tx").get_array();
+            const json& txArr = obj["tx"];
             BOOST_CHECK_EQUAL(txArr.size(), 1u);
 
             // Merkle root equals the single tx hash (identity)
-            uint256 merkle("0x" + find_value(obj, "merkleroot").get_str());
-            uint256 txHash("0x" + txArr[0].get_str());
+            uint256 merkle("0x" + obj["merkleroot"].get<std::string>());
+            uint256 txHash("0x" + txArr[0].get<std::string>());
             BOOST_CHECK(merkle == txHash);
         }
     }
@@ -258,13 +273,12 @@ BOOST_AUTO_TEST_CASE(mainnet_block_1_genesis_link)
 
 BOOST_AUTO_TEST_CASE(mainnet_entropy_bits)
 {
-    Array blocks = read_json("mainnet_blocks.json");
+    json blocks = read_json("mainnet_blocks.json");
 
-    for (const Value& bv : blocks)
+    for (const auto& obj : blocks)
     {
-        Object obj = bv.get_obj();
-        std::string desc = find_value(obj, "description").get_str();
-        int expectedBit = find_value(obj, "entropybit").get_int();
+        std::string desc = obj["description"].get<std::string>();
+        int expectedBit = obj["entropybit"].get<int>();
 
         CBlock blk = BlockFromJson(obj);
         unsigned int computedBit = blk.GetStakeEntropyBit();
@@ -282,12 +296,11 @@ BOOST_AUTO_TEST_CASE(mainnet_entropy_bits)
 
 BOOST_AUTO_TEST_CASE(mainnet_header_field_pinning)
 {
-    Array blocks = read_json("mainnet_blocks.json");
+    json blocks = read_json("mainnet_blocks.json");
 
-    for (const Value& bv : blocks)
+    for (const auto& obj : blocks)
     {
-        Object obj = bv.get_obj();
-        std::string desc = find_value(obj, "description").get_str();
+        std::string desc = obj["description"].get<std::string>();
 
         CBlock blk = BlockFromJson(obj);
 

@@ -11,7 +11,8 @@
 
 #include "ui_interface.h"
 #include "base58.h"
-#include "json_spirit.h"
+#include "json/nlohmann/json.hpp"
+using json = nlohmann::json;
 
 #include <QSet>
 #include <QTimer>
@@ -245,44 +246,28 @@ public:
     }
 
 private:
-    // Get the json value
-    const json_spirit::mValue & find_value(json_spirit::mObject & obj, const char * key)
+    // Get a string value from a JSON object, or "" if not found
+    std::string get_value(const json& obj, const char* key)
     {
-        std::string newKey = key;
-
-        json_spirit::mObject::const_iterator i = obj.find(newKey);
-
-        if(i != obj.end() && i->first == newKey)
-            return i->second;
-        else
-            return json_spirit::mValue::null;
-    }
-
-    const std::string get_value(json_spirit::mObject & obj, const char * key)
-    {
-        json_spirit::mValue val = find_value(obj, key);
-
-        if(val.is_null())
-            return "";
-        else
-            return val.get_str();
+        auto it = obj.find(key);
+        if (it != obj.end() && it->is_string())
+            return it->get<std::string>();
+        return "";
     }
 
     // Determine if it is a special message, i.e.: Invoice, Receipt, etc...
     void handleMessageEntry(const MessageTableEntry & message, const bool append)
     {
         addMessageEntry(message, append);
-        json_spirit::mValue mVal;
-        json_spirit::read(message.message.toStdString(), mVal);
+        json mVal = json::parse(message.message.toStdString(), nullptr, false);
 
-        if(mVal.is_null())
+        if (mVal.is_discarded() || mVal.is_null())
         {
             addMessageEntry(message, append);
             return;
         }
 
-        json_spirit::mObject mObj(mVal.get_obj());
-        json_spirit::mValue mvType = find_value(mObj, "type");
+        json mvType = mVal.value("type", json());
 
     }
 

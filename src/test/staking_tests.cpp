@@ -20,11 +20,7 @@
 
 #include <ctime>
 
-using json_spirit::Array;
-using json_spirit::Value;
-using json_spirit::obj_type;
-using json_spirit::str_type;
-using json_spirit::array_type;
+// json type alias provided by bitcoinrpc.h (using json = nlohmann::json)
 
 extern CWallet* pwalletMain;
 extern CWallet* pstakeDB;
@@ -927,20 +923,15 @@ BOOST_AUTO_TEST_SUITE_END()
 // Suite 8: RPC staking commands
 // ============================================================================
 
-extern Value splitthreshold(const Array& params, bool fHelp);
-extern Value setstakesplitthreshold(const Array& params, bool fHelp);
-extern Value getstakesplitthreshold(const Array& params, bool fHelp);
-extern Value addstakeout(const Array& params, bool fHelp);
-extern Value delstakeout(const Array& params, bool fHelp);
-extern Value liststakeout(const Array& params, bool fHelp);
+// RPC functions declared in bitcoinrpc.h with json type
 
 BOOST_AUTO_TEST_SUITE(rpc_staking_tests)
 
 BOOST_AUTO_TEST_CASE(splitthreshold_get_returns_object)
 {
-    Array params;
-    Value result = splitthreshold(params, false);
-    BOOST_CHECK(result.type() == obj_type);
+    json params = json::array();
+    json result = splitthreshold(params, false);
+    BOOST_CHECK(result.is_object());
 }
 
 BOOST_AUTO_TEST_CASE(splitthreshold_set_valid)
@@ -948,9 +939,9 @@ BOOST_AUTO_TEST_CASE(splitthreshold_set_valid)
     ThresholdGuard guard;
     nCombineThreshold = 1000;
 
-    Array params;
-    params.push_back(Value(static_cast<int64_t>(5000)));
-    Value result = splitthreshold(params, false);
+    json params = json::array();
+    params.push_back(static_cast<int64_t>(5000));
+    json result = splitthreshold(params, false);
 
     BOOST_CHECK_EQUAL(nSplitThreshold, 5000);
 }
@@ -958,8 +949,8 @@ BOOST_AUTO_TEST_CASE(splitthreshold_set_valid)
 BOOST_AUTO_TEST_CASE(splitthreshold_rejects_over_million)
 {
     ThresholdGuard guard;
-    Array params;
-    params.push_back(Value(static_cast<int64_t>(2000000)));
+    json params = json::array();
+    params.push_back(static_cast<int64_t>(2000000));
     BOOST_CHECK_THROW(splitthreshold(params, false), std::runtime_error);
 }
 
@@ -968,43 +959,43 @@ BOOST_AUTO_TEST_CASE(splitthreshold_rejects_below_combine)
     ThresholdGuard guard;
     nCombineThreshold = 5000;
 
-    Array params;
-    params.push_back(Value(static_cast<int64_t>(3000)));
+    json params = json::array();
+    params.push_back(static_cast<int64_t>(3000));
     BOOST_CHECK_THROW(splitthreshold(params, false), std::runtime_error);
 }
 
 BOOST_AUTO_TEST_CASE(splitthreshold_help_throws)
 {
-    Array params;
+    json params = json::array();
     BOOST_CHECK_THROW(splitthreshold(params, true), std::runtime_error);
 }
 
 BOOST_AUTO_TEST_CASE(getstakesplitthreshold_returns_object)
 {
-    Array params;
-    Value result = getstakesplitthreshold(params, false);
-    BOOST_CHECK(result.type() == obj_type);
+    json params = json::array();
+    json result = getstakesplitthreshold(params, false);
+    BOOST_CHECK(result.is_object());
 }
 
 BOOST_AUTO_TEST_CASE(getstakesplitthreshold_help_throws)
 {
-    Array params;
+    json params = json::array();
     BOOST_CHECK_THROW(getstakesplitthreshold(params, true), std::runtime_error);
 }
 
 BOOST_AUTO_TEST_CASE(addstakeout_help_throws)
 {
-    Array params;
+    json params = json::array();
     BOOST_CHECK_THROW(addstakeout(params, true), std::runtime_error);
 }
 
 BOOST_AUTO_TEST_CASE(addstakeout_rejects_invalid_address)
 {
     StakeDBGuard guard;
-    Array params;
-    params.push_back(Value(std::string("TestName")));
-    params.push_back(Value(std::string("INVALID_ADDRESS")));
-    params.push_back(Value(std::string("10")));
+    json params = json::array();
+    params.push_back(std::string("TestName"));
+    params.push_back(std::string("INVALID_ADDRESS"));
+    params.push_back(std::string("10"));
     BOOST_CHECK_THROW(addstakeout(params, false), std::runtime_error);
 }
 
@@ -1012,10 +1003,10 @@ BOOST_AUTO_TEST_CASE(addstakeout_rejects_negative_percent)
 {
     StakeDBGuard guard;
     CBitcoinAddress addr = MakeTestAddress(200);
-    Array params;
-    params.push_back(Value(std::string("Neg")));
-    params.push_back(Value(addr.ToString()));
-    params.push_back(Value(std::string("-10")));
+    json params = json::array();
+    params.push_back(std::string("Neg"));
+    params.push_back(addr.ToString());
+    params.push_back(std::string("-10"));
     BOOST_CHECK_THROW(addstakeout(params, false), std::runtime_error);
 }
 
@@ -1023,10 +1014,10 @@ BOOST_AUTO_TEST_CASE(addstakeout_rejects_over_100_percent)
 {
     StakeDBGuard guard;
     CBitcoinAddress addr = MakeTestAddress(201);
-    Array params;
-    params.push_back(Value(std::string("Over")));
-    params.push_back(Value(addr.ToString()));
-    params.push_back(Value(std::string("150")));
+    json params = json::array();
+    params.push_back(std::string("Over"));
+    params.push_back(addr.ToString());
+    params.push_back(std::string("150"));
     BOOST_CHECK_THROW(addstakeout(params, false), std::runtime_error);
 }
 
@@ -1036,10 +1027,10 @@ BOOST_AUTO_TEST_CASE(addstakeout_rejects_long_name)
     CBitcoinAddress addr = MakeTestAddress(202);
     std::string longName(101, 'A');
 
-    Array params;
-    params.push_back(Value(longName));
-    params.push_back(Value(addr.ToString()));
-    params.push_back(Value(std::string("10")));
+    json params = json::array();
+    params.push_back(longName);
+    params.push_back(addr.ToString());
+    params.push_back(std::string("10"));
     BOOST_CHECK_THROW(addstakeout(params, false), std::runtime_error);
 }
 
@@ -1048,13 +1039,13 @@ BOOST_AUTO_TEST_CASE(addstakeout_valid_entry)
     StakeDBGuard guard;
     CBitcoinAddress addr = MakeTestAddress(203);
 
-    Array params;
-    params.push_back(Value(std::string("ValidEntry")));
-    params.push_back(Value(addr.ToString()));
-    params.push_back(Value(std::string("25")));
+    json params = json::array();
+    params.push_back(std::string("ValidEntry"));
+    params.push_back(addr.ToString());
+    params.push_back(std::string("25"));
 
-    Value result = addstakeout(params, false);
-    BOOST_CHECK(result.type() == str_type);
+    json result = addstakeout(params, false);
+    BOOST_CHECK(result.is_string());
 
     BOOST_CHECK(pstakeDB->mapAddressPercent.find(addr.Get()) != pstakeDB->mapAddressPercent.end());
     BOOST_CHECK_EQUAL(pstakeDB->mapAddressPercent[addr.Get()], "25");
@@ -1062,14 +1053,14 @@ BOOST_AUTO_TEST_CASE(addstakeout_valid_entry)
 
 BOOST_AUTO_TEST_CASE(delstakeout_help_throws)
 {
-    Array params;
+    json params = json::array();
     BOOST_CHECK_THROW(delstakeout(params, true), std::runtime_error);
 }
 
 BOOST_AUTO_TEST_CASE(delstakeout_rejects_invalid_address)
 {
-    Array params;
-    params.push_back(Value(std::string("INVALID")));
+    json params = json::array();
+    params.push_back(std::string("INVALID"));
     BOOST_CHECK_THROW(delstakeout(params, false), std::runtime_error);
 }
 
@@ -1077,8 +1068,8 @@ BOOST_AUTO_TEST_CASE(delstakeout_rejects_nonexistent)
 {
     StakeDBGuard guard;
     CBitcoinAddress addr = MakeTestAddress(210);
-    Array params;
-    params.push_back(Value(addr.ToString()));
+    json params = json::array();
+    params.push_back(addr.ToString());
     BOOST_CHECK_THROW(delstakeout(params, false), std::runtime_error);
 }
 
@@ -1088,17 +1079,17 @@ BOOST_AUTO_TEST_CASE(add_then_del_roundtrip)
     CBitcoinAddress addr = MakeTestAddress(220);
 
     // Add
-    Array addParams;
-    addParams.push_back(Value(std::string("Roundtrip")));
-    addParams.push_back(Value(addr.ToString()));
-    addParams.push_back(Value(std::string("15")));
+    json addParams = json::array();
+    addParams.push_back(std::string("Roundtrip"));
+    addParams.push_back(addr.ToString());
+    addParams.push_back(std::string("15"));
     addstakeout(addParams, false);
 
     BOOST_CHECK(pstakeDB->mapAddressBook.find(addr.Get()) != pstakeDB->mapAddressBook.end());
 
     // Delete
-    Array delParams;
-    delParams.push_back(Value(addr.ToString()));
+    json delParams = json::array();
+    delParams.push_back(addr.ToString());
     delstakeout(delParams, false);
 
     BOOST_CHECK(pstakeDB->mapAddressBook.find(addr.Get()) == pstakeDB->mapAddressBook.end());
@@ -1108,12 +1099,11 @@ BOOST_AUTO_TEST_CASE(add_then_del_roundtrip)
 BOOST_AUTO_TEST_CASE(liststakeout_empty)
 {
     StakeDBGuard guard;
-    Array params;
-    Value result = liststakeout(params, false);
-    BOOST_CHECK(result.type() == array_type);
+    json params = json::array();
+    json result = liststakeout(params, false);
+    BOOST_CHECK(result.is_array());
 
-    const Array& arr = result.get_array();
-    BOOST_CHECK(arr.empty());
+    BOOST_CHECK(result.empty());
 }
 
 BOOST_AUTO_TEST_CASE(liststakeout_after_add)
@@ -1121,21 +1111,20 @@ BOOST_AUTO_TEST_CASE(liststakeout_after_add)
     StakeDBGuard guard;
     CBitcoinAddress addr = MakeTestAddress(230);
 
-    Array addParams;
-    addParams.push_back(Value(std::string("Listed")));
-    addParams.push_back(Value(addr.ToString()));
-    addParams.push_back(Value(std::string("10")));
+    json addParams = json::array();
+    addParams.push_back(std::string("Listed"));
+    addParams.push_back(addr.ToString());
+    addParams.push_back(std::string("10"));
     addstakeout(addParams, false);
 
-    Array listParams;
-    Value result = liststakeout(listParams, false);
-    const Array& arr = result.get_array();
-    BOOST_CHECK_EQUAL(arr.size(), 1u);
+    json listParams = json::array();
+    json result = liststakeout(listParams, false);
+    BOOST_CHECK_EQUAL(result.size(), 1u);
 }
 
 BOOST_AUTO_TEST_CASE(liststakeout_help_throws)
 {
-    Array params;
+    json params = json::array();
     BOOST_CHECK_THROW(liststakeout(params, true), std::runtime_error);
 }
 
@@ -1144,17 +1133,17 @@ BOOST_AUTO_TEST_CASE(addstakeout_total_overflow_rejected)
     StakeDBGuard guard;
 
     CBitcoinAddress addr1 = MakeTestAddress(240);
-    Array p1;
-    p1.push_back(Value(std::string("First")));
-    p1.push_back(Value(addr1.ToString()));
-    p1.push_back(Value(std::string("60")));
+    json p1 = json::array();
+    p1.push_back(std::string("First"));
+    p1.push_back(addr1.ToString());
+    p1.push_back(std::string("60"));
     addstakeout(p1, false);
 
     CBitcoinAddress addr2 = MakeTestAddress(241);
-    Array p2;
-    p2.push_back(Value(std::string("Second")));
-    p2.push_back(Value(addr2.ToString()));
-    p2.push_back(Value(std::string("50"))); // 60+50 = 110%
+    json p2 = json::array();
+    p2.push_back(std::string("Second"));
+    p2.push_back(addr2.ToString());
+    p2.push_back(std::string("50")); // 60+50 = 110%
     BOOST_CHECK_THROW(addstakeout(p2, false), std::runtime_error);
 }
 
@@ -1163,13 +1152,13 @@ BOOST_AUTO_TEST_CASE(addstakeout_precision_truncated)
     StakeDBGuard guard;
     CBitcoinAddress addr = MakeTestAddress(250);
 
-    Array params;
-    params.push_back(Value(std::string("Precise")));
-    params.push_back(Value(addr.ToString()));
-    params.push_back(Value(std::string("12.12345678901")));
+    json params = json::array();
+    params.push_back(std::string("Precise"));
+    params.push_back(addr.ToString());
+    params.push_back(std::string("12.12345678901"));
 
-    Value result = addstakeout(params, false);
-    BOOST_CHECK(result.type() == str_type);
+    json result = addstakeout(params, false);
+    BOOST_CHECK(result.is_string());
 
     // Stored percent should be truncated (6 decimal places max)
     std::string stored = pstakeDB->mapAddressPercent[addr.Get()];
