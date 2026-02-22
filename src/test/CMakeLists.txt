@@ -74,6 +74,7 @@ set(PINKCOIN_TEST_SOURCES
     security_tests.cpp
     rpc_response_tests.cpp
     migration_safety_tests.cpp
+    json_tests.cpp
 )
 
 #-----------------------------------------
