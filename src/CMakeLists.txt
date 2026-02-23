@@ -11,6 +11,7 @@ set(PINKCOIN_CORE_SOURCES
     # Root sources
     addrman.cpp
     alert.cpp
+    arith_uint256.cpp
     checkpoints.cpp
     crypter.cpp
     db.cpp
