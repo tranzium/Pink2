@@ -523,62 +523,96 @@ public:
         nOrderPos = -1;
     }
 
-    IMPLEMENT_SERIALIZE
-    (
-        CWalletTx* pthis = const_cast<CWalletTx*>(this);
-        if (fRead)
-            pthis->Init(nullptr);
+    unsigned int GetSerializeSize(int nType, int nVersion) const
+    {
+        unsigned int nSerSize = 0;
+        // Pack transient fields into mapValue copy for size calculation
+        mapValue_t mapValueCopy = mapValue;
+        mapValueCopy["fromaccount"] = strFromAccount;
+        std::string str;
+        char fSpent = false;
+        for (char f : vfSpent)
+        {
+            str += (f ? '1' : '0');
+            if (f)
+                fSpent = true;
+        }
+        mapValueCopy["spent"] = str;
+        WriteOrderPos(const_cast<int64_t&>(nOrderPos), mapValueCopy);
+        if (nTimeSmart)
+            mapValueCopy["timesmart"] = strprintf("%u", nTimeSmart);
+
+        nSerSize += CMerkleTx::GetSerializeSize(nType, nVersion);
+        nSerSize += ::GetSerializeSize(vtxPrev, nType, nVersion);
+        nSerSize += ::GetSerializeSize(mapValueCopy, nType, nVersion);
+        nSerSize += ::GetSerializeSize(vOrderForm, nType, nVersion);
+        nSerSize += ::GetSerializeSize(fTimeReceivedIsTxTime, nType, nVersion);
+        nSerSize += ::GetSerializeSize(nTimeReceived, nType, nVersion);
+        nSerSize += ::GetSerializeSize(fFromMe, nType, nVersion);
+        nSerSize += ::GetSerializeSize(fSpent, nType, nVersion);
+        return nSerSize;
+    }
+    template<typename Stream>
+    void Serialize(Stream& s, int nType, int nVersion) const
+    {
+        // Pack transient fields into mapValue copy for serialization
+        mapValue_t mapValueCopy = mapValue;
+        mapValueCopy["fromaccount"] = strFromAccount;
+        std::string str;
+        char fSpent = false;
+        for (char f : vfSpent)
+        {
+            str += (f ? '1' : '0');
+            if (f)
+                fSpent = true;
+        }
+        mapValueCopy["spent"] = str;
+        WriteOrderPos(const_cast<int64_t&>(nOrderPos), mapValueCopy);
+        if (nTimeSmart)
+            mapValueCopy["timesmart"] = strprintf("%u", nTimeSmart);
+
+        CMerkleTx::Serialize(s, nType, nVersion);
+        ::Serialize(s, vtxPrev, nType, nVersion);
+        ::Serialize(s, mapValueCopy, nType, nVersion);
+        ::Serialize(s, vOrderForm, nType, nVersion);
+        ::Serialize(s, fTimeReceivedIsTxTime, nType, nVersion);
+        ::Serialize(s, nTimeReceived, nType, nVersion);
+        ::Serialize(s, fFromMe, nType, nVersion);
+        ::Serialize(s, fSpent, nType, nVersion);
+    }
+    template<typename Stream>
+    void Unserialize(Stream& s, int nType, int nVersion)
+    {
+        Init(nullptr);
         char fSpent = false;
 
-        if (!fRead)
-        {
-            pthis->mapValue["fromaccount"] = pthis->strFromAccount;
+        CMerkleTx::Unserialize(s, nType, nVersion);
+        ::Unserialize(s, vtxPrev, nType, nVersion);
+        ::Unserialize(s, mapValue, nType, nVersion);
+        ::Unserialize(s, vOrderForm, nType, nVersion);
+        ::Unserialize(s, fTimeReceivedIsTxTime, nType, nVersion);
+        ::Unserialize(s, nTimeReceived, nType, nVersion);
+        ::Unserialize(s, fFromMe, nType, nVersion);
+        ::Unserialize(s, fSpent, nType, nVersion);
 
-            std::string str;
-            for (char f : vfSpent)
-            {
-                str += (f ? '1' : '0');
-                if (f)
-                    fSpent = true;
-            }
-            pthis->mapValue["spent"] = str;
+        strFromAccount = mapValue["fromaccount"];
 
-            WriteOrderPos(pthis->nOrderPos, pthis->mapValue);
+        if (mapValue.count("spent"))
+            for (char c : mapValue["spent"])
+                vfSpent.push_back(c != '0');
+        else
+            vfSpent.assign(vout.size(), fSpent);
 
-            if (nTimeSmart)
-                pthis->mapValue["timesmart"] = strprintf("%u", nTimeSmart);
-        }
+        ReadOrderPos(nOrderPos, mapValue);
 
-        nSerSize += SerReadWrite(s, *(CMerkleTx*)this, nType, nVersion,ser_action);
-        READWRITE(vtxPrev);
-        READWRITE(mapValue);
-        READWRITE(vOrderForm);
-        READWRITE(fTimeReceivedIsTxTime);
-        READWRITE(nTimeReceived);
-        READWRITE(fFromMe);
-        READWRITE(fSpent);
+        nTimeSmart = mapValue.count("timesmart") ? static_cast<unsigned int>(atoi64(mapValue["timesmart"])) : 0;
 
-        if (fRead)
-        {
-            pthis->strFromAccount = pthis->mapValue["fromaccount"];
-
-            if (mapValue.count("spent"))
-                for (char c : pthis->mapValue["spent"])
-                    pthis->vfSpent.push_back(c != '0');
-            else
-                pthis->vfSpent.assign(vout.size(), fSpent);
-
-            ReadOrderPos(pthis->nOrderPos, pthis->mapValue);
-
-            pthis->nTimeSmart = mapValue.count("timesmart") ? static_cast<unsigned int>(atoi64(pthis->mapValue["timesmart"])) : 0;
-        }
-
-        pthis->mapValue.erase("fromaccount");
-        pthis->mapValue.erase("version");
-        pthis->mapValue.erase("spent");
-        pthis->mapValue.erase("n");
-        pthis->mapValue.erase("timesmart");
-    )
+        mapValue.erase("fromaccount");
+        mapValue.erase("version");
+        mapValue.erase("spent");
+        mapValue.erase("n");
+        mapValue.erase("timesmart");
+    }
 
     // marks certain txout's as spent
     // returns true if any update took place
@@ -969,49 +1003,77 @@ public:
         nOrderPos = -1;
     }
 
-    IMPLEMENT_SERIALIZE
-    (
-        CAccountingentry& me = *const_cast<CAccountingentry*>(this);
+    unsigned int GetSerializeSize(int nType, int nVersion) const
+    {
+        unsigned int nSerSize = 0;
         if (!(nType & SER_GETHASH))
-            READWRITE(nVersion);
+            nSerSize += ::GetSerializeSize(nVersion, nType, nVersion);
         // Note: strAccount is serialized as part of the key, not here.
-        READWRITE(nCreditDebit);
-        READWRITE(nTime);
-        READWRITE(strOtherAccount);
-
-        if (!fRead)
+        nSerSize += ::GetSerializeSize(nCreditDebit, nType, nVersion);
+        nSerSize += ::GetSerializeSize(nTime, nType, nVersion);
+        nSerSize += ::GetSerializeSize(strOtherAccount, nType, nVersion);
+        // Build serialized strComment with packed mapValue
+        std::string strCommentCopy = strComment;
+        mapValue_t mapValueCopy = mapValue;
+        WriteOrderPos(const_cast<int64_t&>(nOrderPos), mapValueCopy);
+        if (!(mapValueCopy.empty() && _ssExtra.empty()))
         {
-            WriteOrderPos(nOrderPos, me.mapValue);
-
-            if (!(mapValue.empty() && _ssExtra.empty()))
-            {
-                CDataStream ss(nType, nVersion);
-                ss.insert(ss.begin(), '\0');
-                ss << mapValue;
-                ss.insert(ss.end(), _ssExtra.begin(), _ssExtra.end());
-                me.strComment.append(ss.str());
-            }
+            CDataStream ss(nType, nVersion);
+            ss.insert(ss.begin(), '\0');
+            ss << mapValueCopy;
+            ss.insert(ss.end(), _ssExtra.begin(), _ssExtra.end());
+            strCommentCopy.append(ss.str());
         }
-
-        READWRITE(strComment);
-
+        nSerSize += ::GetSerializeSize(strCommentCopy, nType, nVersion);
+        return nSerSize;
+    }
+    template<typename Stream>
+    void Serialize(Stream& s, int nType, int nVersion) const
+    {
+        if (!(nType & SER_GETHASH))
+            ::Serialize(s, nVersion, nType, nVersion);
+        // Note: strAccount is serialized as part of the key, not here.
+        ::Serialize(s, nCreditDebit, nType, nVersion);
+        ::Serialize(s, nTime, nType, nVersion);
+        ::Serialize(s, strOtherAccount, nType, nVersion);
+        // Pack mapValue + _ssExtra into strComment for serialization
+        std::string strCommentCopy = strComment;
+        mapValue_t mapValueCopy = mapValue;
+        WriteOrderPos(const_cast<int64_t&>(nOrderPos), mapValueCopy);
+        if (!(mapValueCopy.empty() && _ssExtra.empty()))
+        {
+            CDataStream ss(nType, nVersion);
+            ss.insert(ss.begin(), '\0');
+            ss << mapValueCopy;
+            ss.insert(ss.end(), _ssExtra.begin(), _ssExtra.end());
+            strCommentCopy.append(ss.str());
+        }
+        ::Serialize(s, strCommentCopy, nType, nVersion);
+    }
+    template<typename Stream>
+    void Unserialize(Stream& s, int nType, int nVersion)
+    {
+        if (!(nType & SER_GETHASH))
+            ::Unserialize(s, nVersion, nType, nVersion);
+        // Note: strAccount is serialized as part of the key, not here.
+        ::Unserialize(s, nCreditDebit, nType, nVersion);
+        ::Unserialize(s, nTime, nType, nVersion);
+        ::Unserialize(s, strOtherAccount, nType, nVersion);
+        ::Unserialize(s, strComment, nType, nVersion);
+        // Unpack mapValue from strComment
         size_t nSepPos = strComment.find("\0", 0, 1);
-        if (fRead)
-        {
-            me.mapValue.clear();
-            if (std::string::npos != nSepPos)
-            {
-                CDataStream ss(std::vector<char>(strComment.begin() + nSepPos + 1, strComment.end()), nType, nVersion);
-                ss >> me.mapValue;
-                me._ssExtra = std::vector<char>(ss.begin(), ss.end());
-            }
-            ReadOrderPos(me.nOrderPos, me.mapValue);
-        }
+        mapValue.clear();
         if (std::string::npos != nSepPos)
-            me.strComment.erase(nSepPos);
-
-        me.mapValue.erase("n");
-    )
+        {
+            CDataStream ss(std::vector<char>(strComment.begin() + nSepPos + 1, strComment.end()), nType, nVersion);
+            ss >> mapValue;
+            _ssExtra = std::vector<char>(ss.begin(), ss.end());
+        }
+        ReadOrderPos(nOrderPos, mapValue);
+        if (std::string::npos != nSepPos)
+            strComment.erase(nSepPos);
+        mapValue.erase("n");
+    }
 
 private:
     std::vector<char> _ssExtra;

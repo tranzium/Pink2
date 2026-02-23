@@ -45,13 +45,31 @@ private:
 
 public:
 
-    IMPLEMENT_SERIALIZE(
-        CAddress* pthis = (CAddress*)(this);
-        READWRITE(*pthis);
-        READWRITE(source);
-        READWRITE(nLastSuccess);
-        READWRITE(nAttempts);
-    )
+    unsigned int GetSerializeSize(int nType, int nVersion) const
+    {
+        unsigned int nSerSize = 0;
+        nSerSize += CAddress::GetSerializeSize(nType, nVersion);
+        nSerSize += ::GetSerializeSize(source, nType, nVersion);
+        nSerSize += ::GetSerializeSize(nLastSuccess, nType, nVersion);
+        nSerSize += ::GetSerializeSize(nAttempts, nType, nVersion);
+        return nSerSize;
+    }
+    template<typename Stream>
+    void Serialize(Stream& s, int nType, int nVersion) const
+    {
+        CAddress::Serialize(s, nType, nVersion);
+        ::Serialize(s, source, nType, nVersion);
+        ::Serialize(s, nLastSuccess, nType, nVersion);
+        ::Serialize(s, nAttempts, nType, nVersion);
+    }
+    template<typename Stream>
+    void Unserialize(Stream& s, int nType, int nVersion)
+    {
+        CAddress::Unserialize(s, nType, nVersion);
+        ::Unserialize(s, source, nType, nVersion);
+        ::Unserialize(s, nLastSuccess, nType, nVersion);
+        ::Unserialize(s, nAttempts, nType, nVersion);
+    }
 
     void Init()
     {

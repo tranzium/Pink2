@@ -174,7 +174,21 @@ public:
         nTxPos = nTxPosIn;
     }
 
-    IMPLEMENT_SERIALIZE( READWRITE(FLATDATA(*this)); )
+    unsigned int GetSerializeSize(int nType, int nVersion) const
+    {
+        return sizeof(*this);
+    }
+    template<typename Stream>
+    void Serialize(Stream& s, int nType, int nVersion) const
+    {
+        s.write(reinterpret_cast<const char*>(this), sizeof(*this));
+    }
+    template<typename Stream>
+    void Unserialize(Stream& s, int nType, int nVersion)
+    {
+        s.read(reinterpret_cast<char*>(this), sizeof(*this));
+    }
+
     void SetNull() { nFile = static_cast<unsigned int>(-1); nBlockPos = 0; nTxPos = 0; }
     bool IsNull() const { return (nFile == static_cast<unsigned int>(-1)); }
 
@@ -231,7 +245,21 @@ public:
 
     COutPoint() { SetNull(); }
     COutPoint(uint256 hashIn, unsigned int nIn) { hash = hashIn; n = nIn; }
-    IMPLEMENT_SERIALIZE( READWRITE(FLATDATA(*this)); )
+    unsigned int GetSerializeSize(int nType, int nVersion) const
+    {
+        return sizeof(*this);
+    }
+    template<typename Stream>
+    void Serialize(Stream& s, int nType, int nVersion) const
+    {
+        s.write(reinterpret_cast<const char*>(this), sizeof(*this));
+    }
+    template<typename Stream>
+    void Unserialize(Stream& s, int nType, int nVersion)
+    {
+        s.read(reinterpret_cast<char*>(this), sizeof(*this));
+    }
+
     void SetNull() { hash = 0; n = static_cast<unsigned int>(-1); }
     bool IsNull() const { return (hash == 0 && n == static_cast<unsigned int>(-1)); }
 
@@ -294,12 +322,28 @@ public:
         nSequence = nSequenceIn;
     }
 
-    IMPLEMENT_SERIALIZE
-    (
-        READWRITE(prevout);
-        READWRITE(scriptSig);
-        READWRITE(nSequence);
-    )
+    unsigned int GetSerializeSize(int nType, int nVersion) const
+    {
+        unsigned int nSerSize = 0;
+        nSerSize += ::GetSerializeSize(prevout, nType, nVersion);
+        nSerSize += ::GetSerializeSize(scriptSig, nType, nVersion);
+        nSerSize += ::GetSerializeSize(nSequence, nType, nVersion);
+        return nSerSize;
+    }
+    template<typename Stream>
+    void Serialize(Stream& s, int nType, int nVersion) const
+    {
+        ::Serialize(s, prevout, nType, nVersion);
+        ::Serialize(s, scriptSig, nType, nVersion);
+        ::Serialize(s, nSequence, nType, nVersion);
+    }
+    template<typename Stream>
+    void Unserialize(Stream& s, int nType, int nVersion)
+    {
+        ::Unserialize(s, prevout, nType, nVersion);
+        ::Unserialize(s, scriptSig, nType, nVersion);
+        ::Unserialize(s, nSequence, nType, nVersion);
+    }
 
     bool IsFinal() const
     {
@@ -367,11 +411,25 @@ public:
         scriptPubKey = scriptPubKeyIn;
     }
 
-    IMPLEMENT_SERIALIZE
-    (
-        READWRITE(nValue);
-        READWRITE(scriptPubKey);
-    )
+    unsigned int GetSerializeSize(int nType, int nVersion) const
+    {
+        unsigned int nSerSize = 0;
+        nSerSize += ::GetSerializeSize(nValue, nType, nVersion);
+        nSerSize += ::GetSerializeSize(scriptPubKey, nType, nVersion);
+        return nSerSize;
+    }
+    template<typename Stream>
+    void Serialize(Stream& s, int nType, int nVersion) const
+    {
+        ::Serialize(s, nValue, nType, nVersion);
+        ::Serialize(s, scriptPubKey, nType, nVersion);
+    }
+    template<typename Stream>
+    void Unserialize(Stream& s, int nType, int nVersion)
+    {
+        ::Unserialize(s, nValue, nType, nVersion);
+        ::Unserialize(s, scriptPubKey, nType, nVersion);
+    }
 
     void SetNull()
     {
@@ -465,15 +523,35 @@ public:
         SetNull();
     }
 
-    IMPLEMENT_SERIALIZE
-    (
-        READWRITE(this->nVersion);
+    unsigned int GetSerializeSize(int nType, int nVersion) const
+    {
+        unsigned int nSerSize = 0;
+        nSerSize += ::GetSerializeSize(this->nVersion, nType, nVersion);
+        nSerSize += ::GetSerializeSize(nTime, nType, nVersion);
+        nSerSize += ::GetSerializeSize(vin, nType, nVersion);
+        nSerSize += ::GetSerializeSize(vout, nType, nVersion);
+        nSerSize += ::GetSerializeSize(nLockTime, nType, nVersion);
+        return nSerSize;
+    }
+    template<typename Stream>
+    void Serialize(Stream& s, int nType, int nVersion) const
+    {
+        ::Serialize(s, this->nVersion, nType, nVersion);
+        ::Serialize(s, nTime, nType, nVersion);
+        ::Serialize(s, vin, nType, nVersion);
+        ::Serialize(s, vout, nType, nVersion);
+        ::Serialize(s, nLockTime, nType, nVersion);
+    }
+    template<typename Stream>
+    void Unserialize(Stream& s, int nType, int nVersion)
+    {
+        ::Unserialize(s, this->nVersion, nType, nVersion);
         nVersion = this->nVersion;
-        READWRITE(nTime);
-        READWRITE(vin);
-        READWRITE(vout);
-        READWRITE(nLockTime);
-    )
+        ::Unserialize(s, nTime, nType, nVersion);
+        ::Unserialize(s, vin, nType, nVersion);
+        ::Unserialize(s, vout, nType, nVersion);
+        ::Unserialize(s, nLockTime, nType, nVersion);
+    }
 
     void SetNull()
     {
@@ -755,14 +833,33 @@ public:
     }
 
 
-    IMPLEMENT_SERIALIZE
-    (
-        nSerSize += SerReadWrite(s, *(CTransaction*)this, nType, nVersion, ser_action);
+    unsigned int GetSerializeSize(int nType, int nVersion) const
+    {
+        unsigned int nSerSize = 0;
+        nSerSize += CTransaction::GetSerializeSize(nType, nVersion);
+        nSerSize += ::GetSerializeSize(hashBlock, nType, nVersion);
+        nSerSize += ::GetSerializeSize(vMerkleBranch, nType, nVersion);
+        nSerSize += ::GetSerializeSize(nIndex, nType, nVersion);
+        return nSerSize;
+    }
+    template<typename Stream>
+    void Serialize(Stream& s, int nType, int nVersion) const
+    {
+        CTransaction::Serialize(s, nType, nVersion);
         nVersion = this->nVersion;
-        READWRITE(hashBlock);
-        READWRITE(vMerkleBranch);
-        READWRITE(nIndex);
-    )
+        ::Serialize(s, hashBlock, nType, nVersion);
+        ::Serialize(s, vMerkleBranch, nType, nVersion);
+        ::Serialize(s, nIndex, nType, nVersion);
+    }
+    template<typename Stream>
+    void Unserialize(Stream& s, int nType, int nVersion)
+    {
+        CTransaction::Unserialize(s, nType, nVersion);
+        nVersion = this->nVersion;
+        ::Unserialize(s, hashBlock, nType, nVersion);
+        ::Unserialize(s, vMerkleBranch, nType, nVersion);
+        ::Unserialize(s, nIndex, nType, nVersion);
+    }
 
 
     int SetMerkleBranch(const CBlock* pblock=nullptr);
@@ -803,13 +900,31 @@ public:
         vSpent.resize(nOutputs);
     }
 
-    IMPLEMENT_SERIALIZE
-    (
+    unsigned int GetSerializeSize(int nType, int nVersion) const
+    {
+        unsigned int nSerSize = 0;
         if (!(nType & SER_GETHASH))
-            READWRITE(nVersion);
-        READWRITE(pos);
-        READWRITE(vSpent);
-    )
+            nSerSize += ::GetSerializeSize(nVersion, nType, nVersion);
+        nSerSize += ::GetSerializeSize(pos, nType, nVersion);
+        nSerSize += ::GetSerializeSize(vSpent, nType, nVersion);
+        return nSerSize;
+    }
+    template<typename Stream>
+    void Serialize(Stream& s, int nType, int nVersion) const
+    {
+        if (!(nType & SER_GETHASH))
+            ::Serialize(s, nVersion, nType, nVersion);
+        ::Serialize(s, pos, nType, nVersion);
+        ::Serialize(s, vSpent, nType, nVersion);
+    }
+    template<typename Stream>
+    void Unserialize(Stream& s, int nType, int nVersion)
+    {
+        if (!(nType & SER_GETHASH))
+            ::Unserialize(s, nVersion, nType, nVersion);
+        ::Unserialize(s, pos, nType, nVersion);
+        ::Unserialize(s, vSpent, nType, nVersion);
+    }
 
     void SetNull()
     {
@@ -882,28 +997,61 @@ public:
         SetNull();
     }
 
-    IMPLEMENT_SERIALIZE
-    (
-        READWRITE(this->nVersion);
-        nVersion = this->nVersion;
-        READWRITE(hashPrevBlock);
-        READWRITE(hashMerkleRoot);
-        READWRITE(nTime);
-        READWRITE(nBits);
-        READWRITE(nNonce);
-
+    unsigned int GetSerializeSize(int nType, int nVersion) const
+    {
+        unsigned int nSerSize = 0;
+        nSerSize += ::GetSerializeSize(this->nVersion, nType, nVersion);
+        nSerSize += ::GetSerializeSize(hashPrevBlock, nType, nVersion);
+        nSerSize += ::GetSerializeSize(hashMerkleRoot, nType, nVersion);
+        nSerSize += ::GetSerializeSize(nTime, nType, nVersion);
+        nSerSize += ::GetSerializeSize(nBits, nType, nVersion);
+        nSerSize += ::GetSerializeSize(nNonce, nType, nVersion);
         // ConnectBlock depends on vtx following header to generate CDiskTxPos
         if (!(nType & (SER_GETHASH|SER_BLOCKHEADERONLY)))
         {
-            READWRITE(vtx);
-            READWRITE(vchBlockSig);
+            nSerSize += ::GetSerializeSize(vtx, nType, nVersion);
+            nSerSize += ::GetSerializeSize(vchBlockSig, nType, nVersion);
         }
-        else if (fRead)
+        return nSerSize;
+    }
+    template<typename Stream>
+    void Serialize(Stream& s, int nType, int nVersion) const
+    {
+        ::Serialize(s, this->nVersion, nType, nVersion);
+        ::Serialize(s, hashPrevBlock, nType, nVersion);
+        ::Serialize(s, hashMerkleRoot, nType, nVersion);
+        ::Serialize(s, nTime, nType, nVersion);
+        ::Serialize(s, nBits, nType, nVersion);
+        ::Serialize(s, nNonce, nType, nVersion);
+        // ConnectBlock depends on vtx following header to generate CDiskTxPos
+        if (!(nType & (SER_GETHASH|SER_BLOCKHEADERONLY)))
         {
-            const_cast<CBlock*>(this)->vtx.clear();
-            const_cast<CBlock*>(this)->vchBlockSig.clear();
+            ::Serialize(s, vtx, nType, nVersion);
+            ::Serialize(s, vchBlockSig, nType, nVersion);
         }
-    )
+    }
+    template<typename Stream>
+    void Unserialize(Stream& s, int nType, int nVersion)
+    {
+        ::Unserialize(s, this->nVersion, nType, nVersion);
+        nVersion = this->nVersion;
+        ::Unserialize(s, hashPrevBlock, nType, nVersion);
+        ::Unserialize(s, hashMerkleRoot, nType, nVersion);
+        ::Unserialize(s, nTime, nType, nVersion);
+        ::Unserialize(s, nBits, nType, nVersion);
+        ::Unserialize(s, nNonce, nType, nVersion);
+        // ConnectBlock depends on vtx following header to generate CDiskTxPos
+        if (!(nType & (SER_GETHASH|SER_BLOCKHEADERONLY)))
+        {
+            ::Unserialize(s, vtx, nType, nVersion);
+            ::Unserialize(s, vchBlockSig, nType, nVersion);
+        }
+        else
+        {
+            vtx.clear();
+            vchBlockSig.clear();
+        }
+    }
 
     void SetNull()
     {
@@ -1393,40 +1541,96 @@ public:
         hashNext = (pnext ? pnext->GetBlockHash() : 0);
     }
 
-    IMPLEMENT_SERIALIZE
-    (
+    unsigned int GetSerializeSize(int nType, int nVersion) const
+    {
+        unsigned int nSerSize = 0;
         if (!(nType & SER_GETHASH))
-            READWRITE(nVersion);
-
-        READWRITE(hashNext);
-        READWRITE(nFile);
-        READWRITE(nBlockPos);
-        READWRITE(nHeight);
-        READWRITE(nMint);
-        READWRITE(nMoneySupply);
-        READWRITE(nFlags);
-        READWRITE(nStakeModifier);
+            nSerSize += ::GetSerializeSize(nVersion, nType, nVersion);
+        nSerSize += ::GetSerializeSize(hashNext, nType, nVersion);
+        nSerSize += ::GetSerializeSize(nFile, nType, nVersion);
+        nSerSize += ::GetSerializeSize(nBlockPos, nType, nVersion);
+        nSerSize += ::GetSerializeSize(nHeight, nType, nVersion);
+        nSerSize += ::GetSerializeSize(nMint, nType, nVersion);
+        nSerSize += ::GetSerializeSize(nMoneySupply, nType, nVersion);
+        nSerSize += ::GetSerializeSize(nFlags, nType, nVersion);
+        nSerSize += ::GetSerializeSize(nStakeModifier, nType, nVersion);
         if (IsProofOfStake())
         {
-            READWRITE(prevoutStake);
-            READWRITE(nStakeTime);
+            nSerSize += ::GetSerializeSize(prevoutStake, nType, nVersion);
+            nSerSize += ::GetSerializeSize(nStakeTime, nType, nVersion);
         }
-        else if (fRead)
-        {
-            const_cast<CDiskBlockIndex*>(this)->prevoutStake.SetNull();
-            const_cast<CDiskBlockIndex*>(this)->nStakeTime = 0;
-        }
-        READWRITE(hashProof);
-
+        nSerSize += ::GetSerializeSize(hashProof, nType, nVersion);
         // block header
-        READWRITE(this->nVersion);
-        READWRITE(hashPrev);
-        READWRITE(hashMerkleRoot);
-        READWRITE(nTime);
-        READWRITE(nBits);
-        READWRITE(nNonce);
-        READWRITE(blockHash);
-    )
+        nSerSize += ::GetSerializeSize(this->nVersion, nType, nVersion);
+        nSerSize += ::GetSerializeSize(hashPrev, nType, nVersion);
+        nSerSize += ::GetSerializeSize(hashMerkleRoot, nType, nVersion);
+        nSerSize += ::GetSerializeSize(nTime, nType, nVersion);
+        nSerSize += ::GetSerializeSize(nBits, nType, nVersion);
+        nSerSize += ::GetSerializeSize(nNonce, nType, nVersion);
+        nSerSize += ::GetSerializeSize(blockHash, nType, nVersion);
+        return nSerSize;
+    }
+    template<typename Stream>
+    void Serialize(Stream& s, int nType, int nVersion) const
+    {
+        if (!(nType & SER_GETHASH))
+            ::Serialize(s, nVersion, nType, nVersion);
+        ::Serialize(s, hashNext, nType, nVersion);
+        ::Serialize(s, nFile, nType, nVersion);
+        ::Serialize(s, nBlockPos, nType, nVersion);
+        ::Serialize(s, nHeight, nType, nVersion);
+        ::Serialize(s, nMint, nType, nVersion);
+        ::Serialize(s, nMoneySupply, nType, nVersion);
+        ::Serialize(s, nFlags, nType, nVersion);
+        ::Serialize(s, nStakeModifier, nType, nVersion);
+        if (IsProofOfStake())
+        {
+            ::Serialize(s, prevoutStake, nType, nVersion);
+            ::Serialize(s, nStakeTime, nType, nVersion);
+        }
+        ::Serialize(s, hashProof, nType, nVersion);
+        // block header
+        ::Serialize(s, this->nVersion, nType, nVersion);
+        ::Serialize(s, hashPrev, nType, nVersion);
+        ::Serialize(s, hashMerkleRoot, nType, nVersion);
+        ::Serialize(s, nTime, nType, nVersion);
+        ::Serialize(s, nBits, nType, nVersion);
+        ::Serialize(s, nNonce, nType, nVersion);
+        ::Serialize(s, blockHash, nType, nVersion);
+    }
+    template<typename Stream>
+    void Unserialize(Stream& s, int nType, int nVersion)
+    {
+        if (!(nType & SER_GETHASH))
+            ::Unserialize(s, nVersion, nType, nVersion);
+        ::Unserialize(s, hashNext, nType, nVersion);
+        ::Unserialize(s, nFile, nType, nVersion);
+        ::Unserialize(s, nBlockPos, nType, nVersion);
+        ::Unserialize(s, nHeight, nType, nVersion);
+        ::Unserialize(s, nMint, nType, nVersion);
+        ::Unserialize(s, nMoneySupply, nType, nVersion);
+        ::Unserialize(s, nFlags, nType, nVersion);
+        ::Unserialize(s, nStakeModifier, nType, nVersion);
+        if (IsProofOfStake())
+        {
+            ::Unserialize(s, prevoutStake, nType, nVersion);
+            ::Unserialize(s, nStakeTime, nType, nVersion);
+        }
+        else
+        {
+            prevoutStake.SetNull();
+            nStakeTime = 0;
+        }
+        ::Unserialize(s, hashProof, nType, nVersion);
+        // block header
+        ::Unserialize(s, this->nVersion, nType, nVersion);
+        ::Unserialize(s, hashPrev, nType, nVersion);
+        ::Unserialize(s, hashMerkleRoot, nType, nVersion);
+        ::Unserialize(s, nTime, nType, nVersion);
+        ::Unserialize(s, nBits, nType, nVersion);
+        ::Unserialize(s, nNonce, nType, nVersion);
+        ::Unserialize(s, blockHash, nType, nVersion);
+    }
 
     uint256 GetBlockHash() const
     {
@@ -1501,12 +1705,28 @@ public:
         vHave = vHaveIn;
     }
 
-    IMPLEMENT_SERIALIZE
-    (
+    unsigned int GetSerializeSize(int nType, int nVersion) const
+    {
+        unsigned int nSerSize = 0;
         if (!(nType & SER_GETHASH))
-            READWRITE(nVersion);
-        READWRITE(vHave);
-    )
+            nSerSize += ::GetSerializeSize(nVersion, nType, nVersion);
+        nSerSize += ::GetSerializeSize(vHave, nType, nVersion);
+        return nSerSize;
+    }
+    template<typename Stream>
+    void Serialize(Stream& s, int nType, int nVersion) const
+    {
+        if (!(nType & SER_GETHASH))
+            ::Serialize(s, nVersion, nType, nVersion);
+        ::Serialize(s, vHave, nType, nVersion);
+    }
+    template<typename Stream>
+    void Unserialize(Stream& s, int nType, int nVersion)
+    {
+        if (!(nType & SER_GETHASH))
+            ::Unserialize(s, nVersion, nType, nVersion);
+        ::Unserialize(s, vHave, nType, nVersion);
+    }
 
     void SetNull()
     {
