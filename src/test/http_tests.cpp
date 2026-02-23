@@ -15,10 +15,9 @@
 #include "bitcoinrpc.h"
 #include "util.h"
 
-#include <boost/asio.hpp>
+#include <asio.hpp>
 
 using namespace std;
-namespace asio = boost::asio;
 
 // Extern declarations for functions in bitcoinrpc.cpp not exposed in header
 extern bool ReadHTTPRequestLine(std::basic_istream<char>& stream, int &proto,
