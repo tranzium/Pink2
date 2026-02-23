@@ -41,12 +41,26 @@ public:
         nCreateTime = nCreateTime_;
     }
 
-    IMPLEMENT_SERIALIZE
-    (
-        READWRITE(this->nVersion);
+    unsigned int GetSerializeSize(int nType, int nVersion) const
+    {
+        unsigned int nSerSize = 0;
+        nSerSize += ::GetSerializeSize(this->nVersion, nType, nVersion);
+        nSerSize += ::GetSerializeSize(nCreateTime, nType, nVersion);
+        return nSerSize;
+    }
+    template<typename Stream>
+    void Serialize(Stream& s, int nType, int nVersion) const
+    {
+        ::Serialize(s, this->nVersion, nType, nVersion);
+        ::Serialize(s, nCreateTime, nType, nVersion);
+    }
+    template<typename Stream>
+    void Unserialize(Stream& s, int nType, int nVersion)
+    {
+        ::Unserialize(s, this->nVersion, nType, nVersion);
         nVersion = this->nVersion;
-        READWRITE(nCreateTime);
-    )
+        ::Unserialize(s, nCreateTime, nType, nVersion);
+    }
 
     void SetNull()
     {
@@ -70,11 +84,25 @@ public:
     CPubKey pkEphem;
     CPubKey pkScan;
 
-    IMPLEMENT_SERIALIZE
-    (
-        READWRITE(pkEphem);
-        READWRITE(pkScan);
-    )
+    unsigned int GetSerializeSize(int nType, int nVersion) const
+    {
+        unsigned int nSerSize = 0;
+        nSerSize += ::GetSerializeSize(pkEphem, nType, nVersion);
+        nSerSize += ::GetSerializeSize(pkScan, nType, nVersion);
+        return nSerSize;
+    }
+    template<typename Stream>
+    void Serialize(Stream& s, int nType, int nVersion) const
+    {
+        ::Serialize(s, pkEphem, nType, nVersion);
+        ::Serialize(s, pkScan, nType, nVersion);
+    }
+    template<typename Stream>
+    void Unserialize(Stream& s, int nType, int nVersion)
+    {
+        ::Unserialize(s, pkEphem, nType, nVersion);
+        ::Unserialize(s, pkScan, nType, nVersion);
+    }
 
 };
 

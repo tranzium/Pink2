@@ -40,14 +40,34 @@ public:
     // such as the various parameters to scrypt
     std::vector<unsigned char> vchOtherDerivationParameters;
 
-    IMPLEMENT_SERIALIZE
-    (
-        READWRITE(vchCryptedKey);
-        READWRITE(vchSalt);
-        READWRITE(nDerivationMethod);
-        READWRITE(nDeriveIterations);
-        READWRITE(vchOtherDerivationParameters);
-    )
+    unsigned int GetSerializeSize(int nType, int nVersion) const
+    {
+        unsigned int nSerSize = 0;
+        nSerSize += ::GetSerializeSize(vchCryptedKey, nType, nVersion);
+        nSerSize += ::GetSerializeSize(vchSalt, nType, nVersion);
+        nSerSize += ::GetSerializeSize(nDerivationMethod, nType, nVersion);
+        nSerSize += ::GetSerializeSize(nDeriveIterations, nType, nVersion);
+        nSerSize += ::GetSerializeSize(vchOtherDerivationParameters, nType, nVersion);
+        return nSerSize;
+    }
+    template<typename Stream>
+    void Serialize(Stream& s, int nType, int nVersion) const
+    {
+        ::Serialize(s, vchCryptedKey, nType, nVersion);
+        ::Serialize(s, vchSalt, nType, nVersion);
+        ::Serialize(s, nDerivationMethod, nType, nVersion);
+        ::Serialize(s, nDeriveIterations, nType, nVersion);
+        ::Serialize(s, vchOtherDerivationParameters, nType, nVersion);
+    }
+    template<typename Stream>
+    void Unserialize(Stream& s, int nType, int nVersion)
+    {
+        ::Unserialize(s, vchCryptedKey, nType, nVersion);
+        ::Unserialize(s, vchSalt, nType, nVersion);
+        ::Unserialize(s, nDerivationMethod, nType, nVersion);
+        ::Unserialize(s, nDeriveIterations, nType, nVersion);
+        ::Unserialize(s, vchOtherDerivationParameters, nType, nVersion);
+    }
     CMasterKey()
     {
         // 25000 rounds is just under 0.1 seconds on a 1.86 GHz Pentium M

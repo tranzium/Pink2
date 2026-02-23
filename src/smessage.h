@@ -197,12 +197,28 @@ public:
     bool            fReceiveEnabled;
     bool            fReceiveAnon;
     
-    IMPLEMENT_SERIALIZE
-    (
-        READWRITE(this->sAddress);
-        READWRITE(this->fReceiveEnabled);
-        READWRITE(this->fReceiveAnon);
-    );
+    unsigned int GetSerializeSize(int nType, int nVersion) const
+    {
+        unsigned int nSerSize = 0;
+        nSerSize += ::GetSerializeSize(sAddress, nType, nVersion);
+        nSerSize += ::GetSerializeSize(fReceiveEnabled, nType, nVersion);
+        nSerSize += ::GetSerializeSize(fReceiveAnon, nType, nVersion);
+        return nSerSize;
+    }
+    template<typename Stream>
+    void Serialize(Stream& s, int nType, int nVersion) const
+    {
+        ::Serialize(s, sAddress, nType, nVersion);
+        ::Serialize(s, fReceiveEnabled, nType, nVersion);
+        ::Serialize(s, fReceiveAnon, nType, nVersion);
+    }
+    template<typename Stream>
+    void Unserialize(Stream& s, int nType, int nVersion)
+    {
+        ::Unserialize(s, sAddress, nType, nVersion);
+        ::Unserialize(s, fReceiveEnabled, nType, nVersion);
+        ::Unserialize(s, fReceiveAnon, nType, nVersion);
+    }
 };
 
 class SecMsgOptions
@@ -266,15 +282,37 @@ public:
     std::string                     sAddrOutbox;    // owned address this copy was encrypted with
     std::vector<unsigned char>      vchMessage;     // message header + encryped payload
     
-    IMPLEMENT_SERIALIZE
-    (
-        READWRITE(this->timeReceived);
-        READWRITE(this->status);
-        READWRITE(this->folderId);
-        READWRITE(this->sAddrTo);
-        READWRITE(this->sAddrOutbox);
-        READWRITE(this->vchMessage);
-    );
+    unsigned int GetSerializeSize(int nType, int nVersion) const
+    {
+        unsigned int nSerSize = 0;
+        nSerSize += ::GetSerializeSize(timeReceived, nType, nVersion);
+        nSerSize += ::GetSerializeSize(status, nType, nVersion);
+        nSerSize += ::GetSerializeSize(folderId, nType, nVersion);
+        nSerSize += ::GetSerializeSize(sAddrTo, nType, nVersion);
+        nSerSize += ::GetSerializeSize(sAddrOutbox, nType, nVersion);
+        nSerSize += ::GetSerializeSize(vchMessage, nType, nVersion);
+        return nSerSize;
+    }
+    template<typename Stream>
+    void Serialize(Stream& s, int nType, int nVersion) const
+    {
+        ::Serialize(s, timeReceived, nType, nVersion);
+        ::Serialize(s, status, nType, nVersion);
+        ::Serialize(s, folderId, nType, nVersion);
+        ::Serialize(s, sAddrTo, nType, nVersion);
+        ::Serialize(s, sAddrOutbox, nType, nVersion);
+        ::Serialize(s, vchMessage, nType, nVersion);
+    }
+    template<typename Stream>
+    void Unserialize(Stream& s, int nType, int nVersion)
+    {
+        ::Unserialize(s, timeReceived, nType, nVersion);
+        ::Unserialize(s, status, nType, nVersion);
+        ::Unserialize(s, folderId, nType, nVersion);
+        ::Unserialize(s, sAddrTo, nType, nVersion);
+        ::Unserialize(s, sAddrOutbox, nType, nVersion);
+        ::Unserialize(s, vchMessage, nType, nVersion);
+    }
 };
 
 class SecMsgDB

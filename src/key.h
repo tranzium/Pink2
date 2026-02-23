@@ -48,9 +48,20 @@ public:
     friend bool operator!=(const CPubKey &a, const CPubKey &b) { return a.vchPubKey != b.vchPubKey; }
     friend bool operator<(const CPubKey &a, const CPubKey &b) { return a.vchPubKey < b.vchPubKey; }
 
-    IMPLEMENT_SERIALIZE(
-        READWRITE(vchPubKey);
-    )
+    unsigned int GetSerializeSize(int nType, int nVersion) const
+    {
+        return ::GetSerializeSize(vchPubKey, nType, nVersion);
+    }
+    template<typename Stream>
+    void Serialize(Stream& s, int nType, int nVersion) const
+    {
+        ::Serialize(s, vchPubKey, nType, nVersion);
+    }
+    template<typename Stream>
+    void Unserialize(Stream& s, int nType, int nVersion)
+    {
+        ::Unserialize(s, vchPubKey, nType, nVersion);
+    }
 
     CKeyID GetID() const {
         return CKeyID(Hash160(vchPubKey));

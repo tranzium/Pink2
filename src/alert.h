@@ -39,24 +39,59 @@ public:
     std::string strStatusBar;
     std::string strReserved;
 
-    IMPLEMENT_SERIALIZE
-    (
-        READWRITE(this->nVersion);
+    unsigned int GetSerializeSize(int nType, int nVersion) const
+    {
+        unsigned int nSerSize = 0;
+        nSerSize += ::GetSerializeSize(this->nVersion, nType, nVersion);
+        nSerSize += ::GetSerializeSize(nRelayUntil, nType, nVersion);
+        nSerSize += ::GetSerializeSize(nExpiration, nType, nVersion);
+        nSerSize += ::GetSerializeSize(nID, nType, nVersion);
+        nSerSize += ::GetSerializeSize(nCancel, nType, nVersion);
+        nSerSize += ::GetSerializeSize(setCancel, nType, nVersion);
+        nSerSize += ::GetSerializeSize(nMinVer, nType, nVersion);
+        nSerSize += ::GetSerializeSize(nMaxVer, nType, nVersion);
+        nSerSize += ::GetSerializeSize(setSubVer, nType, nVersion);
+        nSerSize += ::GetSerializeSize(nPriority, nType, nVersion);
+        nSerSize += ::GetSerializeSize(strComment, nType, nVersion);
+        nSerSize += ::GetSerializeSize(strStatusBar, nType, nVersion);
+        nSerSize += ::GetSerializeSize(strReserved, nType, nVersion);
+        return nSerSize;
+    }
+    template<typename Stream>
+    void Serialize(Stream& s, int nType, int nVersion) const
+    {
+        ::Serialize(s, this->nVersion, nType, nVersion);
+        ::Serialize(s, nRelayUntil, nType, nVersion);
+        ::Serialize(s, nExpiration, nType, nVersion);
+        ::Serialize(s, nID, nType, nVersion);
+        ::Serialize(s, nCancel, nType, nVersion);
+        ::Serialize(s, setCancel, nType, nVersion);
+        ::Serialize(s, nMinVer, nType, nVersion);
+        ::Serialize(s, nMaxVer, nType, nVersion);
+        ::Serialize(s, setSubVer, nType, nVersion);
+        ::Serialize(s, nPriority, nType, nVersion);
+        ::Serialize(s, strComment, nType, nVersion);
+        ::Serialize(s, strStatusBar, nType, nVersion);
+        ::Serialize(s, strReserved, nType, nVersion);
+    }
+    template<typename Stream>
+    void Unserialize(Stream& s, int nType, int nVersion)
+    {
+        ::Unserialize(s, this->nVersion, nType, nVersion);
         nVersion = this->nVersion;
-        READWRITE(nRelayUntil);
-        READWRITE(nExpiration);
-        READWRITE(nID);
-        READWRITE(nCancel);
-        READWRITE(setCancel);
-        READWRITE(nMinVer);
-        READWRITE(nMaxVer);
-        READWRITE(setSubVer);
-        READWRITE(nPriority);
-
-        READWRITE(strComment);
-        READWRITE(strStatusBar);
-        READWRITE(strReserved);
-    )
+        ::Unserialize(s, nRelayUntil, nType, nVersion);
+        ::Unserialize(s, nExpiration, nType, nVersion);
+        ::Unserialize(s, nID, nType, nVersion);
+        ::Unserialize(s, nCancel, nType, nVersion);
+        ::Unserialize(s, setCancel, nType, nVersion);
+        ::Unserialize(s, nMinVer, nType, nVersion);
+        ::Unserialize(s, nMaxVer, nType, nVersion);
+        ::Unserialize(s, setSubVer, nType, nVersion);
+        ::Unserialize(s, nPriority, nType, nVersion);
+        ::Unserialize(s, strComment, nType, nVersion);
+        ::Unserialize(s, strStatusBar, nType, nVersion);
+        ::Unserialize(s, strReserved, nType, nVersion);
+    }
 
     void SetNull();
 
@@ -76,11 +111,25 @@ public:
         SetNull();
     }
 
-    IMPLEMENT_SERIALIZE
-    (
-        READWRITE(vchMsg);
-        READWRITE(vchSig);
-    )
+    unsigned int GetSerializeSize(int nType, int nVersion) const
+    {
+        unsigned int nSerSize = 0;
+        nSerSize += ::GetSerializeSize(vchMsg, nType, nVersion);
+        nSerSize += ::GetSerializeSize(vchSig, nType, nVersion);
+        return nSerSize;
+    }
+    template<typename Stream>
+    void Serialize(Stream& s, int nType, int nVersion) const
+    {
+        ::Serialize(s, vchMsg, nType, nVersion);
+        ::Serialize(s, vchSig, nType, nVersion);
+    }
+    template<typename Stream>
+    void Unserialize(Stream& s, int nType, int nVersion)
+    {
+        ::Unserialize(s, vchMsg, nType, nVersion);
+        ::Unserialize(s, vchSig, nType, nVersion);
+    }
 
     void SetNull();
     bool IsNull() const;

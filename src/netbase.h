@@ -78,10 +78,20 @@ class CNetAddr
         friend bool operator!=(const CNetAddr& a, const CNetAddr& b);
         friend bool operator<(const CNetAddr& a, const CNetAddr& b);
 
-        IMPLEMENT_SERIALIZE
-            (
-             READWRITE(FLATDATA(ip));
-            )
+        unsigned int GetSerializeSize(int nType, int nVersion) const
+        {
+            return sizeof(ip);
+        }
+        template<typename Stream>
+        void Serialize(Stream& s, int nType, int nVersion) const
+        {
+            s.write(reinterpret_cast<const char*>(ip), sizeof(ip));
+        }
+        template<typename Stream>
+        void Unserialize(Stream& s, int nType, int nVersion)
+        {
+            s.read(reinterpret_cast<char*>(ip), sizeof(ip));
+        }
 };
 
 /** A combination of a network address (CNetAddr) and a (TCP) port */
@@ -116,15 +126,25 @@ class CService : public CNetAddr
         CService(const struct in6_addr& ipv6Addr, unsigned short port);
         CService(const struct sockaddr_in6& addr);
 
-        IMPLEMENT_SERIALIZE
-            (
-             CService* pthis = const_cast<CService*>(this);
-             READWRITE(FLATDATA(ip));
-             unsigned short portN = htons(port);
-             READWRITE(portN);
-             if (fRead)
-                 pthis->port = ntohs(portN);
-            )
+        unsigned int GetSerializeSize(int nType, int nVersion) const
+        {
+            return sizeof(ip) + sizeof(unsigned short);
+        }
+        template<typename Stream>
+        void Serialize(Stream& s, int nType, int nVersion) const
+        {
+            s.write(reinterpret_cast<const char*>(ip), sizeof(ip));
+            unsigned short portN = htons(port);
+            ::Serialize(s, portN, nType, nVersion);
+        }
+        template<typename Stream>
+        void Unserialize(Stream& s, int nType, int nVersion)
+        {
+            s.read(reinterpret_cast<char*>(ip), sizeof(ip));
+            unsigned short portN;
+            ::Unserialize(s, portN, nType, nVersion);
+            port = ntohs(portN);
+        }
 };
 
 using proxyType = std::pair<CService, int>;

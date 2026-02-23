@@ -61,13 +61,31 @@ public:
         vchPubKey = vchPubKeyIn;
     }
 
-    IMPLEMENT_SERIALIZE
-    (
+    unsigned int GetSerializeSize(int nType, int nVersion) const
+    {
+        unsigned int nSerSize = 0;
         if (!(nType & SER_GETHASH))
-            READWRITE(nVersion);
-        READWRITE(nTime);
-        READWRITE(vchPubKey);
-    )
+            nSerSize += ::GetSerializeSize(nVersion, nType, nVersion);
+        nSerSize += ::GetSerializeSize(nTime, nType, nVersion);
+        nSerSize += ::GetSerializeSize(vchPubKey, nType, nVersion);
+        return nSerSize;
+    }
+    template<typename Stream>
+    void Serialize(Stream& s, int nType, int nVersion) const
+    {
+        if (!(nType & SER_GETHASH))
+            ::Serialize(s, nVersion, nType, nVersion);
+        ::Serialize(s, nTime, nType, nVersion);
+        ::Serialize(s, vchPubKey, nType, nVersion);
+    }
+    template<typename Stream>
+    void Unserialize(Stream& s, int nType, int nVersion)
+    {
+        if (!(nType & SER_GETHASH))
+            ::Unserialize(s, nVersion, nType, nVersion);
+        ::Unserialize(s, nTime, nType, nVersion);
+        ::Unserialize(s, vchPubKey, nType, nVersion);
+    }
 };
 
 /** A CWallet is an extension of a keystore, which also maintains a set of transactions and balances,
@@ -839,15 +857,37 @@ public:
         nTimeExpires = nExpires;
     }
 
-    IMPLEMENT_SERIALIZE
-    (
+    unsigned int GetSerializeSize(int nType, int nVersion) const
+    {
+        unsigned int nSerSize = 0;
         if (!(nType & SER_GETHASH))
-            READWRITE(nVersion);
-        READWRITE(vchPrivKey);
-        READWRITE(nTimeCreated);
-        READWRITE(nTimeExpires);
-        READWRITE(strComment);
-    )
+            nSerSize += ::GetSerializeSize(nVersion, nType, nVersion);
+        nSerSize += ::GetSerializeSize(vchPrivKey, nType, nVersion);
+        nSerSize += ::GetSerializeSize(nTimeCreated, nType, nVersion);
+        nSerSize += ::GetSerializeSize(nTimeExpires, nType, nVersion);
+        nSerSize += ::GetSerializeSize(strComment, nType, nVersion);
+        return nSerSize;
+    }
+    template<typename Stream>
+    void Serialize(Stream& s, int nType, int nVersion) const
+    {
+        if (!(nType & SER_GETHASH))
+            ::Serialize(s, nVersion, nType, nVersion);
+        ::Serialize(s, vchPrivKey, nType, nVersion);
+        ::Serialize(s, nTimeCreated, nType, nVersion);
+        ::Serialize(s, nTimeExpires, nType, nVersion);
+        ::Serialize(s, strComment, nType, nVersion);
+    }
+    template<typename Stream>
+    void Unserialize(Stream& s, int nType, int nVersion)
+    {
+        if (!(nType & SER_GETHASH))
+            ::Unserialize(s, nVersion, nType, nVersion);
+        ::Unserialize(s, vchPrivKey, nType, nVersion);
+        ::Unserialize(s, nTimeCreated, nType, nVersion);
+        ::Unserialize(s, nTimeExpires, nType, nVersion);
+        ::Unserialize(s, strComment, nType, nVersion);
+    }
 };
 
 
@@ -873,12 +913,28 @@ public:
         vchPubKey = CPubKey();
     }
 
-    IMPLEMENT_SERIALIZE
-    (
+    unsigned int GetSerializeSize(int nType, int nVersion) const
+    {
+        unsigned int nSerSize = 0;
         if (!(nType & SER_GETHASH))
-            READWRITE(nVersion);
-        READWRITE(vchPubKey);
-    )
+            nSerSize += ::GetSerializeSize(nVersion, nType, nVersion);
+        nSerSize += ::GetSerializeSize(vchPubKey, nType, nVersion);
+        return nSerSize;
+    }
+    template<typename Stream>
+    void Serialize(Stream& s, int nType, int nVersion) const
+    {
+        if (!(nType & SER_GETHASH))
+            ::Serialize(s, nVersion, nType, nVersion);
+        ::Serialize(s, vchPubKey, nType, nVersion);
+    }
+    template<typename Stream>
+    void Unserialize(Stream& s, int nType, int nVersion)
+    {
+        if (!(nType & SER_GETHASH))
+            ::Unserialize(s, nVersion, nType, nVersion);
+        ::Unserialize(s, vchPubKey, nType, nVersion);
+    }
 };
 
 

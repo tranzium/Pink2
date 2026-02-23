@@ -85,16 +85,37 @@ public:
         return memcmp(&scan_pubkey[0], &y.scan_pubkey[0], ec_compressed_size) == 0;
     }
 
-    IMPLEMENT_SERIALIZE
-    (
-        READWRITE(this->options);
-        READWRITE(this->scan_pubkey);
-        READWRITE(this->spend_pubkey);
-        READWRITE(this->label);
-        
-        READWRITE(this->scan_secret);
-        READWRITE(this->spend_secret);
-    );
+    unsigned int GetSerializeSize(int nType, int nVersion) const
+    {
+        unsigned int nSerSize = 0;
+        nSerSize += ::GetSerializeSize(options, nType, nVersion);
+        nSerSize += ::GetSerializeSize(scan_pubkey, nType, nVersion);
+        nSerSize += ::GetSerializeSize(spend_pubkey, nType, nVersion);
+        nSerSize += ::GetSerializeSize(label, nType, nVersion);
+        nSerSize += ::GetSerializeSize(scan_secret, nType, nVersion);
+        nSerSize += ::GetSerializeSize(spend_secret, nType, nVersion);
+        return nSerSize;
+    }
+    template<typename Stream>
+    void Serialize(Stream& s, int nType, int nVersion) const
+    {
+        ::Serialize(s, options, nType, nVersion);
+        ::Serialize(s, scan_pubkey, nType, nVersion);
+        ::Serialize(s, spend_pubkey, nType, nVersion);
+        ::Serialize(s, label, nType, nVersion);
+        ::Serialize(s, scan_secret, nType, nVersion);
+        ::Serialize(s, spend_secret, nType, nVersion);
+    }
+    template<typename Stream>
+    void Unserialize(Stream& s, int nType, int nVersion)
+    {
+        ::Unserialize(s, options, nType, nVersion);
+        ::Unserialize(s, scan_pubkey, nType, nVersion);
+        ::Unserialize(s, spend_pubkey, nType, nVersion);
+        ::Unserialize(s, label, nType, nVersion);
+        ::Unserialize(s, scan_secret, nType, nVersion);
+        ::Unserialize(s, spend_secret, nType, nVersion);
+    }
     
     
 

@@ -76,12 +76,26 @@ public:
     int nVersion;
     uint256 hashCheckpoint;      // checkpoint block
 
-    IMPLEMENT_SERIALIZE
-    (
-        READWRITE(this->nVersion);
+    unsigned int GetSerializeSize(int nType, int nVersion) const
+    {
+        unsigned int nSerSize = 0;
+        nSerSize += ::GetSerializeSize(this->nVersion, nType, nVersion);
+        nSerSize += ::GetSerializeSize(hashCheckpoint, nType, nVersion);
+        return nSerSize;
+    }
+    template<typename Stream>
+    void Serialize(Stream& s, int nType, int nVersion) const
+    {
+        ::Serialize(s, this->nVersion, nType, nVersion);
+        ::Serialize(s, hashCheckpoint, nType, nVersion);
+    }
+    template<typename Stream>
+    void Unserialize(Stream& s, int nType, int nVersion)
+    {
+        ::Unserialize(s, this->nVersion, nType, nVersion);
         nVersion = this->nVersion;
-        READWRITE(hashCheckpoint);
-    )
+        ::Unserialize(s, hashCheckpoint, nType, nVersion);
+    }
 
     void SetNull()
     {
@@ -120,11 +134,25 @@ public:
         SetNull();
     }
 
-    IMPLEMENT_SERIALIZE
-    (
-        READWRITE(vchMsg);
-        READWRITE(vchSig);
-    )
+    unsigned int GetSerializeSize(int nType, int nVersion) const
+    {
+        unsigned int nSerSize = 0;
+        nSerSize += ::GetSerializeSize(vchMsg, nType, nVersion);
+        nSerSize += ::GetSerializeSize(vchSig, nType, nVersion);
+        return nSerSize;
+    }
+    template<typename Stream>
+    void Serialize(Stream& s, int nType, int nVersion) const
+    {
+        ::Serialize(s, vchMsg, nType, nVersion);
+        ::Serialize(s, vchSig, nType, nVersion);
+    }
+    template<typename Stream>
+    void Unserialize(Stream& s, int nType, int nVersion)
+    {
+        ::Unserialize(s, vchMsg, nType, nVersion);
+        ::Unserialize(s, vchSig, nType, nVersion);
+    }
 
     void SetNull()
     {
