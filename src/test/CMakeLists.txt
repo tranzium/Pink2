@@ -76,6 +76,7 @@ set(PINKCOIN_TEST_SOURCES
     migration_safety_tests.cpp
     json_tests.cpp
     result_tests.cpp
+    bignum_pinning_tests.cpp
 )
 
 #-----------------------------------------
