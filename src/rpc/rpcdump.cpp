@@ -16,7 +16,7 @@
 #include <iomanip>
 #include <sstream>
 
-#define printf OutputDebugStringF
+#include "logging.h"
 
 using namespace std;
 
@@ -186,7 +186,7 @@ json importwallet(const json& params, bool fHelp)
         CKeyID keyid = key.GetPubKey().GetID();
 
         if (pwalletMain->HaveKey(keyid)) {
-            printf("Skipping import of %s (key already present)\n", CBitcoinAddress(keyid).ToString().c_str());
+            LogPrintf("Skipping import of %s (key already present)\n", CBitcoinAddress(keyid).ToString().c_str());
             continue;
         }
         int64_t nTime = DecodeDumpTime(vstr[1]);
@@ -204,7 +204,7 @@ json importwallet(const json& params, bool fHelp)
                 fLabel = true;
             }
         }
-        printf("Importing %s...\n", CBitcoinAddress(keyid).ToString().c_str());
+        LogPrintf("Importing %s...\n", CBitcoinAddress(keyid).ToString().c_str());
         if (!pwalletMain->AddKey(key)) {
             fGood = false;
             continue;
@@ -223,7 +223,7 @@ json importwallet(const json& params, bool fHelp)
     if (!pwalletMain->nTimeFirstKey || nTimeBegin < pwalletMain->nTimeFirstKey)
         pwalletMain->nTimeFirstKey = nTimeBegin;
 
-    printf("Rescanning last %i blocks\n", pindexBest->nHeight - pindex->nHeight + 1);
+    LogPrintf("Rescanning last %i blocks\n", pindexBest->nHeight - pindex->nHeight + 1);
     pwalletMain->ScanForWalletTransactions(pindex);
     pwalletMain->ReacceptWalletTransactions();
     pwalletMain->MarkDirty();

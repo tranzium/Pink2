@@ -673,7 +673,7 @@ template <typename Callable> void LoopForever(const char* name, Callable func, i
 {
     std::string s = strprintf("pinkcoin-%s", name);
     RenameThread(s.c_str());
-    printf("%s thread start\n", name);
+    LogPrintf("%s thread start\n", name);
     try
     {
         while (1)
@@ -696,9 +696,9 @@ template <typename Callable> void TraceThread(const char* name, Callable func)
     RenameThread(s.c_str());
     try
     {
-        printf("%s thread start\n", name);
+        LogPrintf("%s thread start\n", name);
         func();
-        printf("%s thread exit\n", name);
+        LogPrintf("%s thread exit\n", name);
     }
     catch (std::exception& e) {
         PrintException(&e, name);

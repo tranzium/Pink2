@@ -11,7 +11,6 @@
 #include "bitcoinrpc.h"
 #include "db.h"
 
-#undef printf
 #include <asio.hpp>
 #include <asio/ssl.hpp>
 #include <filesystem>
@@ -26,7 +25,7 @@
 #define GetIOServiceFromPtr(s) ((asio::io_context&)(s->get_executor().context()))
 using ioContext = asio::io_context;
 
-#define printf OutputDebugStringF
+#include "logging.h"
 
 using namespace std;
 using namespace asio;
@@ -795,7 +794,7 @@ void ThreadRPCServer(void* parg)
         vnThreadsRunning[THREAD_RPCLISTENER]--;
         PrintException(nullptr, "ThreadRPCServer()");
     }
-    printf("ThreadRPCServer exited\n");
+    LogPrintf("ThreadRPCServer exited\n");
 }
 
 // Forward declaration required for RPCListen
@@ -864,7 +863,7 @@ static void RPCAcceptHandler(std::shared_ptr< basic_socket_acceptor<Protocol> > 
 
     // start HTTP client thread
     else if (!NewThread(ThreadRPCServer3, conn)) {
-        printf("Failed to create RPC server client thread\n");
+        LogPrintf("Failed to create RPC server client thread\n");
         delete conn;
     }
 
@@ -873,7 +872,7 @@ static void RPCAcceptHandler(std::shared_ptr< basic_socket_acceptor<Protocol> > 
 
 void ThreadRPCServer2(void* parg)
 {
-    printf("ThreadRPCServer started\n");
+    LogPrintf("ThreadRPCServer started\n");
 
     strRPCUserColonPass = mapArgs["-rpcuser"] + ":" + mapArgs["-rpcpassword"];
     if ((mapArgs["-rpcpassword"] == "") ||
@@ -916,12 +915,12 @@ void ThreadRPCServer2(void* parg)
         std::filesystem::path pathCertFile(GetArg("-rpcsslcertificatechainfile", "server.cert"));
         if (!pathCertFile.is_absolute()) pathCertFile = std::filesystem::path(GetDataDir()) / pathCertFile;
         if (std::filesystem::exists(pathCertFile)) context.use_certificate_chain_file(pathCertFile.string());
-        else printf("ThreadRPCServer ERROR: missing server certificate file %s\n", pathCertFile.string().c_str());
+        else LogPrintf("ThreadRPCServer ERROR: missing server certificate file %s\n", pathCertFile.string().c_str());
 
         std::filesystem::path pathPKFile(GetArg("-rpcsslprivatekeyfile", "server.pem"));
         if (!pathPKFile.is_absolute()) pathPKFile = std::filesystem::path(GetDataDir()) / pathPKFile;
         if (std::filesystem::exists(pathPKFile)) context.use_private_key_file(pathPKFile.string(), ssl::context::pem);
-        else printf("ThreadRPCServer ERROR: missing server private key file %s\n", pathPKFile.string().c_str());
+        else LogPrintf("ThreadRPCServer ERROR: missing server private key file %s\n", pathPKFile.string().c_str());
 
         string strCiphers = GetArg("-rpcsslciphers", "TLSv1+HIGH:!SSLv2:!aNULL:!eNULL:!AH:!3DES:@STRENGTH");
         SSL_CTX_set_cipher_list(context.native_handle(), strCiphers.c_str());
@@ -1032,7 +1031,7 @@ void JSONRequest::parse(const json& valRequest)
         throw JSONRPCError(RPC_INVALID_REQUEST, "Method must be a string");
     strMethod = valMethod.get<std::string>();
     if (strMethod != "getwork" && strMethod != "getblocktemplate")
-        printf("ThreadRPCServer method=%s\n", strMethod.c_str());
+        LogPrintf("ThreadRPCServer method=%s\n", strMethod.c_str());
 
     // Parse params
     if (valRequest.contains("params")) {
@@ -1127,7 +1126,7 @@ void ThreadRPCServer3(void* parg)
         }
         if (!HTTPAuthorized(mapHeaders))
         {
-            printf("ThreadRPCServer incorrect password attempt from %s\n", conn->peer_address_to_string().c_str());
+            LogPrintf("ThreadRPCServer incorrect password attempt from %s\n", conn->peer_address_to_string().c_str());
             /* Deter brute-forcing short passwords.
                If this results in a DOS the user really
                shouldn't have their RPC port exposed.*/
@@ -1448,7 +1447,7 @@ int main(int argc, char *argv[])
     {
         if (argc >= 2 && string(argv[1]) == "-server")
         {
-            printf("server ready\n");
+            LogPrintf("server ready\n");
             ThreadRPCServer(nullptr);
         }
         else
