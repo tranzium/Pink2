@@ -39,13 +39,31 @@ class CMessageHeader
         std::string GetCommand() const;
         bool IsValid() const;
 
-        IMPLEMENT_SERIALIZE
-            (
-             READWRITE(FLATDATA(pchMessageStart));
-             READWRITE(FLATDATA(pchCommand));
-             READWRITE(nMessageSize);
-             READWRITE(nChecksum);
-            )
+        unsigned int GetSerializeSize(int nType, int nVersion) const
+        {
+            unsigned int nSerSize = 0;
+            nSerSize += sizeof(pchMessageStart);
+            nSerSize += sizeof(pchCommand);
+            nSerSize += ::GetSerializeSize(nMessageSize, nType, nVersion);
+            nSerSize += ::GetSerializeSize(nChecksum, nType, nVersion);
+            return nSerSize;
+        }
+        template<typename Stream>
+        void Serialize(Stream& s, int nType, int nVersion) const
+        {
+            s.write(pchMessageStart, sizeof(pchMessageStart));
+            s.write(pchCommand, sizeof(pchCommand));
+            ::Serialize(s, nMessageSize, nType, nVersion);
+            ::Serialize(s, nChecksum, nType, nVersion);
+        }
+        template<typename Stream>
+        void Unserialize(Stream& s, int nType, int nVersion)
+        {
+            s.read(pchMessageStart, sizeof(pchMessageStart));
+            s.read(pchCommand, sizeof(pchCommand));
+            ::Unserialize(s, nMessageSize, nType, nVersion);
+            ::Unserialize(s, nChecksum, nType, nVersion);
+        }
 
     // TODO: make private (improves encapsulation)
     public:
@@ -80,20 +98,42 @@ class CAddress : public CService
 
         void Init();
 
-        IMPLEMENT_SERIALIZE
-            (
-             CAddress* pthis = const_cast<CAddress*>(this);
-             CService* pip = (CService*)pthis;
-             if (fRead)
-                 pthis->Init();
-             if (nType & SER_DISK)
-                 READWRITE(nVersion);
-             if ((nType & SER_DISK) ||
-                 (nVersion >= CADDR_TIME_VERSION && !(nType & SER_GETHASH)))
-                 READWRITE(nTime);
-             READWRITE(nServices);
-             READWRITE(*pip);
-            )
+        unsigned int GetSerializeSize(int nType, int nVersion) const
+        {
+            unsigned int nSerSize = 0;
+            if (nType & SER_DISK)
+                nSerSize += ::GetSerializeSize(nVersion, nType, nVersion);
+            if ((nType & SER_DISK) ||
+                (nVersion >= CADDR_TIME_VERSION && !(nType & SER_GETHASH)))
+                nSerSize += ::GetSerializeSize(nTime, nType, nVersion);
+            nSerSize += ::GetSerializeSize(nServices, nType, nVersion);
+            nSerSize += CService::GetSerializeSize(nType, nVersion);
+            return nSerSize;
+        }
+        template<typename Stream>
+        void Serialize(Stream& s, int nType, int nVersion) const
+        {
+            if (nType & SER_DISK)
+                ::Serialize(s, nVersion, nType, nVersion);
+            if ((nType & SER_DISK) ||
+                (nVersion >= CADDR_TIME_VERSION && !(nType & SER_GETHASH)))
+                ::Serialize(s, nTime, nType, nVersion);
+            ::Serialize(s, nServices, nType, nVersion);
+            CService::Serialize(s, nType, nVersion);
+        }
+        template<typename Stream>
+        void Unserialize(Stream& s, int nType, int nVersion)
+        {
+            Init();
+            if (nType & SER_DISK) {
+                ::Unserialize(s, nVersion, nType, nVersion);
+            }
+            if ((nType & SER_DISK) ||
+                (nVersion >= CADDR_TIME_VERSION && !(nType & SER_GETHASH)))
+                ::Unserialize(s, nTime, nType, nVersion);
+            ::Unserialize(s, nServices, nType, nVersion);
+            CService::Unserialize(s, nType, nVersion);
+        }
 
         void print() const;
 
@@ -116,11 +156,23 @@ class CInv
         CInv(int typeIn, const uint256& hashIn);
         CInv(const std::string& strType, const uint256& hashIn);
 
-        IMPLEMENT_SERIALIZE
-        (
-            READWRITE(type);
-            READWRITE(hash);
-        )
+        unsigned int GetSerializeSize(int nType, int nVersion) const
+        {
+            return ::GetSerializeSize(type, nType, nVersion) +
+                   ::GetSerializeSize(hash, nType, nVersion);
+        }
+        template<typename Stream>
+        void Serialize(Stream& s, int nType, int nVersion) const
+        {
+            ::Serialize(s, type, nType, nVersion);
+            ::Serialize(s, hash, nType, nVersion);
+        }
+        template<typename Stream>
+        void Unserialize(Stream& s, int nType, int nVersion)
+        {
+            ::Unserialize(s, type, nType, nVersion);
+            ::Unserialize(s, hash, nType, nVersion);
+        }
 
         friend bool operator<(const CInv& a, const CInv& b);
 
