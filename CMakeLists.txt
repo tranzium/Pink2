@@ -77,9 +77,6 @@ find_package(Threads REQUIRED)
 set(Boost_USE_STATIC_LIBS ${STATIC_BUILD})
 find_package(Boost 1.55 REQUIRED COMPONENTS
     unit_test_framework
-    OPTIONAL_COMPONENTS
-    system
-    chrono
 )
 
 # OpenSSL
@@ -169,6 +166,7 @@ add_definitions(-DBOOST_BIND_GLOBAL_PLACEHOLDERS)
 #-----------------------------------------
 add_subdirectory(src/leveldb)
 add_subdirectory(src/json)
+add_subdirectory(src/asio)
 add_subdirectory(src)
 
 if(BUILD_GUI)

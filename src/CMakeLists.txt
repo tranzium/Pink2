@@ -154,10 +154,9 @@ target_include_directories(pinkcoin_core
 target_link_libraries(pinkcoin_core
     PUBLIC
         nlohmann_json
+        standalone_asio
         leveldb
         memenv
-        $<$<TARGET_EXISTS:Boost::system>:Boost::system>
-        $<$<TARGET_EXISTS:Boost::chrono>:Boost::chrono>
         OpenSSL::SSL
         OpenSSL::Crypto
         BerkeleyDB::BerkeleyDB
