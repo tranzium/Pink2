@@ -31,6 +31,8 @@
 #include "version.h"
 #include "bignum.h"
 #include "util.h"
+#include "alert.h"
+#include "checkpoints.h"
 
 // Helper: serialize any object to hex string
 template<typename T>
@@ -1157,6 +1159,94 @@ BOOST_AUTO_TEST_CASE(golden_genesis_merkle_verified)
     BOOST_CHECK_EQUAL(merkle.GetHex(),
         "96f872319c330aadbdc18543e27a305c6ab046801cfc81e20a004f3b26fad891");
     BOOST_CHECK(merkle == genesis.hashMerkleRoot);
+}
+
+// ============================================================================
+// Section 10: Pre-Serialization-Migration Pins
+// ============================================================================
+
+BOOST_AUTO_TEST_CASE(golden_cmerkletx)
+{
+    // CMerkleTx = CTransaction + hashBlock + vMerkleBranch + nIndex
+    CMerkleTx mtx;
+    mtx.nVersion = 1;
+    mtx.nTime = 1000;
+    mtx.nLockTime = 0;
+    mtx.hashBlock = uint256("0x00000000000000001");
+    mtx.nIndex = 5;
+    // Leave vMerkleBranch empty, vin/vout empty
+
+    std::string hex = SerializeToHex(mtx);
+    CMerkleTx mtx2 = DeserializeFromHex<CMerkleTx>(hex);
+    BOOST_CHECK_EQUAL(mtx2.hashBlock.GetHex(), mtx.hashBlock.GetHex());
+    BOOST_CHECK_EQUAL(mtx2.nIndex, 5);
+    BOOST_CHECK_EQUAL(mtx2.nTime, 1000u);
+
+    // Pin the size: CTransaction(14) + hashBlock(32) + vMerkleBranch count(1) + nIndex(4) = 51
+    BOOST_CHECK_EQUAL(hex.size() / 2, 51u);
+}
+
+BOOST_AUTO_TEST_CASE(golden_cunsignedalert)
+{
+    CUnsignedAlert alert;
+    alert.nVersion = 1;
+    alert.nRelayUntil = 1000000;
+    alert.nExpiration = 2000000;
+    alert.nID = 42;
+    alert.nCancel = 0;
+    alert.nMinVer = 60016;
+    alert.nMaxVer = 60019;
+    alert.nPriority = 100;
+    alert.strComment = "test";
+    alert.strStatusBar = "alert!";
+    alert.strReserved = "";
+
+    std::string hex = SerializeToHex(alert);
+    CUnsignedAlert alert2 = DeserializeFromHex<CUnsignedAlert>(hex);
+    BOOST_CHECK_EQUAL(alert2.nID, 42);
+    BOOST_CHECK_EQUAL(alert2.nMinVer, 60016);
+    BOOST_CHECK_EQUAL(alert2.nMaxVer, 60019);
+    BOOST_CHECK_EQUAL(alert2.strStatusBar, "alert!");
+
+    // Round-trip integrity
+    std::string hex2 = SerializeToHex(alert2);
+    BOOST_CHECK_EQUAL(hex, hex2);
+}
+
+BOOST_AUTO_TEST_CASE(golden_calert)
+{
+    CAlert alert;
+    alert.vchMsg = {0x01, 0x02, 0x03};
+    alert.vchSig = {0xAA, 0xBB};
+
+    std::string hex = SerializeToHex(alert);
+    CAlert alert2 = DeserializeFromHex<CAlert>(hex);
+    BOOST_CHECK(alert2.vchMsg == alert.vchMsg);
+    BOOST_CHECK(alert2.vchSig == alert.vchSig);
+}
+
+BOOST_AUTO_TEST_CASE(golden_cunsignedsynccheckpoint)
+{
+    CUnsignedSyncCheckpoint cp;
+    cp.nVersion = 1;
+    cp.hashCheckpoint = uint256("0x00000000000000abc");
+
+    std::string hex = SerializeToHex(cp);
+    CUnsignedSyncCheckpoint cp2 = DeserializeFromHex<CUnsignedSyncCheckpoint>(hex);
+    BOOST_CHECK_EQUAL(cp2.nVersion, 1);
+    BOOST_CHECK_EQUAL(cp2.hashCheckpoint.GetHex(), cp.hashCheckpoint.GetHex());
+}
+
+BOOST_AUTO_TEST_CASE(golden_csynccheckpoint)
+{
+    CSyncCheckpoint cp;
+    cp.vchMsg = {0xDE, 0xAD};
+    cp.vchSig = {0xBE, 0xEF};
+
+    std::string hex = SerializeToHex(cp);
+    CSyncCheckpoint cp2 = DeserializeFromHex<CSyncCheckpoint>(hex);
+    BOOST_CHECK(cp2.vchMsg == cp.vchMsg);
+    BOOST_CHECK(cp2.vchSig == cp.vchSig);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
