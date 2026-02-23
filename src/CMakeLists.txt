@@ -66,6 +66,7 @@ set(PINKCOIN_CORE_HEADERS
     addrman.h
     alert.h
     allocators.h
+    asio_stream.h
     base58.h
     bignum.h
     bitcoinrpc.h
