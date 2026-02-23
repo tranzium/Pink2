@@ -153,13 +153,8 @@ include(cmake/GenerateBuildInfo.cmake)
 # Common definitions
 #-----------------------------------------
 add_definitions(
-    -DBOOST_SPIRIT_THREADSAFE
-    -DBOOST_THREAD_USE_LIB
     -DHAVE_BUILD_INFO
 )
-
-# Disable Boost deprecated headers warning
-add_definitions(-DBOOST_BIND_GLOBAL_PLACEHOLDERS)
 
 #-----------------------------------------
 # Subdirectories

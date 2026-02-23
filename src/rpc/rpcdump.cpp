@@ -10,7 +10,6 @@
 #include "ui_interface.h"
 #include "base58.h"
 
-#include <boost/variant/get.hpp>
 #include "string_utils.h"
 
 #include <ctime>
