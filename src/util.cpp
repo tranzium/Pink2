@@ -39,10 +39,10 @@
 # include <sys/prctl.h>
 #endif
 
-using namespace std;
+// std:: prefix used explicitly throughout
 
-map<string, string> mapArgs;
-map<string, vector<string> > mapMultiArgs;
+std::map<std::string, std::string> mapArgs;
+std::map<std::string, std::vector<std::string> > mapMultiArgs;
 bool fDebug = false;
 bool fDebugNet = false;
 bool fDebugSmsg = false;
@@ -54,7 +54,7 @@ bool fShutdown = false;
 bool fDaemon = false;
 bool fServer = false;
 bool fCommandLine = false;
-string strMiscWarning;
+std::string strMiscWarning;
 bool fTestNet = false;
 bool fNoListen = false;
 bool fLogTimestamps = false;
@@ -244,7 +244,7 @@ inline int OutputDebugStringF(const char* pszFormat, ...)
     return ret;
 }
 
-string vstrprintf(const char *format, va_list ap)
+std::string vstrprintf(const char *format, va_list ap)
 {
     char buffer[50000];
     char* p = buffer;
@@ -269,26 +269,26 @@ string vstrprintf(const char *format, va_list ap)
         if (p == nullptr)
             throw std::bad_alloc();
     }
-    string str(p, p+ret);
+    std::string str(p, p+ret);
     if (p != buffer)
         delete[] p;
     return str;
 }
 
-string real_strprintf(const char *format, int dummy, ...)
+std::string real_strprintf(const char *format, int dummy, ...)
 {
     va_list arg_ptr;
     va_start(arg_ptr, dummy);
-    string str = vstrprintf(format, arg_ptr);
+    std::string str = vstrprintf(format, arg_ptr);
     va_end(arg_ptr);
     return str;
 }
 
-string real_strprintf(const std::string &format, int dummy, ...)
+std::string real_strprintf(const std::string &format, int dummy, ...)
 {
     va_list arg_ptr;
     va_start(arg_ptr, dummy);
-    string str = vstrprintf(format.c_str(), arg_ptr);
+    std::string str = vstrprintf(format.c_str(), arg_ptr);
     va_end(arg_ptr);
     return str;
 }
@@ -304,12 +304,12 @@ bool error(const char *format, ...)
 }
 
 
-void ParseString(const string& str, char c, vector<string>& v)
+void ParseString(const std::string& str, char c, std::vector<std::string>& v)
 {
     if (str.empty())
         return;
-    string::size_type i1 = 0;
-    string::size_type i2;
+    std::string::size_type i1 = 0;
+    std::string::size_type i2;
     while (true)
     {
         i2 = str.find(c, i1);
@@ -324,14 +324,14 @@ void ParseString(const string& str, char c, vector<string>& v)
 }
 
 
-string FormatMoney(int64_t n, bool fPlus)
+std::string FormatMoney(int64_t n, bool fPlus)
 {
     // Note: not using straight sprintf here because we do NOT want
     // localized number formatting.
     int64_t n_abs = (n > 0 ? n : -n);
     int64_t quotient = n_abs/COIN;
     int64_t remainder = n_abs%COIN;
-    string str = strprintf("%" PRId64 ".%08" PRId64, quotient, remainder);
+    std::string str = strprintf("%" PRId64 ".%08" PRId64, quotient, remainder);
 
     // Right-trim excess zeros before the decimal point:
     int nTrim = 0;
@@ -348,14 +348,14 @@ string FormatMoney(int64_t n, bool fPlus)
 }
 
 
-bool ParseMoney(const string& str, int64_t& nRet)
+bool ParseMoney(const std::string& str, int64_t& nRet)
 {
     return ParseMoney(str.c_str(), nRet);
 }
 
 bool ParseMoney(const char* pszIn, int64_t& nRet)
 {
-    string strWhole;
+    std::string strWhole;
     int64_t nUnits = 0;
     const char* p = pszIn;
     while (isspace(*p))
@@ -412,7 +412,7 @@ static const signed char phexdigit[256] =
   -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
   -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1, };
 
-bool IsHex(const string& str)
+bool IsHex(const std::string& str)
 {
     for (unsigned char c : str)
     {
@@ -422,10 +422,10 @@ bool IsHex(const string& str)
     return (!str.empty()) && (str.size()%2 == 0);
 }
 
-vector<unsigned char> ParseHex(const char* psz)
+std::vector<unsigned char> ParseHex(const char* psz)
 {
     // convert hex dump to vector
-    vector<unsigned char> vch;
+    std::vector<unsigned char> vch;
     while (true)
     {
         while (isspace(*psz))
@@ -443,12 +443,12 @@ vector<unsigned char> ParseHex(const char* psz)
     return vch;
 }
 
-vector<unsigned char> ParseHex(const string& str)
+std::vector<unsigned char> ParseHex(const std::string& str)
 {
     return ParseHex(str.c_str());
 }
 
-static void InterpretNegativeSetting(string name, map<string, string>& mapSettingsRet)
+static void InterpretNegativeSetting(std::string name, std::map<std::string, std::string>& mapSettingsRet)
 {
     // interpret -nofoo as -foo=0 (and -nofoo=0 as -foo=1) as long as -foo not set
     if (name.find("-no") == 0)
@@ -492,7 +492,7 @@ void ParseParameters(int argc, const char* const argv[])
     // New 0.6 features:
     for (const auto& entry : mapArgs)
     {
-        string name = entry.first;
+        std::string name = entry.first;
 
         //  interpret --foo as -foo (as long as both are not set)
         if (name.find("--") == 0)
@@ -550,11 +550,11 @@ bool SoftSetBoolArg(const std::string& strArg, bool fValue)
 }
 
 
-string EncodeBase64(const unsigned char* pch, size_t len)
+std::string EncodeBase64(const unsigned char* pch, size_t len)
 {
     static const char *pbase64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
-    string strRet="";
+    std::string strRet="";
     strRet.reserve((len+2)/3*4);
 
     int mode=0, left=0;
@@ -596,12 +596,12 @@ string EncodeBase64(const unsigned char* pch, size_t len)
     return strRet;
 }
 
-string EncodeBase64(const string& str)
+std::string EncodeBase64(const std::string& str)
 {
     return EncodeBase64((const unsigned char*)str.c_str(), str.size());
 }
 
-vector<unsigned char> DecodeBase64(const char* p, bool* pfInvalid)
+std::vector<unsigned char> DecodeBase64(const char* p, bool* pfInvalid)
 {
     static const int decode64_table[256] =
     {
@@ -623,7 +623,7 @@ vector<unsigned char> DecodeBase64(const char* p, bool* pfInvalid)
     if (pfInvalid)
         *pfInvalid = false;
 
-    vector<unsigned char> vchRet;
+    std::vector<unsigned char> vchRet;
     vchRet.reserve(strlen(p)*3/4);
 
     int mode = 0;
@@ -684,17 +684,17 @@ vector<unsigned char> DecodeBase64(const char* p, bool* pfInvalid)
     return vchRet;
 }
 
-string DecodeBase64(const string& str)
+std::string DecodeBase64(const std::string& str)
 {
-    vector<unsigned char> vchRet = DecodeBase64(str.c_str());
-    return string(reinterpret_cast<const char*>(&vchRet[0]), vchRet.size());
+    std::vector<unsigned char> vchRet = DecodeBase64(str.c_str());
+    return std::string(reinterpret_cast<const char*>(&vchRet[0]), vchRet.size());
 }
 
-string EncodeBase32(const unsigned char* pch, size_t len)
+std::string EncodeBase32(const unsigned char* pch, size_t len)
 {
     static const char *pbase32 = "abcdefghijklmnopqrstuvwxyz234567";
 
-    string strRet="";
+    std::string strRet="";
     strRet.reserve((len+4)/5*8);
 
     int mode=0, left=0;
@@ -749,12 +749,12 @@ string EncodeBase32(const unsigned char* pch, size_t len)
     return strRet;
 }
 
-string EncodeBase32(const string& str)
+std::string EncodeBase32(const std::string& str)
 {
     return EncodeBase32((const unsigned char*)str.c_str(), str.size());
 }
 
-vector<unsigned char> DecodeBase32(const char* p, bool* pfInvalid)
+std::vector<unsigned char> DecodeBase32(const char* p, bool* pfInvalid)
 {
     static const int decode32_table[256] =
     {
@@ -776,7 +776,7 @@ vector<unsigned char> DecodeBase32(const char* p, bool* pfInvalid)
     if (pfInvalid)
         *pfInvalid = false;
 
-    vector<unsigned char> vchRet;
+    std::vector<unsigned char> vchRet;
     vchRet.reserve((strlen(p))*5/8);
 
     int mode = 0;
@@ -871,10 +871,10 @@ vector<unsigned char> DecodeBase32(const char* p, bool* pfInvalid)
     return vchRet;
 }
 
-string DecodeBase32(const string& str)
+std::string DecodeBase32(const std::string& str)
 {
-    vector<unsigned char> vchRet = DecodeBase32(str.c_str());
-    return string(reinterpret_cast<const char*>(&vchRet[0]), vchRet.size());
+    std::vector<unsigned char> vchRet = DecodeBase32(str.c_str());
+    return std::string(reinterpret_cast<const char*>(&vchRet[0]), vchRet.size());
 }
 
 
@@ -902,7 +902,7 @@ bool WildcardMatch(const char* psz, const char* mask)
     }
 }
 
-bool WildcardMatch(const string& str, const string& mask)
+bool WildcardMatch(const std::string& str, const std::string& mask)
 {
     return WildcardMatch(str.c_str(), mask.c_str());
 }
@@ -1024,8 +1024,8 @@ std::filesystem::path GetConfigFile()
     return pathConfigFile;
 }
 
-void ReadConfigFile(map<string, string>& mapSettingsRet,
-                    map<string, vector<string> >& mapMultiSettingsRet)
+void ReadConfigFile(std::map<std::string, std::string>& mapSettingsRet,
+                    std::map<std::string, std::vector<std::string> >& mapMultiSettingsRet)
 {
     std::ifstream streamConfig(GetConfigFile());
     if (!streamConfig.good())
@@ -1033,7 +1033,7 @@ void ReadConfigFile(map<string, string>& mapSettingsRet,
 
     strutil::parse_config_file(streamConfig, [&](const std::string& key, const std::string& value) {
         // Don't overwrite existing settings so command line settings override pinkcoin.conf
-        string strKey = string("-") + key;
+        std::string strKey = std::string("-") + key;
         if (mapSettingsRet.count(strKey) == 0)
         {
             mapSettingsRet[strKey] = value;
@@ -1159,7 +1159,7 @@ void CompareTimeWithPeers(const std::vector<int64_t>& vSorted)
         if (!fMatch)
         {
             fDone = true;
-            string strMessage = _(
+            std::string strMessage = _(
                 "Warning: Please check that your computer's date and time are correct! "
                 "If your clock is wrong Pinkcoin will not work properly."
             );
@@ -1167,7 +1167,7 @@ void CompareTimeWithPeers(const std::vector<int64_t>& vSorted)
             printf("*** %s\n", strMessage.c_str());
             uiInterface.ThreadSafeMessageBox(
                 strMessage+" ",
-                string("Pinkcoin"),
+                std::string("Pinkcoin"),
                 CClientUIInterface::OK | CClientUIInterface::ICON_EXCLAMATION
             );
         }
@@ -1179,7 +1179,7 @@ void AddTimeData(const CNetAddr& ip, int64_t nTime, bool fSyncTime)
     int64_t nOffsetSample = nTime - GetTime();
 
     // Ignore duplicates
-    static set<CNetAddr> setKnown;
+    static std::set<CNetAddr> setKnown;
     if (!setKnown.insert(ip).second)
         return;
 
@@ -1257,7 +1257,7 @@ void seed_insecure_rand(bool fDeterministic)
     }
 }
 
-string FormatVersion(int nVersion)
+std::string FormatVersion(int nVersion)
 {
     if (nVersion%100 == 0)
         return strprintf("%d.%d.%d", nVersion/1000000, (nVersion/10000)%100, (nVersion/100)%100);
@@ -1265,7 +1265,7 @@ string FormatVersion(int nVersion)
         return strprintf("%d.%d.%d.%d", nVersion/1000000, (nVersion/10000)%100, (nVersion/100)%100, nVersion%100);
 }
 
-string FormatFullVersion()
+std::string FormatFullVersion()
 {
     return CLIENT_BUILD;
 }
@@ -1325,15 +1325,3 @@ void RenameThread(const char* name)
 #endif
 }
 
-bool NewThread(void(*pfn)(void*), void* parg)
-{
-    try
-    {
-        std::thread t(pfn, parg);
-        t.detach();
-    } catch(const std::system_error& e) {
-        printf("Error creating thread: %s\n", e.what());
-        return false;
-    }
-    return true;
-}

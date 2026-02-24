@@ -12,7 +12,7 @@ class ThreadGroup;
 extern CWallet* pwalletMain;
 extern CWallet* pstakeDB;
 void StartShutdown();
-void Shutdown(void* parg);
+void Shutdown();
 bool AppInit2(ThreadGroup& threadGroup);
 std::string HelpMessage();
 

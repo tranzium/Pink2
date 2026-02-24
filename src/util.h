@@ -599,7 +599,18 @@ public:
     }
 };
 
-bool NewThread(void(*pfn)(void*), void* parg);
+template<typename Callable, typename... Args>
+bool NewThread(Callable&& func, Args&&... args)
+{
+    try {
+        std::thread t(std::forward<Callable>(func), std::forward<Args>(args)...);
+        t.detach();
+    } catch (const std::system_error& e) {
+        LogPrintf("Error creating thread: %s\n", e.what());
+        return false;
+    }
+    return true;
+}
 
 // Minimal std::thread-based replacement for boost::thread_group.
 // Stores joinable threads created via create_thread() and provides join_all().

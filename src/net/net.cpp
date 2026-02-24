@@ -3,10 +3,14 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include <algorithm>
+#include <list>
+
 #include "db.h"
 #include "net.h"
 #include "init.h"
 #include "addrman.h"
+#include "thread_guard.h"
 #include "ui_interface.h"
 
 #ifdef WIN32
@@ -20,18 +24,8 @@
 #include <miniupnpc/upnperrors.h>
 #endif
 
-using namespace std;
-
 int MAX_OUTBOUND_CONNECTIONS = 32;
 
-void ThreadMessageHandler2(void* parg);
-void ThreadSocketHandler2(void* parg);
-void ThreadOpenConnections2(void* parg);
-void ThreadOpenAddedConnections2(void* parg);
-#ifdef USE_UPNP
-void ThreadMapPort2(void* parg);
-#endif
-void ThreadDNSAddressSeed2(void* parg);
 bool OpenNetworkConnection(const CAddress& addrConnect, CSemaphoreGrant *grantOutbound = nullptr, const char *strDest = nullptr, bool fOneShot = false);
 
 
@@ -47,35 +41,35 @@ bool fDiscover = true;
 bool fUseUPnP = false;
 uint64_t nLocalServices = NODE_NETWORK;
 static CCriticalSection cs_mapLocalHost;
-static map<CNetAddr, LocalServiceInfo> mapLocalHost;
+static std::map<CNetAddr, LocalServiceInfo> mapLocalHost;
 static bool vfReachable[NET_MAX] = {};
 static bool vfLimited[NET_MAX] = {};
 static CNode* pnodeLocalHost = nullptr;
 CAddress addrSeenByPeer(CService("0.0.0.0", 0), nLocalServices);
 uint64_t nLocalHostNonce = 0;
-std::array<int, THREAD_MAX> vnThreadsRunning;
+std::array<std::atomic<int>, THREAD_MAX> vnThreadsRunning;
 static std::vector<SOCKET> vhListenSocket;
 CAddrMan addrman;
 
-vector<CNode*> vNodes;
+std::vector<CNode*> vNodes;
 CCriticalSection cs_vNodes;
-map<CInv, CDataStream> mapRelay;
-deque<pair<int64_t, CInv> > vRelayExpiration;
+std::map<CInv, CDataStream> mapRelay;
+std::deque<std::pair<int64_t, CInv> > vRelayExpiration;
 CCriticalSection cs_mapRelay;
-map<CInv, int64_t> mapAlreadyAskedFor;
+std::map<CInv, int64_t> mapAlreadyAskedFor;
 
-static deque<string> vOneShots;
+static std::deque<std::string> vOneShots;
 CCriticalSection cs_vOneShots;
 
-set<CNetAddr> setservAddNodeAddresses;
+std::set<CNetAddr> setservAddNodeAddresses;
 CCriticalSection cs_setservAddNodeAddresses;
 
-vector<std::string> vAddedNodes;
+std::vector<std::string> vAddedNodes;
 CCriticalSection cs_vAddedNodes;
 
 static CSemaphore *semOutbound = nullptr;
 
-void AddOneShot(string strDest)
+void AddOneShot(std::string strDest)
 {
     LOCK(cs_vOneShots);
     vOneShots.push_back(strDest);
@@ -136,7 +130,7 @@ CAddress GetLocalAddress(const CNetAddr *paddrPeer)
     return ret;
 }
 
-bool RecvLine(SOCKET hSocket, string& strLine)
+bool RecvLine(SOCKET hSocket, std::string& strLine)
 {
     strLine = "";
     while (true)
@@ -307,7 +301,7 @@ bool GetMyExternalIP2(const CService& addrConnect, const char* pszGet, const cha
 
     send(hSocket, pszGet, strlen(pszGet), MSG_NOSIGNAL);
 
-    string strLine;
+    std::string strLine;
     while (RecvLine(hSocket, strLine))
     {
         if (strLine.empty()) // HTTP response is separated from headers by blank line
@@ -321,14 +315,14 @@ bool GetMyExternalIP2(const CService& addrConnect, const char* pszGet, const cha
                 }
                 if (pszKeyword == nullptr)
                     break;
-                if (strLine.find(pszKeyword) != string::npos)
+                if (strLine.find(pszKeyword) != std::string::npos)
                 {
                     strLine = strLine.substr(strLine.find(pszKeyword) + strlen(pszKeyword));
                     break;
                 }
             }
             closesocket(hSocket);
-            if (strLine.find("<") != string::npos)
+            if (strLine.find("<") != std::string::npos)
                 strLine = strLine.substr(0, strLine.find("<"));
             strLine = strLine.substr(strspn(strLine.c_str(), " \t\n\r"));
             while (!strLine.empty() && isspace(strLine[strLine.size()-1]))
@@ -385,7 +379,7 @@ bool GetMyExternalIP(CNetAddr& ipRet)
     return false;
 }
 
-void ThreadGetMyExternalIP(void* parg)
+void ThreadGetMyExternalIP()
 {
     // Make this thread recognisable as the external IP detection thread
     RenameThread("pinkcoin-ext-ip");
@@ -535,7 +529,7 @@ void CNode::PushVersion()
     RAND_bytes(reinterpret_cast<unsigned char*>(&nLocalHostNonce), sizeof(nLocalHostNonce));
     LogPrintf("send version message: version %d, blocks=%d, us=%s, them=%s, peer=%s\n", PROTOCOL_VERSION, nBestHeight, addrMe.ToString().c_str(), addrYou.ToString().c_str(), addr.ToString().c_str());
     PushMessage("version", PROTOCOL_VERSION, nLocalServices, nTime, addrYou, addrMe,
-                nLocalHostNonce, FormatSubVersion(CLIENT_NAME, CLIENT_VERSION, std::vector<string>()), nBestHeight);
+                nLocalHostNonce, FormatSubVersion(CLIENT_NAME, CLIENT_VERSION, std::vector<std::string>()), nBestHeight);
 }
 
 
@@ -778,31 +772,13 @@ void SocketSendData(CNode *pnode)
     pnode->vSendMsg.erase(pnode->vSendMsg.begin(), it);
 }
 
-void ThreadSocketHandler(void* parg)
+void ThreadSocketHandler()
 {
     // Make this thread recognisable as the networking thread
     RenameThread("pinkcoin-net");
-
-    try
-    {
-        vnThreadsRunning[THREAD_SOCKETHANDLER]++;
-        ThreadSocketHandler2(parg);
-        vnThreadsRunning[THREAD_SOCKETHANDLER]--;
-    }
-    catch (std::exception& e) {
-        vnThreadsRunning[THREAD_SOCKETHANDLER]--;
-        PrintException(&e, "ThreadSocketHandler()");
-    } catch (...) {
-        vnThreadsRunning[THREAD_SOCKETHANDLER]--;
-        throw; // support pthread_cancel()
-    }
-    LogPrintf("ThreadSocketHandler exited\n");
-}
-
-void ThreadSocketHandler2(void* parg)
-{
+    ThreadCountGuard guard(THREAD_SOCKETHANDLER);
     LogPrintf("ThreadSocketHandler started\n");
-    list<CNode*> vNodesDisconnected;
+    std::list<CNode*> vNodesDisconnected;
     unsigned int nPrevNodeCount = 0;
 
     while (true)
@@ -813,14 +789,14 @@ void ThreadSocketHandler2(void* parg)
         {
             LOCK(cs_vNodes);
             // Disconnect unused nodes
-            vector<CNode*> vNodesCopy = vNodes;
+            std::vector<CNode*> vNodesCopy = vNodes;
             for (CNode* pnode : vNodesCopy)
             {
                 if (pnode->fDisconnect ||
                     (pnode->GetRefCount() <= 0 && pnode->vRecvMsg.empty() && pnode->nSendSize == 0 && pnode->ssSend.empty()))
                 {
                     // remove from vNodes
-                    vNodes.erase(remove(vNodes.begin(), vNodes.end(), pnode), vNodes.end());
+                    vNodes.erase(std::remove(vNodes.begin(), vNodes.end(), pnode), vNodes.end());
 
                     // release outbound grant (if any)
                     pnode->grantOutbound.Release();
@@ -837,7 +813,7 @@ void ThreadSocketHandler2(void* parg)
             }
 
             // Delete disconnected nodes
-            list<CNode*> vNodesDisconnectedCopy = vNodesDisconnected;
+            std::list<CNode*> vNodesDisconnectedCopy = vNodesDisconnected;
             for (CNode* pnode : vNodesDisconnectedCopy)
             {
                 // wait until threads are done using it
@@ -890,7 +866,7 @@ void ThreadSocketHandler2(void* parg)
 
         for (SOCKET hListenSocket : vhListenSocket) {
             FD_SET(hListenSocket, &fdsetRecv);
-            hSocketMax = max(hSocketMax, hListenSocket);
+            hSocketMax = std::max(hSocketMax, hListenSocket);
             have_fds = true;
         }
         {
@@ -908,7 +884,7 @@ void ThreadSocketHandler2(void* parg)
                         else
                             FD_SET(pnode->hSocket, &fdsetRecv);
                         FD_SET(pnode->hSocket, &fdsetError);
-                        hSocketMax = max(hSocketMax, pnode->hSocket);
+                        hSocketMax = std::max(hSocketMax, pnode->hSocket);
                         have_fds = true;
                     }
                 }
@@ -990,7 +966,7 @@ void ThreadSocketHandler2(void* parg)
         //
         // Service each socket
         //
-        vector<CNode*> vNodesCopy;
+        std::vector<CNode*> vNodesCopy;
         {
             LOCK(cs_vNodes);
             vNodesCopy = vNodes;
@@ -1108,29 +1084,11 @@ void ThreadSocketHandler2(void* parg)
 
 
 #ifdef USE_UPNP
-void ThreadMapPort(void* parg)
+void ThreadMapPort()
 {
     // Make this thread recognisable as the UPnP thread
     RenameThread("pinkcoin-UPnP");
-
-    try
-    {
-        vnThreadsRunning[THREAD_UPNP]++;
-        ThreadMapPort2(parg);
-        vnThreadsRunning[THREAD_UPNP]--;
-    }
-    catch (std::exception& e) {
-        vnThreadsRunning[THREAD_UPNP]--;
-        PrintException(&e, "ThreadMapPort()");
-    } catch (...) {
-        vnThreadsRunning[THREAD_UPNP]--;
-        PrintException(nullptr, "ThreadMapPort()");
-    }
-    LogPrintf("ThreadMapPort exited\n");
-}
-
-void ThreadMapPort2(void* parg)
-{
+    ThreadCountGuard guard(THREAD_UPNP);
     LogPrintf("ThreadMapPort started\n");
 
     std::string port = strprintf("%u", GetListenPort());
@@ -1176,7 +1134,7 @@ void ThreadMapPort2(void* parg)
             }
         }
 
-        string strDesc = "Pinkcoin " + FormatFullVersion();
+        std::string strDesc = "Pinkcoin " + FormatFullVersion();
 #ifndef UPNPDISCOVER_SUCCESS
         /* miniupnpc 1.5 */
         r = UPNP_AddPortMapping(urls.controlURL, data.first.servicetype,
@@ -1242,7 +1200,7 @@ void MapPort()
 {
     if (fUseUPnP && vnThreadsRunning[THREAD_UPNP] < 1)
     {
-        if (!NewThread(ThreadMapPort, nullptr))
+        if (!NewThread(ThreadMapPort))
             LogPrintf("Error: ThreadMapPort(ThreadMapPort) failed\n");
     }
 }
@@ -1275,29 +1233,11 @@ static const char *strDNSSeed[][2] = {
     {"tokyo", "tokyo.pinkarmy.ml"},
 };
 
-void ThreadDNSAddressSeed(void* parg)
+void ThreadDNSAddressSeed()
 {
     // Make this thread recognisable as the DNS seeding thread
     RenameThread("pinkcoin-dnsseed");
-
-    try
-    {
-        vnThreadsRunning[THREAD_DNSSEED]++;
-        ThreadDNSAddressSeed2(parg);
-        vnThreadsRunning[THREAD_DNSSEED]--;
-    }
-    catch (std::exception& e) {
-        vnThreadsRunning[THREAD_DNSSEED]--;
-        PrintException(&e, "ThreadDNSAddressSeed()");
-    } catch (...) {
-        vnThreadsRunning[THREAD_DNSSEED]--;
-        throw; // support pthread_cancel()
-    }
-    LogPrintf("ThreadDNSAddressSeed exited\n");
-}
-
-void ThreadDNSAddressSeed2(void* parg)
-{
+    ThreadCountGuard guard(THREAD_DNSSEED);
     LogPrintf("ThreadDNSAddressSeed started\n");
 
     // goal: only query DNS seeds if address need is acute
@@ -1320,8 +1260,8 @@ void ThreadDNSAddressSeed2(void* parg)
         if (HaveNameProxy()) {
             AddOneShot(strDNSSeed[seed_idx][1]);
         } else {
-            vector<CNetAddr> vaddr;
-            vector<CAddress> vAdd;
+            std::vector<CNetAddr> vaddr;
+            std::vector<CAddress> vAdd;
             if (LookupHost(strDNSSeed[seed_idx][1], vaddr))
             {
                 for (CNetAddr& ip : vaddr)
@@ -1368,9 +1308,12 @@ void DumpAddresses()
            addrman.size(), GetTimeMillis() - nStart);
 }
 
-void ThreadDumpAddress2(void* parg)
+void ThreadDumpAddress()
 {
-    vnThreadsRunning[THREAD_DUMPADDRESS]++;
+    // Make this thread recognisable as the address dumping thread
+    RenameThread("pinkcoin-adrdump");
+    ThreadCountGuard guard(THREAD_DUMPADDRESS);
+
     while (!fShutdown)
     {
         DumpAddresses();
@@ -1378,48 +1321,12 @@ void ThreadDumpAddress2(void* parg)
         MilliSleep(600000);
         vnThreadsRunning[THREAD_DUMPADDRESS]++;
     }
-    vnThreadsRunning[THREAD_DUMPADDRESS]--;
 }
 
-void ThreadDumpAddress(void* parg)
-{
-    // Make this thread recognisable as the address dumping thread
-    RenameThread("pinkcoin-adrdump");
-
-    try
-    {
-        ThreadDumpAddress2(parg);
-    }
-    catch (std::exception& e) {
-        PrintException(&e, "ThreadDumpAddress()");
-    }
-    LogPrintf("ThreadDumpAddress exited\n");
-}
-
-void ThreadOpenConnections(void* parg)
-{
-    // Make this thread recognisable as the connection opening thread
-    RenameThread("pinkcoin-opencon");
-
-    try
-    {
-        vnThreadsRunning[THREAD_OPENCONNECTIONS]++;
-        ThreadOpenConnections2(parg);
-        vnThreadsRunning[THREAD_OPENCONNECTIONS]--;
-    }
-    catch (std::exception& e) {
-        vnThreadsRunning[THREAD_OPENCONNECTIONS]--;
-        PrintException(&e, "ThreadOpenConnections()");
-    } catch (...) {
-        vnThreadsRunning[THREAD_OPENCONNECTIONS]--;
-        PrintException(nullptr, "ThreadOpenConnections()");
-    }
-    LogPrintf("ThreadOpenConnections exited\n");
-}
 
 void static ProcessOneShot()
 {
-    string strDest;
+    std::string strDest;
     {
         LOCK(cs_vOneShots);
         if (vOneShots.empty())
@@ -1435,28 +1342,19 @@ void static ProcessOneShot()
     }
 }
 
-void static ThreadStakeMiner(void* parg)
+static void ThreadStakeMiner(CWallet* pwallet)
 {
     LogPrintf("ThreadStakeMiner started\n");
-    CWallet* pwallet = (CWallet*)parg;
-    try
-    {
-        vnThreadsRunning[THREAD_STAKE_MINER]++;
-        StakeMiner(pwallet);
-        vnThreadsRunning[THREAD_STAKE_MINER]--;
-    }
-    catch (std::exception& e) {
-        vnThreadsRunning[THREAD_STAKE_MINER]--;
-        PrintException(&e, "ThreadStakeMiner()");
-    } catch (...) {
-        vnThreadsRunning[THREAD_STAKE_MINER]--;
-        PrintException(nullptr, "ThreadStakeMiner()");
-    }
-    LogPrintf("ThreadStakeMiner exiting, %d threads remaining\n", vnThreadsRunning[THREAD_STAKE_MINER]);
+    ThreadCountGuard guard(THREAD_STAKE_MINER);
+    StakeMiner(pwallet);
+    LogPrintf("ThreadStakeMiner exiting, %d threads remaining\n", vnThreadsRunning[THREAD_STAKE_MINER].load());
 }
 
-void ThreadOpenConnections2(void* parg)
+void ThreadOpenConnections()
 {
+    // Make this thread recognisable as the connection opening thread
+    RenameThread("pinkcoin-opencon");
+    ThreadCountGuard guard(THREAD_OPENCONNECTIONS);
     LogPrintf("ThreadOpenConnections started\n");
 
     // Connect to specific addresses
@@ -1465,7 +1363,7 @@ void ThreadOpenConnections2(void* parg)
         for (int64_t nLoop = 0;; nLoop++)
         {
             ProcessOneShot();
-            for (const string& strAddr : mapMultiArgs["-connect"])
+            for (const std::string& strAddr : mapMultiArgs["-connect"])
             {
                 CAddress addr;
                 OpenNetworkConnection(addr, nullptr, strAddr.c_str());
@@ -1527,7 +1425,7 @@ void ThreadOpenConnections2(void* parg)
         // Only connect out to one peer per network group (/16 for IPv4).
         // Do this here so we don't have to critsect vNodes inside mapAddresses critsect.
         int nOutbound = 0;
-        set<vector<unsigned char> > setConnected;
+        std::set<std::vector<unsigned char> > setConnected;
         {
             LOCK(cs_vNodes);
             for (CNode* pnode : vNodes) {
@@ -1576,29 +1474,11 @@ void ThreadOpenConnections2(void* parg)
     }
 }
 
-void ThreadOpenAddedConnections(void* parg)
+void ThreadOpenAddedConnections()
 {
     // Make this thread recognisable as the connection opening thread
     RenameThread("pinkcoin-opencon");
-
-    try
-    {
-        vnThreadsRunning[THREAD_ADDEDCONNECTIONS]++;
-        ThreadOpenAddedConnections2(parg);
-        vnThreadsRunning[THREAD_ADDEDCONNECTIONS]--;
-    }
-    catch (std::exception& e) {
-        vnThreadsRunning[THREAD_ADDEDCONNECTIONS]--;
-        PrintException(&e, "ThreadOpenAddedConnections()");
-    } catch (...) {
-        vnThreadsRunning[THREAD_ADDEDCONNECTIONS]--;
-        PrintException(nullptr, "ThreadOpenAddedConnections()");
-    }
-    LogPrintf("ThreadOpenAddedConnections exited\n");
-}
-
-void ThreadOpenAddedConnections2(void* parg)
-{
+    ThreadCountGuard guard(THREAD_ADDEDCONNECTIONS);
     LogPrintf("ThreadOpenAddedConnections started\n");
 
     {
@@ -1608,13 +1488,13 @@ void ThreadOpenAddedConnections2(void* parg)
 
     if (HaveNameProxy()) {
         while(!fShutdown) {
-            list<string> lAddresses(0);
+            std::list<std::string> lAddresses(0);
             {
                 LOCK(cs_vAddedNodes);
-                for (string& strAddNode : vAddedNodes)
+                for (std::string& strAddNode : vAddedNodes)
                     lAddresses.push_back(strAddNode);
             }
-            for (string& strAddNode : lAddresses) {
+            for (std::string& strAddNode : lAddresses) {
                 CAddress addr;
                 CSemaphoreGrant grant(*semOutbound);
                 OpenNetworkConnection(addr, &grant, strAddNode.c_str());
@@ -1631,17 +1511,17 @@ void ThreadOpenAddedConnections2(void* parg)
 
     for (unsigned int i = 0; true; i++)
     {
-        list<string> lAddresses(0);
+        std::list<std::string> lAddresses(0);
         {
             LOCK(cs_vAddedNodes);
-            for (string& strAddNode : vAddedNodes)
+            for (std::string& strAddNode : vAddedNodes)
                 lAddresses.push_back(strAddNode);
         }
 
-        list<vector<CService> > lservAddressesToAdd(0);
-        for (string& strAddNode : lAddresses)
+        std::list<std::vector<CService> > lservAddressesToAdd(0);
+        for (std::string& strAddNode : lAddresses)
         {
-            vector<CService> vservNode(0);
+            std::vector<CService> vservNode(0);
             if(Lookup(strAddNode.c_str(), vservNode, GetDefaultPort(), fNameLookup, 0))
             {
                 lservAddressesToAdd.push_back(vservNode);
@@ -1666,7 +1546,7 @@ void ThreadOpenAddedConnections2(void* parg)
                             break;
                         }
         }
-        for (vector<CService>& vserv : lservAddressesToAdd)
+        for (std::vector<CService>& vserv : lservAddressesToAdd)
         {
             CSemaphoreGrant grant(*semOutbound);
             OpenNetworkConnection(CAddress(vserv[i % vserv.size()]), &grant);
@@ -1723,34 +1603,16 @@ bool OpenNetworkConnection(const CAddress& addrConnect, CSemaphoreGrant *grantOu
 
 
 
-void ThreadMessageHandler(void* parg)
+void ThreadMessageHandler()
 {
     // Make this thread recognisable as the message handling thread
     RenameThread("pinkcoin-msghand");
-
-    try
-    {
-        vnThreadsRunning[THREAD_MESSAGEHANDLER]++;
-        ThreadMessageHandler2(parg);
-        vnThreadsRunning[THREAD_MESSAGEHANDLER]--;
-    }
-    catch (std::exception& e) {
-        vnThreadsRunning[THREAD_MESSAGEHANDLER]--;
-        PrintException(&e, "ThreadMessageHandler()");
-    } catch (...) {
-        vnThreadsRunning[THREAD_MESSAGEHANDLER]--;
-        PrintException(nullptr, "ThreadMessageHandler()");
-    }
-    LogPrintf("ThreadMessageHandler exited\n");
-}
-
-void ThreadMessageHandler2(void* parg)
-{
+    ThreadCountGuard guard(THREAD_MESSAGEHANDLER);
     LogPrintf("ThreadMessageHandler started\n");
     SetThreadPriority(THREAD_PRIORITY_BELOW_NORMAL);
     while (!fShutdown)
     {
-        vector<CNode*> vNodesCopy;
+        std::vector<CNode*> vNodesCopy;
         {
             LOCK(cs_vNodes);
             vNodesCopy = vNodes;
@@ -1811,7 +1673,7 @@ void ThreadMessageHandler2(void* parg)
 
 
 
-bool BindListenPort(const CService &addrBind, string& strError)
+bool BindListenPort(const CService &addrBind, std::string& strError)
 {
     strError = "";
     int nOne = 1;
@@ -1926,7 +1788,7 @@ void static Discover()
     char pszHostName[1000] = "";
     if (gethostname(pszHostName, sizeof(pszHostName)) != SOCKET_ERROR)
     {
-        vector<CNetAddr> vaddr;
+        std::vector<CNetAddr> vaddr;
         if (LookupHost(pszHostName, vaddr))
         {
             for (const CNetAddr &addr : vaddr)
@@ -1967,10 +1829,10 @@ void static Discover()
 
     // Don't use external IPv4 discovery, when -onlynet="IPv6"
     if (!IsLimited(NET_IPV4))
-        NewThread(ThreadGetMyExternalIP, nullptr);
+        NewThread(ThreadGetMyExternalIP);
 }
 
-void StartNode(void* parg)
+void StartNode()
 {
     // Make this thread recognisable as the startup thread
     RenameThread("pinkcoin-start");
@@ -1979,7 +1841,7 @@ void StartNode(void* parg)
 
     if (semOutbound == nullptr) {
         // initialize semaphore
-        int nMaxOutbound = min(MAX_OUTBOUND_CONNECTIONS, static_cast<int>(GetArg("-maxconnections", 125)));
+        int nMaxOutbound = std::min(MAX_OUTBOUND_CONNECTIONS, static_cast<int>(GetArg("-maxconnections", 125)));
         semOutbound = new CSemaphore(nMaxOutbound);
     }
 
@@ -1995,7 +1857,7 @@ void StartNode(void* parg)
     if (!GetBoolArg("-dnsseed", true))
         LogPrintf("DNS seeding disabled\n");
     else
-        if (!NewThread(ThreadDNSAddressSeed, nullptr))
+        if (!NewThread(ThreadDNSAddressSeed))
             LogPrintf("Error: NewThread(ThreadDNSAddressSeed) failed\n");
 
     // Map ports with UPnP
@@ -2003,23 +1865,23 @@ void StartNode(void* parg)
         MapPort();
 
     // Send and receive from sockets, accept connections
-    if (!NewThread(ThreadSocketHandler, nullptr))
+    if (!NewThread(ThreadSocketHandler))
         LogPrintf("Error: NewThread(ThreadSocketHandler) failed\n");
 
     // Initiate outbound connections from -addnode
-    if (!NewThread(ThreadOpenAddedConnections, nullptr))
+    if (!NewThread(ThreadOpenAddedConnections))
         LogPrintf("Error: NewThread(ThreadOpenAddedConnections) failed\n");
 
     // Initiate outbound connections
-    if (!NewThread(ThreadOpenConnections, nullptr))
+    if (!NewThread(ThreadOpenConnections))
         LogPrintf("Error: NewThread(ThreadOpenConnections) failed\n");
 
     // Process messages
-    if (!NewThread(ThreadMessageHandler, nullptr))
+    if (!NewThread(ThreadMessageHandler))
         LogPrintf("Error: NewThread(ThreadMessageHandler) failed\n");
 
     // Dump network addresses
-    if (!NewThread(ThreadDumpAddress, nullptr))
+    if (!NewThread(ThreadDumpAddress))
         LogPrintf("Error; NewThread(ThreadDumpAddress) failed\n");
 
     // Mine proof-of-stake blocks in the background

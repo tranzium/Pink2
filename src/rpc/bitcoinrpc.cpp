@@ -6,6 +6,7 @@
 #include "init.h"
 #include "util.h"
 #include "sync.h"
+#include "thread_guard.h"
 #include "ui_interface.h"
 #include "base58.h"
 #include "bitcoinrpc.h"
@@ -28,21 +29,18 @@ using ioContext = asio::io_context;
 
 #include "logging.h"
 
-using namespace std;
-using namespace asio;
-
-void ThreadRPCServer2(void* parg);
 
 static std::string strRPCUserColonPass;
 
-void ThreadRPCServer3(void* parg);
+class AcceptedConnection;
+void ThreadRPCServer3(AcceptedConnection* conn);
 
 static inline unsigned short GetDefaultRPCPort()
 {
     return GetBoolArg("-testnet", false) ? 19135 : 9135;
 }
 
-json JSONRPCError(int code, const string& message)
+json JSONRPCError(int code, const std::string& message)
 {
     json error;
     error["code"] = code;
@@ -81,7 +79,7 @@ static bool JsonTypeMatches(json::value_t actual, json::value_t expected)
 }
 
 void RPCTypeCheck(const json& params,
-                  const list<json::value_t>& typesExpected,
+                  const std::list<json::value_t>& typesExpected,
                   bool fAllowNull)
 {
     unsigned int i = 0;
@@ -93,7 +91,7 @@ void RPCTypeCheck(const json& params,
         const json& v = params[i];
         if (!(JsonTypeMatches(v.type(), t) || (fAllowNull && v.is_null())))
         {
-            string err = strprintf("Expected type %s, got %s",
+            std::string err = strprintf("Expected type %s, got %s",
                                    JsonTypeName(t), JsonTypeName(v.type()));
             throw JSONRPCError(RPC_TYPE_ERROR, err);
         }
@@ -102,7 +100,7 @@ void RPCTypeCheck(const json& params,
 }
 
 void RPCTypeCheck(const json& o,
-                  const map<string, json::value_t>& typesExpected,
+                  const std::map<std::string, json::value_t>& typesExpected,
                   bool fAllowNull)
 {
     for (const auto& t : typesExpected)
@@ -115,7 +113,7 @@ void RPCTypeCheck(const json& o,
         const json& v = o[t.first];
         if (!(JsonTypeMatches(v.type(), t.second) || (fAllowNull && v.is_null())))
         {
-            string err = strprintf("Expected type %s for %s, got %s",
+            std::string err = strprintf("Expected type %s for %s, got %s",
                                    JsonTypeName(t.second), t.first.c_str(), JsonTypeName(v.type()));
             throw JSONRPCError(RPC_TYPE_ERROR, err);
         }
@@ -153,9 +151,9 @@ std::string HexBits(unsigned int nBits)
 // Utilities: convert hex-encoded Values
 // (throws error if not hex).
 //
-uint256 ParseHashV(const json& v, string strName)
+uint256 ParseHashV(const json& v, std::string strName)
 {
-    string strHex;
+    std::string strHex;
     if (v.is_string())
         strHex = v.get<std::string>();
     if (!IsHex(strHex)) // Note: IsHex("") is false
@@ -165,14 +163,14 @@ uint256 ParseHashV(const json& v, string strName)
     return result;
 }
 
-uint256 ParseHashO(const json& o, string strKey)
+uint256 ParseHashO(const json& o, std::string strKey)
 {
     return ParseHashV(o[strKey], strKey);
 }
 
-vector<unsigned char> ParseHexV(const json& v, string strName)
+std::vector<unsigned char> ParseHexV(const json& v, std::string strName)
 {
-    string strHex;
+    std::string strHex;
     if (v.is_string())
         strHex = v.get<std::string>();
     if (!IsHex(strHex))
@@ -180,7 +178,7 @@ vector<unsigned char> ParseHexV(const json& v, string strName)
     return ParseHex(strHex);
 }
 
-vector<unsigned char> ParseHexO(const json& o, string strKey)
+std::vector<unsigned char> ParseHexO(const json& o, std::string strKey)
 {
     return ParseHexV(o[strKey], strKey);
 }
@@ -190,16 +188,16 @@ vector<unsigned char> ParseHexO(const json& o, string strKey)
 /// Note: This interface may still be subject to change.
 ///
 
-string CRPCTable::help(string strCommand) const
+std::string CRPCTable::help(std::string strCommand) const
 {
-    string strRet;
-    set<rpcfn_type> setDone;
+    std::string strRet;
+    std::set<rpcfn_type> setDone;
     for (const auto& mi : mapCommands)
     {
         const CRPCCommand *pcmd = mi.second;
-        string strMethod = mi.first;
+        std::string strMethod = mi.first;
         // We already filter duplicates, but these deprecated screw up the sort order
-        if (strMethod.find("label") != string::npos)
+        if (strMethod.find("label") != std::string::npos)
             continue;
         if (strCommand != "" && strMethod != strCommand)
             continue;
@@ -213,9 +211,9 @@ string CRPCTable::help(string strCommand) const
         catch (std::exception& e)
         {
             // Help text is returned in an exception
-            string strHelp = string(e.what());
+            std::string strHelp = std::string(e.what());
             if (strCommand == "")
-                if (strHelp.find('\n') != string::npos)
+                if (strHelp.find('\n') != std::string::npos)
                     strHelp = strHelp.substr(0, strHelp.find('\n'));
             strRet += strHelp + "\n";
         }
@@ -229,11 +227,11 @@ string CRPCTable::help(string strCommand) const
 json help(const json& params, bool fHelp)
 {
     if (fHelp || params.size() > 1)
-        throw runtime_error(
+        throw std::runtime_error(
             "help [command]\n"
             "List commands, or get help for a command.");
 
-    string strCommand;
+    std::string strCommand;
     if (!params.empty())
         strCommand = params[0].get<std::string>();
 
@@ -244,7 +242,7 @@ json help(const json& params, bool fHelp)
 json stop(const json& params, bool fHelp)
 {
     if (fHelp || params.size() > 1)
-        throw runtime_error(
+        throw std::runtime_error(
             "stop <detach>\n"
             "<detach> is true or false to detach the database or not for this stop only\n"
             "Stop Pinkcoin server (and possibly override the detachdb config value).");
@@ -258,7 +256,7 @@ json stop(const json& params, bool fHelp)
 json setloglevel(const json& params, bool fHelp)
 {
     if (fHelp || params.size() < 1 || params.size() > 2)
-        throw runtime_error(
+        throw std::runtime_error(
             "setloglevel <level> [categories]\n"
             "Set the logging level and optionally enable categories.\n"
             "<level> is one of: none, error, warn, info, debug\n"
@@ -304,7 +302,7 @@ json setloglevel(const json& params, bool fHelp)
 json getloglevel(const json& params, bool fHelp)
 {
     if (fHelp || params.size() > 0)
-        throw runtime_error(
+        throw std::runtime_error(
             "getloglevel\n"
             "Returns the current logging level and enabled categories.");
 
@@ -456,7 +454,7 @@ CRPCTable::CRPCTable()
     }
 }
 
-const CRPCCommand *CRPCTable::operator[](string name) const
+const CRPCCommand *CRPCTable::operator[](std::string name) const
 {
     auto it = mapCommands.find(name);
     if (it == mapCommands.end())
@@ -471,9 +469,9 @@ const CRPCCommand *CRPCTable::operator[](string name) const
 // and to be compatible with other JSON-RPC implementations.
 //
 
-string HTTPPost(const string& strMsg, const map<string,string>& mapRequestHeaders)
+std::string HTTPPost(const std::string& strMsg, const std::map<std::string,std::string>& mapRequestHeaders)
 {
-    ostringstream s;
+    std::ostringstream s;
     s << "POST / HTTP/1.1\r\n"
       << "User-Agent: pinkcoin-json-rpc/" << FormatFullVersion() << "\r\n"
       << "Host: 127.0.0.1\r\n"
@@ -488,20 +486,20 @@ string HTTPPost(const string& strMsg, const map<string,string>& mapRequestHeader
     return s.str();
 }
 
-string rfc1123Time()
+std::string rfc1123Time()
 {
     char buffer[64];
     time_t now;
     time(&now);
     struct tm* now_gmt = gmtime(&now);
-    string locale(setlocale(LC_TIME, nullptr));
+    std::string locale(setlocale(LC_TIME, nullptr));
     setlocale(LC_TIME, "C"); // we want POSIX (aka "C") weekday/month strings
     strftime(buffer, sizeof(buffer), "%a, %d %b %Y %H:%M:%S +0000", now_gmt);
     setlocale(LC_TIME, locale.c_str());
-    return string(buffer);
+    return std::string(buffer);
 }
 
-static string HTTPReply(int nStatus, const string& strMsg, bool keepalive)
+static std::string HTTPReply(int nStatus, const std::string& strMsg, bool keepalive)
 {
     if (nStatus == HTTP_UNAUTHORIZED)
         return strprintf("HTTP/1.0 401 Authorization Required\r\n"
@@ -546,13 +544,13 @@ static string HTTPReply(int nStatus, const string& strMsg, bool keepalive)
 }
 
 bool ReadHTTPRequestLine(std::basic_istream<char>& stream, int &proto,
-                         string& http_method, string& http_uri)
+                         std::string& http_method, std::string& http_uri)
 {
-    string str;
-    getline(stream, str);
+    std::string str;
+    std::getline(stream, str);
 
     // HTTP request line is space-delimited
-    vector<string> vWords = strutil::split(str, " ");
+    std::vector<std::string> vWords = strutil::split(str, " ");
     if (vWords.size() < 2)
         return false;
 
@@ -567,7 +565,7 @@ bool ReadHTTPRequestLine(std::basic_istream<char>& stream, int &proto,
         return false;
 
     // parse proto, if present
-    string strProto = "";
+    std::string strProto = "";
     if (vWords.size() > 2)
         strProto = vWords[2];
 
@@ -581,9 +579,9 @@ bool ReadHTTPRequestLine(std::basic_istream<char>& stream, int &proto,
 
 int ReadHTTPStatus(std::basic_istream<char>& stream, int &proto)
 {
-    string str;
-    getline(stream, str);
-    vector<string> vWords = strutil::split(str, " ");
+    std::string str;
+    std::getline(stream, str);
+    std::vector<std::string> vWords = strutil::split(str, " ");
     if (vWords.size() < 2)
         return HTTP_INTERNAL_SERVER_ERROR;
     proto = 0;
@@ -593,22 +591,22 @@ int ReadHTTPStatus(std::basic_istream<char>& stream, int &proto)
     return atoi(vWords[1].c_str());
 }
 
-int ReadHTTPHeaders(std::basic_istream<char>& stream, map<string, string>& mapHeadersRet)
+int ReadHTTPHeaders(std::basic_istream<char>& stream, std::map<std::string, std::string>& mapHeadersRet)
 {
     int nLen = 0;
     while (true)
     {
-        string str;
+        std::string str;
         std::getline(stream, str);
         if (str.empty() || str == "\r")
             break;
-        string::size_type nColon = str.find(":");
-        if (nColon != string::npos)
+        std::string::size_type nColon = str.find(":");
+        if (nColon != std::string::npos)
         {
-            string strHeader = str.substr(0, nColon);
+            std::string strHeader = str.substr(0, nColon);
             strutil::trim(strHeader);
             strutil::to_lower(strHeader);
-            string strValue = str.substr(nColon+1);
+            std::string strValue = str.substr(nColon+1);
             strutil::trim(strValue);
             mapHeadersRet[strHeader] = strValue;
             if (strHeader == "content-length")
@@ -618,8 +616,8 @@ int ReadHTTPHeaders(std::basic_istream<char>& stream, map<string, string>& mapHe
     return nLen;
 }
 
-int ReadHTTPMessage(std::basic_istream<char>& stream, map<string,
-                    string>& mapHeadersRet, string& strMessageRet,
+int ReadHTTPMessage(std::basic_istream<char>& stream, std::map<std::string,
+                    std::string>& mapHeadersRet, std::string& strMessageRet,
                     int nProto)
 {
     mapHeadersRet.clear();
@@ -633,12 +631,12 @@ int ReadHTTPMessage(std::basic_istream<char>& stream, map<string,
     // Read message
     if (nLen > 0)
     {
-        vector<char> vch(nLen);
+        std::vector<char> vch(nLen);
         stream.read(&vch[0], nLen);
-        strMessageRet = string(vch.begin(), vch.end());
+        strMessageRet = std::string(vch.begin(), vch.end());
     }
 
-    string sConHdr = mapHeadersRet["connection"];
+    std::string sConHdr = mapHeadersRet["connection"];
 
     if ((sConHdr != "close") && (sConHdr != "keep-alive"))
     {
@@ -651,13 +649,13 @@ int ReadHTTPMessage(std::basic_istream<char>& stream, map<string,
     return HTTP_OK;
 }
 
-bool HTTPAuthorized(map<string, string>& mapHeaders)
+bool HTTPAuthorized(std::map<std::string, std::string>& mapHeaders)
 {
-    string strAuth = mapHeaders["authorization"];
+    std::string strAuth = mapHeaders["authorization"];
     if (strAuth.substr(0,6) != "Basic ")
         return false;
-    string strUserPass64 = strAuth.substr(6); strutil::trim(strUserPass64);
-    string strUserPass = DecodeBase64(strUserPass64);
+    std::string strUserPass64 = strAuth.substr(6); strutil::trim(strUserPass64);
+    std::string strUserPass = DecodeBase64(strUserPass64);
     return TimingResistantEqual(strUserPass, strRPCUserColonPass);
 }
 
@@ -670,7 +668,7 @@ bool HTTPAuthorized(map<string, string>& mapHeaders)
 // 1.2 spec: http://groups.google.com/group/json-rpc/web/json-rpc-over-http
 //
 
-string JSONRPCRequest(const string& strMethod, const json& params, const json& id)
+std::string JSONRPCRequest(const std::string& strMethod, const json& params, const json& id)
 {
     json request;
     request["method"] = strMethod;
@@ -691,7 +689,7 @@ json JSONRPCReplyObj(const json& result, const json& error, const json& id)
     return reply;
 }
 
-string JSONRPCReply(const json& result, const json& error, const json& id)
+std::string JSONRPCReply(const json& result, const json& error, const json& id)
 {
     json reply = JSONRPCReplyObj(result, error, id);
     return reply.dump() + "\n";
@@ -704,7 +702,7 @@ void ErrorReply(std::ostream& stream, const json& objError, const json& id)
     int code = objError["code"].get<int>();
     if (code == RPC_INVALID_REQUEST) nStatus = HTTP_BAD_REQUEST;
     else if (code == RPC_METHOD_NOT_FOUND) nStatus = HTTP_NOT_FOUND;
-    string strReply = JSONRPCReply(nullptr, objError, id);
+    std::string strReply = JSONRPCReply(nullptr, objError, id);
     stream << HTTPReply(nStatus, strReply, false) << std::flush;
 }
 
@@ -722,9 +720,9 @@ bool ClientAllowed(const asio::ip::address& address)
       && (address.to_v4().to_uint() & 0xff000000) == 0x7f000000))
         return true;
 
-    const string strAddress = address.to_string();
-    const vector<string>& vAllow = mapMultiArgs["-rpcallowip"];
-    for (const string& strAllow : vAllow)
+    const std::string strAddress = address.to_string();
+    const std::vector<std::string>& vAllow = mapMultiArgs["-rpcallowip"];
+    for (const std::string& strAllow : vAllow)
         if (WildcardMatch(strAddress, strAllow))
             return true;
     return false;
@@ -746,7 +744,7 @@ class AcceptedConnectionImpl : public AcceptedConnection
 public:
     AcceptedConnectionImpl(
             ioContext& io_ctx,
-            ssl::context &context,
+            asio::ssl::context &context,
             bool fUseSSL) :
         sslStream(io_ctx, context),
         _streambuf(sslStream, fUseSSL),
@@ -777,31 +775,11 @@ private:
     std::iostream _stream;
 };
 
-void ThreadRPCServer(void* parg)
-{
-    // Make this thread recognisable as the RPC listener
-    RenameThread("pinkcoin-rpclist");
-
-    try
-    {
-        vnThreadsRunning[THREAD_RPCLISTENER]++;
-        ThreadRPCServer2(parg);
-        vnThreadsRunning[THREAD_RPCLISTENER]--;
-    }
-    catch (std::exception& e) {
-        vnThreadsRunning[THREAD_RPCLISTENER]--;
-        PrintException(&e, "ThreadRPCServer()");
-    } catch (...) {
-        vnThreadsRunning[THREAD_RPCLISTENER]--;
-        PrintException(nullptr, "ThreadRPCServer()");
-    }
-    LogPrintf("ThreadRPCServer exited\n");
-}
 
 // Forward declaration required for RPCListen
 template <typename Protocol>
-static void RPCAcceptHandler(std::shared_ptr< basic_socket_acceptor<Protocol> > acceptor,
-                             ssl::context& context,
+static void RPCAcceptHandler(std::shared_ptr< asio::basic_socket_acceptor<Protocol> > acceptor,
+                             asio::ssl::context& context,
                              bool fUseSSL,
                              AcceptedConnection* conn,
                              const asio::error_code& error);
@@ -810,8 +788,8 @@ static void RPCAcceptHandler(std::shared_ptr< basic_socket_acceptor<Protocol> > 
  * Sets up I/O resources to accept and handle a new connection.
  */
 template <typename Protocol>
-static void RPCListen(std::shared_ptr< basic_socket_acceptor<Protocol> > acceptor,
-                   ssl::context& context,
+static void RPCListen(std::shared_ptr< asio::basic_socket_acceptor<Protocol> > acceptor,
+                   asio::ssl::context& context,
                    const bool fUseSSL)
 {
     // Accept connection
@@ -829,8 +807,8 @@ static void RPCListen(std::shared_ptr< basic_socket_acceptor<Protocol> > accepto
  * Accept and handle incoming connection.
  */
 template <typename Protocol>
-static void RPCAcceptHandler(std::shared_ptr< basic_socket_acceptor<Protocol> > acceptor,
-                             ssl::context& context,
+static void RPCAcceptHandler(std::shared_ptr< asio::basic_socket_acceptor<Protocol> > acceptor,
+                             asio::ssl::context& context,
                              const bool fUseSSL,
                              AcceptedConnection* conn,
                              const asio::error_code& error)
@@ -842,7 +820,7 @@ static void RPCAcceptHandler(std::shared_ptr< basic_socket_acceptor<Protocol> > 
      && acceptor->is_open())
         RPCListen(acceptor, context, fUseSSL);
 
-    AcceptedConnectionImpl<ip::tcp>* tcp_conn = dynamic_cast< AcceptedConnectionImpl<ip::tcp>* >(conn);
+    AcceptedConnectionImpl<asio::ip::tcp>* tcp_conn = dynamic_cast< AcceptedConnectionImpl<asio::ip::tcp>* >(conn);
 
     // TODO: Actually handle errors
     if (error)
@@ -863,7 +841,7 @@ static void RPCAcceptHandler(std::shared_ptr< basic_socket_acceptor<Protocol> > 
     }
 
     // start HTTP client thread
-    else if (!NewThread(ThreadRPCServer3, conn)) {
+    else if (!NewThread(ThreadRPCServer3, static_cast<AcceptedConnection*>(conn))) {
         LogPrintf("Failed to create RPC server client thread\n");
         delete conn;
     }
@@ -871,8 +849,11 @@ static void RPCAcceptHandler(std::shared_ptr< basic_socket_acceptor<Protocol> > 
     vnThreadsRunning[THREAD_RPCLISTENER]--;
 }
 
-void ThreadRPCServer2(void* parg)
+void ThreadRPCServer()
 {
+    // Make this thread recognisable as the RPC listener
+    RenameThread("pinkcoin-rpclist");
+    ThreadCountGuard guard(THREAD_RPCLISTENER);
     LogPrintf("ThreadRPCServer started\n");
 
     strRPCUserColonPass = mapArgs["-rpcuser"] + ":" + mapArgs["-rpcpassword"];
@@ -881,7 +862,7 @@ void ThreadRPCServer2(void* parg)
     {
         unsigned char rand_pwd[32];
         RAND_bytes(rand_pwd, 32);
-        string strWhatAmI = "To use pinkcoind";
+        std::string strWhatAmI = "To use pinkcoind";
         if (mapArgs.count("-server"))
             strWhatAmI = strprintf(_("To use the %s option"), "\"-server\"");
         else if (mapArgs.count("-daemon"))
@@ -908,10 +889,10 @@ void ThreadRPCServer2(void* parg)
 
     ioContext io_service;
 
-    ssl::context context(ssl::context::sslv23);
+    asio::ssl::context context(asio::ssl::context::sslv23);
     if (fUseSSL)
     {
-        context.set_options(ssl::context::no_sslv2);
+        context.set_options(asio::ssl::context::no_sslv2);
 
         std::filesystem::path pathCertFile(GetArg("-rpcsslcertificatechainfile", "server.cert"));
         if (!pathCertFile.is_absolute()) pathCertFile = std::filesystem::path(GetDataDir()) / pathCertFile;
@@ -920,19 +901,19 @@ void ThreadRPCServer2(void* parg)
 
         std::filesystem::path pathPKFile(GetArg("-rpcsslprivatekeyfile", "server.pem"));
         if (!pathPKFile.is_absolute()) pathPKFile = std::filesystem::path(GetDataDir()) / pathPKFile;
-        if (std::filesystem::exists(pathPKFile)) context.use_private_key_file(pathPKFile.string(), ssl::context::pem);
+        if (std::filesystem::exists(pathPKFile)) context.use_private_key_file(pathPKFile.string(), asio::ssl::context::pem);
         else LogPrintf("ThreadRPCServer ERROR: missing server private key file %s\n", pathPKFile.string().c_str());
 
-        string strCiphers = GetArg("-rpcsslciphers", "TLSv1+HIGH:!SSLv2:!aNULL:!eNULL:!AH:!3DES:@STRENGTH");
+        std::string strCiphers = GetArg("-rpcsslciphers", "TLSv1+HIGH:!SSLv2:!aNULL:!eNULL:!AH:!3DES:@STRENGTH");
         SSL_CTX_set_cipher_list(context.native_handle(), strCiphers.c_str());
     }
 
     // Try a dual IPv6/IPv4 socket, falling back to separate IPv4 and IPv6 sockets
     const bool loopback = !mapArgs.count("-rpcallowip");
     asio::ip::address bindAddress = loopback ? asio::ip::address_v6::loopback() : asio::ip::address_v6::any();
-    ip::tcp::endpoint endpoint(bindAddress, GetArg("-rpcport", GetDefaultRPCPort()));
+    asio::ip::tcp::endpoint endpoint(bindAddress, GetArg("-rpcport", GetDefaultRPCPort()));
     asio::error_code v6_only_error;
-    auto acceptor = std::make_shared<ip::tcp::acceptor>(io_service);
+    auto acceptor = std::make_shared<asio::ip::tcp::acceptor>(io_service);
 
     Signal<> StopRequests;
 
@@ -958,7 +939,7 @@ void ThreadRPCServer2(void* parg)
 
         fListening = true;
     }
-    catch(asio::system_error &e)
+    catch (asio::system_error &e)
     {
         strerr = strprintf(_("An error occurred while setting up the RPC port %u for listening on IPv6, falling back to IPv4: %s"), endpoint.port(), e.what());
     }
@@ -970,7 +951,7 @@ void ThreadRPCServer2(void* parg)
             bindAddress = loopback ? asio::ip::address_v4::loopback() : asio::ip::address_v4::any();
             endpoint.address(bindAddress);
 
-            acceptor = std::make_shared<ip::tcp::acceptor>(io_service);
+            acceptor = std::make_shared<asio::ip::tcp::acceptor>(io_service);
             acceptor->open(endpoint.protocol());
             acceptor->set_option(asio::ip::tcp::acceptor::reuse_address(true));
             acceptor->bind(endpoint);
@@ -986,7 +967,7 @@ void ThreadRPCServer2(void* parg)
             fListening = true;
         }
     }
-    catch(asio::system_error &e)
+    catch (asio::system_error &e)
     {
         strerr = strprintf(_("An error occurred while setting up the RPC port %u for listening on IPv4: %s"), endpoint.port(), e.what());
     }
@@ -1008,7 +989,7 @@ class JSONRequest
 {
 public:
     json id;
-    string strMethod;
+    std::string strMethod;
     json params;
 
     JSONRequest() { id = nullptr; }
@@ -1072,7 +1053,7 @@ static json JSONRPCExecOne(const json& req)
     return rpc_result;
 }
 
-static string JSONRPCExecBatch(const json& vReq)
+static std::string JSONRPCExecBatch(const json& vReq)
 {
     json ret = json::array();
     for (unsigned int reqIdx = 0; reqIdx < vReq.size(); reqIdx++)
@@ -1083,7 +1064,7 @@ static string JSONRPCExecBatch(const json& vReq)
 
 static CCriticalSection cs_THREAD_RPCHANDLER;
 
-void ThreadRPCServer3(void* parg)
+void ThreadRPCServer3(AcceptedConnection* pconn)
 {
     // Make this thread recognisable as the RPC handler
     RenameThread("pinkcoin-rpchand");
@@ -1092,7 +1073,7 @@ void ThreadRPCServer3(void* parg)
         LOCK(cs_THREAD_RPCHANDLER);
         vnThreadsRunning[THREAD_RPCHANDLER]++;
     }
-    std::unique_ptr<AcceptedConnection> conn(static_cast<AcceptedConnection*>(parg));
+    std::unique_ptr<AcceptedConnection> conn(pconn);
 
     bool fRun = true;
     while (true)
@@ -1109,8 +1090,8 @@ void ThreadRPCServer3(void* parg)
         }
 
         int nProto = 0;
-        map<string, string> mapHeaders;
-        string strRequest, strMethod, strURI;
+        std::map<std::string, std::string> mapHeaders;
+        std::string strRequest, strMethod, strURI;
 
         // Read HTTP request line
         if (!ReadHTTPRequestLine(conn->stream(), nProto, strMethod, strURI))
@@ -1151,7 +1132,7 @@ void ThreadRPCServer3(void* parg)
                 throw JSONRPCError(RPC_PARSE_ERROR, "Parse error");
             }
 
-            string strReply;
+            std::string strReply;
 
             // singleton request
             if (valRequest.is_object()) {
@@ -1196,10 +1177,10 @@ json CRPCTable::execute(const std::string &strMethod, const json &params) const
         throw JSONRPCError(RPC_METHOD_NOT_FOUND, "Method not found");
 
     // Observe safe mode
-    string strWarning = GetWarnings("rpc");
+    std::string strWarning = GetWarnings("rpc");
     if (strWarning != "" && !GetBoolArg("-disablesafemode") &&
         !pcmd->okSafeMode)
-        throw JSONRPCError(RPC_FORBIDDEN_BY_SAFE_MODE, string("Safe mode: ") + strWarning);
+        throw JSONRPCError(RPC_FORBIDDEN_BY_SAFE_MODE, std::string("Safe mode: ") + strWarning);
 
     try
     {
@@ -1222,10 +1203,10 @@ json CRPCTable::execute(const std::string &strMethod, const json &params) const
 }
 
 
-json CallRPC(const string& strMethod, const json& params)
+json CallRPC(const std::string& strMethod, const json& params)
 {
     if (mapArgs["-rpcuser"] == "" && mapArgs["-rpcpassword"] == "")
-        throw runtime_error(strprintf(
+        throw std::runtime_error(strprintf(
             _("You must set rpcpassword=<password> in the configuration file:\n%s\n"
               "If the file does not exist, create it with owner-readable-only file permissions."),
                 GetConfigFile().string().c_str()));
@@ -1233,22 +1214,22 @@ json CallRPC(const string& strMethod, const json& params)
     // Connect to localhost
     bool fUseSSL = GetBoolArg("-rpcssl");
     ioContext io_service;
-    ssl::context context(ssl::context::sslv23);
-    context.set_options(ssl::context::no_sslv2);
+    asio::ssl::context context(asio::ssl::context::sslv23);
+    context.set_options(asio::ssl::context::no_sslv2);
     asio::ssl::stream<asio::ip::tcp::socket> sslStream(io_service, context);
     AsioSSLStreamBuf<asio::ip::tcp> streambuf(sslStream, fUseSSL);
     std::iostream stream(&streambuf);
     if (!streambuf.connect(GetArg("-rpcconnect", "127.0.0.1"), GetArg("-rpcport", itostr(GetDefaultRPCPort()))))
-        throw runtime_error("couldn't connect to server");
+        throw std::runtime_error("couldn't connect to server");
 
     // HTTP basic authentication
-    string strUserPass64 = EncodeBase64(mapArgs["-rpcuser"] + ":" + mapArgs["-rpcpassword"]);
-    map<string, string> mapRequestHeaders;
-    mapRequestHeaders["Authorization"] = string("Basic ") + strUserPass64;
+    std::string strUserPass64 = EncodeBase64(mapArgs["-rpcuser"] + ":" + mapArgs["-rpcpassword"]);
+    std::map<std::string, std::string> mapRequestHeaders;
+    mapRequestHeaders["Authorization"] = std::string("Basic ") + strUserPass64;
 
     // Send request
-    string strRequest = JSONRPCRequest(strMethod, params, 1);
-    string strPost = HTTPPost(strRequest, mapRequestHeaders);
+    std::string strRequest = JSONRPCRequest(strMethod, params, 1);
+    std::string strPost = HTTPPost(strRequest, mapRequestHeaders);
     stream << strPost << std::flush;
 
     // Receive HTTP reply status
@@ -1256,26 +1237,26 @@ json CallRPC(const string& strMethod, const json& params)
     int nStatus = ReadHTTPStatus(stream, nProto);
 
     // Receive HTTP reply message headers and body
-    map<string, string> mapHeaders;
-    string strReply;
+    std::map<std::string, std::string> mapHeaders;
+    std::string strReply;
     ReadHTTPMessage(stream, mapHeaders, strReply, nProto);
 
     if (nStatus == HTTP_UNAUTHORIZED)
-        throw runtime_error("incorrect rpcuser or rpcpassword (authorization failed)");
+        throw std::runtime_error("incorrect rpcuser or rpcpassword (authorization failed)");
     else if (nStatus >= 400 && nStatus != HTTP_BAD_REQUEST && nStatus != HTTP_NOT_FOUND && nStatus != HTTP_INTERNAL_SERVER_ERROR)
-        throw runtime_error(strprintf("server returned HTTP error %d", nStatus));
+        throw std::runtime_error(strprintf("server returned HTTP error %d", nStatus));
     else if (strReply.empty())
-        throw runtime_error("no response from server");
+        throw std::runtime_error("no response from server");
 
     // Parse reply
     json valReply;
     try {
         valReply = json::parse(strReply);
     } catch (const json::parse_error&) {
-        throw runtime_error("couldn't parse reply from server");
+        throw std::runtime_error("couldn't parse reply from server");
     }
     if (!valReply.is_object() || valReply.empty())
-        throw runtime_error("expected reply to have result, error and id properties");
+        throw std::runtime_error("expected reply to have result, error and id properties");
 
     return valReply;
 }
@@ -1296,7 +1277,7 @@ static void ConvertParam(json& value, bool fAllowNull=false)
         try {
             value = json::parse(strJSON);
         } catch (const json::parse_error&) {
-            throw runtime_error(string("Error parsing JSON:") + strJSON);
+            throw std::runtime_error(std::string("Error parsing JSON:") + strJSON);
         }
     }
 }
@@ -1370,7 +1351,7 @@ json RPCConvertValues(const std::string &strMethod, const std::vector<std::strin
 
 int CommandLineRPC(int argc, char *argv[])
 {
-    string strPrint;
+    std::string strPrint;
     int nRet = 0;
     try
     {
@@ -1383,8 +1364,8 @@ int CommandLineRPC(int argc, char *argv[])
 
         // Method
         if (argc < 2)
-            throw runtime_error("too few parameters");
-        string strMethod = argv[1];
+            throw std::runtime_error("too few parameters");
+        std::string strMethod = argv[1];
 
         // Parameters default to strings
         std::vector<std::string> strParams(&argv[2], &argv[argc]);
@@ -1417,7 +1398,7 @@ int CommandLineRPC(int argc, char *argv[])
     }
     catch (std::exception& e)
     {
-        strPrint = string("error: ") + e.what();
+        strPrint = std::string("error: ") + e.what();
         nRet = 87;
     }
     catch (...)
@@ -1446,7 +1427,7 @@ int main(int argc, char *argv[])
 
     try
     {
-        if (argc >= 2 && string(argv[1]) == "-server")
+        if (argc >= 2 && std::string(argv[1]) == "-server")
         {
             LogPrintf("server ready\n");
             ThreadRPCServer(nullptr);

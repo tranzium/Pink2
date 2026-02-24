@@ -9,51 +9,49 @@
 
 #include <filesystem>
 
-using namespace std;
-
 //
 // CStakeDB
 //
 
-bool CStakeDB::WriteStake(const string& strAddress, const string& strName, const string& sPercent)
+bool CStakeDB::WriteStake(const std::string& strAddress, const std::string& strName, const std::string& sPercent)
 {
     nStakeDBUpdated++;
     bool success = true;
 
-    if (!Write(make_pair(string("name"), strAddress), strName))
+    if (!Write(std::make_pair(std::string("name"), strAddress), strName))
         success = false;
-    if (!Write(make_pair(string("percent"), strAddress), sPercent))
+    if (!Write(std::make_pair(std::string("percent"), strAddress), sPercent))
         success = false;
     return success;
 }
 
-bool CStakeDB::EraseStake(const string& strAddress)
+bool CStakeDB::EraseStake(const std::string& strAddress)
 {
     nStakeDBUpdated++;
     bool success=true;
 
-    if (!Erase(make_pair(string("name"), strAddress)))
+    if (!Erase(std::make_pair(std::string("name"), strAddress)))
         success = false;
-    if (!Erase(make_pair(string("percent"), strAddress)))
+    if (!Erase(std::make_pair(std::string("percent"), strAddress)))
         success = false;
 
     return success;
 }
 
-bool CStakeDB::ReadStake(const string& strAddress, string& strName, string& sPercent)
+bool CStakeDB::ReadStake(const std::string& strAddress, std::string& strName, std::string& sPercent)
 {
     bool success = true;
 
-    if (!Read(make_pair(string("name"), strAddress), strName))
+    if (!Read(std::make_pair(std::string("name"), strAddress), strName))
         success = false;
-    if (!Read(make_pair(string("percent"), strAddress), sPercent))
+    if (!Read(std::make_pair(std::string("percent"), strAddress), sPercent))
         success = false;
 
     return success;
 }
 
 bool
-ReadKeyValue(CWallet* pwallet, CDataStream& ssKey, CDataStream& ssValue, string& strType, string& strErr)
+ReadKeyValue(CWallet* pwallet, CDataStream& ssKey, CDataStream& ssValue, std::string& strType, std::string& strErr)
 {
     try {
         // Unserialize
@@ -62,13 +60,13 @@ ReadKeyValue(CWallet* pwallet, CDataStream& ssKey, CDataStream& ssValue, string&
         ssKey >> strType;
         if (strType == "name")
         {
-            string strAddress;
+            std::string strAddress;
             ssKey >> strAddress;
             ssValue >> pwallet->mapAddressBook[CBitcoinAddress(strAddress).Get()];
         }
         else if (strType == "percent")
         {
-            string strAddress;
+            std::string strAddress;
             ssKey >> strAddress;
             ssValue >> pwallet->mapAddressPercent[CBitcoinAddress(strAddress).Get()];
         }
@@ -91,7 +89,7 @@ SDBErrors CStakeDB::LoadWallet(CWallet* pwallet)
     try {
         LOCK(pwallet->cs_wallet);
         int nMinVersion = 0;
-        if (Read((string)"minversion", nMinVersion))
+        if (Read((std::string)"minversion", nMinVersion))
         {
             if (nMinVersion > CLIENT_VERSION)
                 return SDB_TOO_NEW;
@@ -121,7 +119,7 @@ SDBErrors CStakeDB::LoadWallet(CWallet* pwallet)
             }
 
             // Try to be tolerant of single corrupt records:
-            string strType, strErr;
+            std::string strType, strErr;
             if (!ReadKeyValue(pwallet, ssKey, ssValue, strType, strErr))
             {
                 LogPrintf("Error: Debug ReadKeyValue for StakeDB\n");
@@ -147,12 +145,10 @@ SDBErrors CStakeDB::LoadWallet(CWallet* pwallet)
     return result;
 }
 
-void ThreadFlushStakeDB(void* parg)
+void ThreadFlushStakeDB(const std::string& strFile)
 {
     // Make this thread recognisable as the wallet flushing thread
     RenameThread("pinkcoin-stake");
-
-    const string& strFile = ((const string*)parg)[0];
     static bool fOneThread;
     if (fOneThread)
         return;
@@ -180,7 +176,7 @@ void ThreadFlushStakeDB(void* parg)
             {
                 // Don't do this if any databases are in use
                 int nRefCount = 0;
-                map<string, int>::iterator mi = bitdb.mapFileUseCount.begin();
+                std::map<std::string, int>::iterator mi = bitdb.mapFileUseCount.begin();
                 while (mi != bitdb.mapFileUseCount.end())
                 {
                     nRefCount += (*mi).second;
@@ -189,7 +185,7 @@ void ThreadFlushStakeDB(void* parg)
 
                 if (nRefCount == 0 && !fShutdown)
                 {
-                    map<string, int>::iterator mi = bitdb.mapFileUseCount.find(strFile);
+                    std::map<std::string, int>::iterator mi = bitdb.mapFileUseCount.find(strFile);
                     if (mi != bitdb.mapFileUseCount.end())
                     {
                         LogPrint(BCLog::STAKE, "Flushing stake.dat\n");
@@ -209,7 +205,7 @@ void ThreadFlushStakeDB(void* parg)
     }
 }
 
-bool BackupStakeDB(const CWallet& stakeDB, const string& strDest)
+bool BackupStakeDB(const CWallet& stakeDB, const std::string& strDest)
 {
     if (!stakeDB.fFileBacked)
         return false;
@@ -301,7 +297,7 @@ bool CStakeDB::Recover(CDBEnv& dbenv, std::string filename, bool fOnlyKeys)
         {
             CDataStream ssKey(row.first, SER_DISK, CLIENT_VERSION);
             CDataStream ssValue(row.second, SER_DISK, CLIENT_VERSION);
-            string strType, strErr;
+            std::string strType, strErr;
             bool fReadOK = ReadKeyValue(&dummyStakeDB, ssKey, ssValue, strType, strErr);
             if (!fReadOK)
             {

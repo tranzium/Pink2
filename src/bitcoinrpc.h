@@ -69,7 +69,7 @@ enum RPCErrorCode
 
 json JSONRPCError(int code, const std::string& message);
 
-void ThreadRPCServer(void* parg);
+void ThreadRPCServer();
 int CommandLineRPC(int argc, char *argv[]);
 
 /** Convert parameter values for RPC call from strings to command-specific JSON objects. */

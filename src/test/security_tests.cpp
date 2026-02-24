@@ -221,8 +221,8 @@ BOOST_AUTO_TEST_CASE(new_thread_creates_and_detaches)
     // NewThread should create a detached thread that runs to completion
     static std::atomic<bool> threadRan{false};
 
-    auto fn = [](void*) { threadRan.store(true); };
-    bool ok = NewThread(fn, nullptr);
+    auto fn = []() { threadRan.store(true); };
+    bool ok = NewThread(fn);
     BOOST_CHECK(ok);
 
     // Give thread time to run

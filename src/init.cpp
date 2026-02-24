@@ -25,7 +25,7 @@
 #endif
 
 
-using namespace std;
+// std:: prefix used explicitly throughout
 
 CWallet* pwalletMain;
 CWallet* pstakeDB;
@@ -42,7 +42,7 @@ enum Checkpoints::CPMode CheckpointsMode;
 // Shutdown
 //
 
-void ExitTimeout(void* parg)
+void ExitTimeout()
 {
 #ifdef WIN32
     MilliSleep(5000);
@@ -57,11 +57,11 @@ void StartShutdown()
     uiInterface.QueueShutdown();
 #else
     // Without UI, Shutdown() can simply be started in a new thread
-    NewThread(Shutdown, nullptr);
+    NewThread(Shutdown);
 #endif
 }
 
-void Shutdown(void* parg)
+void Shutdown()
 {
     static CCriticalSection cs_Shutdown;
     static bool fTaken;
@@ -98,7 +98,7 @@ void Shutdown(void* parg)
         UnregisterWallet(pstakeDB);
         delete pwalletMain;
         delete pstakeDB;
-        NewThread(ExitTimeout, nullptr);
+        NewThread(ExitTimeout);
         MilliSleep(50);
         printf("Pinkcoin exited\n\n");
         fExit = true;
@@ -160,7 +160,7 @@ bool AppInit(int argc, char* argv[])
         if (!std::filesystem::is_directory(GetDataDir(false)))
         {
             fprintf(stderr, "Error: Specified directory does not exist\n");
-            Shutdown(nullptr);
+            Shutdown();
         }
         ReadConfigFile(mapArgs, mapMultiArgs);
 
@@ -200,7 +200,7 @@ bool AppInit(int argc, char* argv[])
     }
     if (!fRet)
     {
-        Shutdown(nullptr);
+        Shutdown();
         threadGroup.interrupt_all();
         threadGroup.join_all();
     }
@@ -252,7 +252,7 @@ bool static Bind(const CService &addr, bool fError = true) {
 // Core-specific options shared between UI and daemon
 std::string HelpMessage()
 {
-    string strUsage = _("Options:") + "\n" +
+    std::string strUsage = _("Options:") + "\n" +
         "  -?                     " + _("This help message") + "\n" +
         "  -conf=<file>           " + _("Specify configuration file (default: pinkconf.txt)") + "\n" +
         "  -pid=<file>            " + _("Specify pid file (default: pinkcoind.pid)") + "\n" +
@@ -630,7 +630,7 @@ bool AppInit2(ThreadGroup& threadGroup)
 
     if (!bitdb.Open(GetDataDir()))
     {
-        string msg = strprintf(_("Error initializing database environment %s!"
+        std::string msg = strprintf(_("Error initializing database environment %s!"
                                  " To recover, BACKUP THAT DIRECTORY, then remove"
                                  " everything from it except for wallet.dat."), strDataDir.c_str());
         return InitError(msg);
@@ -648,7 +648,7 @@ bool AppInit2(ThreadGroup& threadGroup)
         CDBEnv::VerifyResult r = bitdb.Verify(strWalletFileName, CWalletDB::Recover);
         if (r == CDBEnv::RECOVER_OK)
         {
-            string msg = strprintf(_("Warning: wallet.dat corrupt, data salvaged!"
+            std::string msg = strprintf(_("Warning: wallet.dat corrupt, data salvaged!"
                                      " Original wallet.dat saved as wallet.{timestamp}.bak in %s; if"
                                      " your balance or transactions are incorrect you should"
                                      " restore from a backup."), strDataDir.c_str());
@@ -663,7 +663,7 @@ bool AppInit2(ThreadGroup& threadGroup)
         CDBEnv::VerifyResult r = bitdb.Verify(strStakeDBFileName, CStakeDB::Recover);
         if (r == CDBEnv::RECOVER_OK)
         {
-            string msg = strprintf(_("Warning: stake.dat corrupt, data salvaged!"
+            std::string msg = strprintf(_("Warning: stake.dat corrupt, data salvaged!"
                                      " Original stake.dat saved as stake.{timestamp}.bak in %s;"), strDataDir.c_str());
             uiInterface.ThreadSafeMessageBox(msg, _("Pinkcoin"), CClientUIInterface::OK | CClientUIInterface::ICON_EXCLAMATION | CClientUIInterface::MODAL);
         }
@@ -756,7 +756,7 @@ bool AppInit2(ThreadGroup& threadGroup)
 
     if (mapArgs.count("-externalip"))
     {
-        for (const string& strAddr : mapMultiArgs["-externalip"]) {
+        for (const std::string& strAddr : mapMultiArgs["-externalip"]) {
             CService addrLocal(strAddr, GetListenPort(), fNameLookup);
             if (!addrLocal.IsValid())
                 return InitError(strprintf(_("Cannot resolve -externalip address: '%s'"), strAddr.c_str()));
@@ -801,7 +801,7 @@ bool AppInit2(ThreadGroup& threadGroup)
             InitError(_("Unable to sign checkpoint, wrong checkpointkey?\n"));
     }
 
-    for (const string& strDest : mapMultiArgs["-seednode"])
+    for (const std::string& strDest : mapMultiArgs["-seednode"])
         AddOneShot(strDest);
 
     // ********************************************************* Step 7: set adjusted time from NTP
@@ -817,7 +817,7 @@ bool AppInit2(ThreadGroup& threadGroup)
 
     if (!bitdb.Open(GetDataDir()))
     {
-        string msg = strprintf(_("Error initializing database environment %s!"
+        std::string msg = strprintf(_("Error initializing database environment %s!"
                                  " To recover, BACKUP THAT DIRECTORY, then remove"
                                  " everything from it except for wallet.dat."), strDataDir.c_str());
         return InitError(msg);
@@ -856,7 +856,7 @@ bool AppInit2(ThreadGroup& threadGroup)
 
     if (mapArgs.count("-printblock"))
     {
-        string strMatch = mapArgs["-printblock"];
+        std::string strMatch = mapArgs["-printblock"];
         int nFound = 0;
         for (const auto& entry : mapBlockIndex)
         {
@@ -892,7 +892,7 @@ bool AppInit2(ThreadGroup& threadGroup)
             strErrors << _("Error loading wallet.dat: Wallet corrupted") << "\n";
         else if (nLoadWalletRet == DB_NONCRITICAL_ERROR)
         {
-            string msg(_("Warning: error reading wallet.dat! All keys read correctly, but transaction data"
+            std::string msg(_("Warning: error reading wallet.dat! All keys read correctly, but transaction data"
                          " or address book entries might be missing or incorrect."));
             uiInterface.ThreadSafeMessageBox(msg, _("Pinkcoin"), CClientUIInterface::OK | CClientUIInterface::ICON_EXCLAMATION | CClientUIInterface::MODAL);
         }
@@ -917,7 +917,7 @@ bool AppInit2(ThreadGroup& threadGroup)
             strErrors << _("Error loading stake.dat: StakeDB corrupted") << "\n";
         else if (nLoadStakeDBRet == SDB_NONCRITICAL_ERROR)
         {
-            string msg(_("Warning: error reading stake.dat! Side-stake entries might be missing or incorrect."));
+            std::string msg(_("Warning: error reading stake.dat! Side-stake entries might be missing or incorrect."));
             uiInterface.ThreadSafeMessageBox(msg, _("Pinkcoin"), CClientUIInterface::OK | CClientUIInterface::ICON_EXCLAMATION | CClientUIInterface::MODAL);
         }
         else if (nLoadStakeDBRet == SDB_TOO_NEW)
@@ -992,7 +992,7 @@ bool AppInit2(ThreadGroup& threadGroup)
     {
         uiInterface.InitMessage(_("Importing blockchain data file."));
 
-        for (const string& strFile : mapMultiArgs["-loadblock"])
+        for (const std::string& strFile : mapMultiArgs["-loadblock"])
         {
             FILE *file = fopen(strFile.c_str(), "rb");
             if (file)
@@ -1053,11 +1053,11 @@ bool AppInit2(ThreadGroup& threadGroup)
     printf("mapWallet.size() = %" PRIszu "\n",       pwalletMain->mapWallet.size());
     printf("mapAddressBook.size() = %" PRIszu "\n",  pwalletMain->mapAddressBook.size());
 
-    if (!NewThread(StartNode, nullptr))
+    if (!NewThread(StartNode))
         InitError(_("Error: could not start node"));
 
     if (fServer)
-        NewThread(ThreadRPCServer, nullptr);
+        NewThread(ThreadRPCServer);
 
     // ********************************************************* Step 13: finished
 

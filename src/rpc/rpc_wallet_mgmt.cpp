@@ -57,7 +57,7 @@ json keypoolrefill(const json& params, bool fHelp)
 }
 
 
-void ThreadTopUpKeyPool(void* parg)
+void ThreadTopUpKeyPool()
 {
     // Make this thread recognisable as the key-topping-up thread
     RenameThread("pinkcoin-key-top");
@@ -65,13 +65,12 @@ void ThreadTopUpKeyPool(void* parg)
     pwalletMain->TopUpKeyPool();
 }
 
-void ThreadCleanWalletPassphrase(void* parg)
+void ThreadCleanWalletPassphrase(int64_t nSleepSeconds)
 {
     // Make this thread recognisable as the wallet relocking thread
     RenameThread("pinkcoin-lock-wa");
 
-    std::unique_ptr<int64_t> pSleepTime(static_cast<int64_t*>(parg));
-    int64_t nMyWakeTime = GetTimeMillis() + *pSleepTime * 1000;
+    int64_t nMyWakeTime = GetTimeMillis() + nSleepSeconds * 1000;
 
     ENTER_CRITICAL_SECTION(cs_nWalletUnlockTime);
 
@@ -148,9 +147,8 @@ json walletpassphrase(const json& params, bool fHelp)
             "walletpassphrase <passphrase> <timeout>\n"
             "Stores the wallet decryption key in memory for <timeout> seconds.");
 
-    NewThread(ThreadTopUpKeyPool, nullptr);
-    int64_t* pnSleepTime = new int64_t(nSleepTime);
-    NewThread(ThreadCleanWalletPassphrase, pnSleepTime);
+    NewThread(ThreadTopUpKeyPool);
+    NewThread(ThreadCleanWalletPassphrase, nSleepTime);
 
     // ppcoin: if user OS account compromised prevent trivial sendmoney commands
     if (params.size() > 2)

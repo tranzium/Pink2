@@ -370,7 +370,7 @@ int main(int argc, char *argv[])
         delete pClientModel;
 
         // Shutdown the core and its threads, but don't exit Bitcoin-Qt here
-        Shutdown(nullptr);
+        Shutdown();
         threadGroup.interrupt_all();
         threadGroup.join_all();
     } catch (std::exception& e) {

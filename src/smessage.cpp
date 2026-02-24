@@ -579,7 +579,7 @@ bool SecMsgDB::EraseSmesg(unsigned char* chKey)
     return false;
 };
 
-void ThreadSecureMsg(void* parg)
+void ThreadSecureMsg()
 {
     // -- bucket management thread
     RenameThread("pinkcoin-smsg"); // Make this thread recognisable
@@ -689,7 +689,7 @@ void ThreadSecureMsg(void* parg)
     printf("ThreadSecureMsg exited.\n");
 };
 
-void ThreadSecureMsgPow(void* parg)
+void ThreadSecureMsgPow()
 {
     // -- proof of work thread
     RenameThread("pinkcoin-smsg-pow"); // Make this thread recognisable
@@ -1154,8 +1154,8 @@ bool SecureMsgStart(bool fScanChain)
     };
     
     // -- start threads
-    if (!NewThread(ThreadSecureMsg, nullptr)
-        || !NewThread(ThreadSecureMsgPow, nullptr))
+    if (!NewThread(ThreadSecureMsg)
+        || !NewThread(ThreadSecureMsgPow))
     {
         printf("SecureMsg could not start threads, secure messaging disabled.\n");
         fSecMsgenabled = false;
@@ -1227,8 +1227,8 @@ bool SecureMsgEnable()
     }; // LOCK(cs_smsg);
     
     // -- start threads
-    if (!NewThread(ThreadSecureMsg, nullptr)
-        || !NewThread(ThreadSecureMsgPow, nullptr))
+    if (!NewThread(ThreadSecureMsg)
+        || !NewThread(ThreadSecureMsgPow))
     {
         printf("SecureMsgenable could not start threads, secure messaging disabled.\n");
         fSecMsgenabled = false;
