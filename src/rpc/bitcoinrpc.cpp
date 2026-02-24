@@ -11,6 +11,7 @@
 #include "bitcoinrpc.h"
 #include "db.h"
 
+#undef printf              // undo the global #define printf OutputDebugStringF
 #include <asio.hpp>
 #include <asio/ssl.hpp>
 #include <filesystem>
