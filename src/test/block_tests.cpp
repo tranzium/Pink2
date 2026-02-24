@@ -8,7 +8,6 @@
 #include "uint256.h"
 #include "arith_uint256.h"
 #include "scriptnum.h"
-#include "bignum.h"
 
 BOOST_AUTO_TEST_SUITE(block_tests)
 

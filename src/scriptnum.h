@@ -61,10 +61,20 @@ public:
 
     CScriptNum operator-() const { return CScriptNum(-m_value); }
 
+    CScriptNum operator*(const CScriptNum& rhs) const { return CScriptNum(m_value * rhs.m_value); }
+    CScriptNum operator/(const CScriptNum& rhs) const { return CScriptNum(m_value / rhs.m_value); }
+    CScriptNum operator%(const CScriptNum& rhs) const { return CScriptNum(m_value % rhs.m_value); }
+
     CScriptNum& operator+=(const CScriptNum& rhs) { m_value += rhs.m_value; return *this; }
     CScriptNum& operator-=(const CScriptNum& rhs) { m_value -= rhs.m_value; return *this; }
 
     CScriptNum& operator&=(int64_t rhs) { m_value &= rhs; return *this; }
+
+    // Shift operators (used by disabled opcodes OP_2MUL, OP_2DIV, OP_LSHIFT, OP_RSHIFT)
+    CScriptNum operator<<(int shift) const { return CScriptNum(m_value << shift); }
+    CScriptNum operator>>(int shift) const { return CScriptNum(m_value >> shift); }
+    CScriptNum& operator<<=(int shift) { m_value <<= shift; return *this; }
+    CScriptNum& operator>>=(int shift) { m_value >>= shift; return *this; }
 
     // --- Conversion ---
 

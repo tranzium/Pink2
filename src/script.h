@@ -14,7 +14,7 @@
 #include <variant>
 
 #include "keystore.h"
-#include "bignum.h"
+#include "scriptnum.h"
 #include "stealth.h"
 
 using valtype = std::vector<unsigned char>;
@@ -215,7 +215,7 @@ const char* GetOpName(opcodetype opcode);
 inline std::string ValueString(const std::vector<unsigned char>& vch)
 {
     if (vch.size() <= 4)
-        return strprintf("%d", CBigNum(vch).getint());
+        return strprintf("%d", CScriptNum(vch, 4).getint());
     else
         return HexStr(vch);
 }
@@ -251,8 +251,8 @@ protected:
         }
         else
         {
-            CBigNum bn(n);
-            *this << bn.getvch();
+            CScriptNum sn(n);
+            *this << sn.getvch();
         }
         return *this;
     }
@@ -265,8 +265,8 @@ protected:
         }
         else
         {
-            CBigNum bn(n);
-            *this << bn.getvch();
+            CScriptNum sn(static_cast<int64_t>(n));
+            *this << sn.getvch();
         }
         return *this;
     }
@@ -313,7 +313,6 @@ public:
 
     explicit CScript(opcodetype b)     { operator<<(b); }
     explicit CScript(const uint256& b) { operator<<(b); }
-    explicit CScript(const CBigNum& b) { operator<<(b); }
     explicit CScript(const std::vector<unsigned char>& b) { operator<<(b); }
 
 
@@ -355,12 +354,6 @@ public:
     {
         std::vector<unsigned char> vchKey = key.Raw();
         return (*this) << vchKey;
-    }
-
-    CScript& operator<<(const CBigNum& b)
-    {
-        *this << b.getvch();
-        return *this;
     }
 
     CScript& operator<<(const std::vector<unsigned char>& b)

@@ -5,7 +5,6 @@
 #include <boost/test/unit_test.hpp>
 
 #include "main.h"
-#include "bignum.h"
 #include "kernel.h"
 
 // bnProofOfWorkLimit, bnProofOfStakeLimit, bnProofOfFlashStakeLimit declared in main.h

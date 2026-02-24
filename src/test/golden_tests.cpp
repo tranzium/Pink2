@@ -29,7 +29,6 @@
 #include "crypter.h"
 #include "protocol.h"
 #include "version.h"
-#include "bignum.h"
 #include "arith_uint256.h"
 #include "scriptnum.h"
 #include "util.h"

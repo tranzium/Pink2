@@ -15,7 +15,6 @@
 #include "test_framework.h"
 #include "arith_uint256.h"
 #include "txdb.h"
-#include "bignum.h"
 
 extern CWallet* pwalletMain;
 extern int nCoinbaseMaturity;
