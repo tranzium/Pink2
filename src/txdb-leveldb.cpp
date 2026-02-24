@@ -3,8 +3,10 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file license.txt or http://www.opensource.org/licenses/mit-license.php.
 
+#include <algorithm>
 #include <map>
 #include <memory>
+#include <stdexcept>
 
 #include <filesystem>
 
@@ -19,8 +21,6 @@
 #include "txdb.h"
 #include "util.h"
 #include "main.h"
-
-using namespace std;
 
 leveldb::DB *txdb; // global pointer for LevelDB object instance
 
@@ -58,7 +58,7 @@ void init_blockindex(leveldb::Options& options, bool fRemoveOld = false) {
     printf("Opening LevelDB in %s\n", directory.string().c_str());
     leveldb::Status status = leveldb::DB::Open(options, directory.string(), &txdb);
     if (!status.ok()) {
-        throw runtime_error(strprintf("init_blockindex(): error opening database environment %s", status.ToString().c_str()));
+        throw std::runtime_error(strprintf("init_blockindex(): error opening database environment %s", status.ToString().c_str()));
     }
 }
 
@@ -84,7 +84,7 @@ CTxDB::CTxDB(const char* pszMode)
     init_blockindex(options); // Init directory
     pdb = txdb;
 
-    if (Exists(string("version")))
+    if (Exists(std::string("version")))
     {
         ReadVersion(nVersion);
         printf("Transaction index version is %d\n", nVersion);
@@ -181,7 +181,7 @@ public:
 // a database transaction begins reads are consistent with it. It would be good
 // to change that assumption in future and avoid the performance hit, though in
 // practice it does not appear to be large.
-bool CTxDB::ScanBatch(const CDataStream &key, string *value, bool *deleted) const {
+bool CTxDB::ScanBatch(const CDataStream &key, std::string *value, bool *deleted) const {
     assert(activeBatch);
     *deleted = false;
     CBatchScanner scanner;
@@ -190,7 +190,7 @@ bool CTxDB::ScanBatch(const CDataStream &key, string *value, bool *deleted) cons
     scanner.foundValue = value;
     leveldb::Status status = activeBatch->Iterate(&scanner);
     if (!status.ok()) {
-        throw runtime_error(status.ToString());
+        throw std::runtime_error(status.ToString());
     }
     return scanner.foundEntry;
 }
@@ -198,12 +198,12 @@ bool CTxDB::ScanBatch(const CDataStream &key, string *value, bool *deleted) cons
 bool CTxDB::ReadTxIndex(uint256 hash, CTxIndex& txindex)
 {
     txindex.SetNull();
-    return Read(make_pair(string("tx"), hash), txindex);
+    return Read(std::make_pair(std::string("tx"), hash), txindex);
 }
 
 bool CTxDB::UpdateTxIndex(uint256 hash, const CTxIndex& txindex)
 {
-    return Write(make_pair(string("tx"), hash), txindex);
+    return Write(std::make_pair(std::string("tx"), hash), txindex);
 }
 
 bool CTxDB::AddTxIndex(const CTransaction& tx, const CDiskTxPos& pos, int nHeight)
@@ -211,19 +211,19 @@ bool CTxDB::AddTxIndex(const CTransaction& tx, const CDiskTxPos& pos, int nHeigh
     // Add to tx index
     uint256 hash = tx.GetHash();
     CTxIndex txindex(pos, tx.vout.size());
-    return Write(make_pair(string("tx"), hash), txindex);
+    return Write(std::make_pair(std::string("tx"), hash), txindex);
 }
 
 bool CTxDB::EraseTxIndex(const CTransaction& tx)
 {
     uint256 hash = tx.GetHash();
 
-    return Erase(make_pair(string("tx"), hash));
+    return Erase(std::make_pair(std::string("tx"), hash));
 }
 
 bool CTxDB::ContainsTx(uint256 hash)
 {
-    return Exists(make_pair(string("tx"), hash));
+    return Exists(std::make_pair(std::string("tx"), hash));
 }
 
 bool CTxDB::ReadDiskTx(uint256 hash, CTransaction& tx, CTxIndex& txindex)
@@ -253,37 +253,37 @@ bool CTxDB::ReadDiskTx(COutPoint outpoint, CTransaction& tx)
 
 bool CTxDB::WriteBlockIndex(const CDiskBlockIndex& blockindex)
 {
-    return Write(make_pair(string("blockindex"), blockindex.GetBlockHash()), blockindex);
+    return Write(std::make_pair(std::string("blockindex"), blockindex.GetBlockHash()), blockindex);
 }
 
 bool CTxDB::ReadHashBestChain(uint256& hashBestChain)
 {
-    return Read(string("hashBestChain"), hashBestChain);
+    return Read(std::string("hashBestChain"), hashBestChain);
 }
 
 bool CTxDB::WriteHashBestChain(uint256 hashBestChain)
 {
-    return Write(string("hashBestChain"), hashBestChain);
+    return Write(std::string("hashBestChain"), hashBestChain);
 }
 
 bool CTxDB::ReadSyncCheckpoint(uint256& hashCheckpoint)
 {
-    return Read(string("hashSyncCheckpoint"), hashCheckpoint);
+    return Read(std::string("hashSyncCheckpoint"), hashCheckpoint);
 }
 
 bool CTxDB::WriteSyncCheckpoint(uint256 hashCheckpoint)
 {
-    return Write(string("hashSyncCheckpoint"), hashCheckpoint);
+    return Write(std::string("hashSyncCheckpoint"), hashCheckpoint);
 }
 
-bool CTxDB::ReadCheckpointPubKey(string& strPubKey)
+bool CTxDB::ReadCheckpointPubKey(std::string& strPubKey)
 {
-    return Read(string("strCheckpointPubKey"), strPubKey);
+    return Read(std::string("strCheckpointPubKey"), strPubKey);
 }
 
-bool CTxDB::WriteCheckpointPubKey(const string& strPubKey)
+bool CTxDB::WriteCheckpointPubKey(const std::string& strPubKey)
 {
-    return Write(string("strCheckpointPubKey"), strPubKey);
+    return Write(std::string("strCheckpointPubKey"), strPubKey);
 }
 
 static CBlockIndex *InsertBlockIndex(uint256 hash)
@@ -292,15 +292,15 @@ static CBlockIndex *InsertBlockIndex(uint256 hash)
         return nullptr;
 
     // Return existing
-    map<uint256, CBlockIndex*>::iterator mi = mapBlockIndex.find(hash);
+    std::map<uint256, CBlockIndex*>::iterator mi = mapBlockIndex.find(hash);
     if (mi != mapBlockIndex.end())
         return (*mi).second;
 
     // Create new
     CBlockIndex* pindexNew = new CBlockIndex();
     if (!pindexNew)
-        throw runtime_error("LoadBlockIndex() : new CBlockIndex failed");
-    mi = mapBlockIndex.insert(make_pair(hash, pindexNew)).first;
+        throw std::runtime_error("LoadBlockIndex() : new CBlockIndex failed");
+    mi = mapBlockIndex.insert(std::make_pair(hash, pindexNew)).first;
     pindexNew->phashBlock = &((*mi).first);
 
     return pindexNew;
@@ -319,7 +319,7 @@ bool CTxDB::LoadBlockIndex()
     std::unique_ptr<leveldb::Iterator> iterator(pdb->NewIterator(leveldb::ReadOptions()));
     // Seek to start key.
     CDataStream ssStartKey(SER_DISK, CLIENT_VERSION);
-    ssStartKey << make_pair(string("blockindex"), uint256(0));
+    ssStartKey << std::make_pair(std::string("blockindex"), uint256(0));
     iterator->Seek(ssStartKey.str());
     // Now read each entry.
     while (iterator->Valid())
@@ -329,7 +329,7 @@ bool CTxDB::LoadBlockIndex()
         ssKey.write(iterator->key().data(), iterator->key().size());
         CDataStream ssValue(SER_DISK, CLIENT_VERSION);
         ssValue.write(iterator->value().data(), iterator->value().size());
-        string strType;
+        std::string strType;
         ssKey >> strType;
         // Did we reach the end of the data to read?
         if (fRequestShutdown || strType != "blockindex")
@@ -369,7 +369,7 @@ bool CTxDB::LoadBlockIndex()
 
         // NovaCoin: build setStakeSeen
         if (pindexNew->IsProofOfStake())
-            setStakeSeen.insert(make_pair(pindexNew->prevoutStake, pindexNew->nStakeTime));
+            setStakeSeen.insert(std::make_pair(pindexNew->prevoutStake, pindexNew->nStakeTime));
 
         iterator->Next();
     }
@@ -378,14 +378,14 @@ bool CTxDB::LoadBlockIndex()
         return true;
 
     // Calculate nChainTrust
-    vector<pair<int, CBlockIndex*> > vSortedByHeight;
+    std::vector<std::pair<int, CBlockIndex*> > vSortedByHeight;
     vSortedByHeight.reserve(mapBlockIndex.size());
     for (const auto& item : mapBlockIndex)
     {
         CBlockIndex* pindex = item.second;
-        vSortedByHeight.push_back(make_pair(pindex->nHeight, pindex));
+        vSortedByHeight.push_back(std::make_pair(pindex->nHeight, pindex));
     }
-    sort(vSortedByHeight.begin(), vSortedByHeight.end());
+    std::sort(vSortedByHeight.begin(), vSortedByHeight.end());
     for (const auto& item : vSortedByHeight)
     {
         CBlockIndex* pindex = item.second;
@@ -436,7 +436,7 @@ bool CTxDB::LoadBlockIndex()
         nCheckDepth = nBestHeight;
     printf("Verifying last %i blocks at level %i\n", nCheckDepth, nCheckLevel);
     CBlockIndex* pindexFork = nullptr;
-    map<pair<unsigned int, unsigned int>, CBlockIndex*> mapBlockPos;
+    std::map<std::pair<unsigned int, unsigned int>, CBlockIndex*> mapBlockPos;
     for (CBlockIndex* pindex = pindexBest; pindex && pindex->pprev; pindex = pindex->pprev)
     {
         if (fRequestShutdown || pindex->nHeight < nBestHeight-nCheckDepth)
@@ -461,7 +461,7 @@ bool CTxDB::LoadBlockIndex()
         // check level 2: verify transaction index validity
         if (nCheckLevel>1)
         {
-            pair<unsigned int, unsigned int> pos = make_pair(pindex->nFile, pindex->nBlockPos);
+            std::pair<unsigned int, unsigned int> pos = std::make_pair(pindex->nFile, pindex->nBlockPos);
             mapBlockPos[pos] = pindex;
             for (const CTransaction &tx : block.vtx)
             {
@@ -494,7 +494,7 @@ bool CTxDB::LoadBlockIndex()
                         {
                             if (!txpos.IsNull())
                             {
-                                pair<unsigned int, unsigned int> posFind = make_pair(txpos.nFile, txpos.nBlockPos);
+                                std::pair<unsigned int, unsigned int> posFind = std::make_pair(txpos.nFile, txpos.nBlockPos);
                                 if (!mapBlockPos.count(posFind))
                                 {
                                     printf("LoadBlockIndex(): *** found bad spend at %d, hashBlock=%s, hashTx=%s\n", pindex->nHeight, pindex->GetBlockHash().ToString().c_str(), hashTx.ToString().c_str());

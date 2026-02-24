@@ -22,7 +22,6 @@
 #include <QTreeWidget>
 #include <QTreeWidgetItem>
 
-using namespace std;
 QList<qint64> CoinControlDialog::payAmounts;
 CCoinControl* CoinControlDialog::coinControl = new CCoinControl();
 
@@ -206,7 +205,7 @@ void CoinControlDialog::customSelectCoins()
 	
 		QFlags<Qt::ItemFlag> flgCheckbox=Qt::ItemIsSelectable | Qt::ItemIsEnabled | Qt::ItemIsUserCheckable;
         
-		map<QString, vector<COutput> > mapCoins;
+		std::map<QString, std::vector<COutput> > mapCoins;
 		model->listCoins(mapCoins);
 
 		for (const auto& coins : mapCoins)
@@ -230,7 +229,7 @@ void CoinControlDialog::customSelectCoins()
 					
 				//Coin Weight
 				uint64_t nTxWeight = 0;
-                double nTimeWeight = min(GetAdjustedTime() - out.tx->GetTxTime() - nStakeMinAge, (int64_t)nStakeMaxAge) / 86400;
+                double nTimeWeight = std::min(GetAdjustedTime() - out.tx->GetTxTime() - nStakeMinAge, (int64_t)nStakeMaxAge) / 86400;
                 nTxWeight = dCoinAmount / COIN * nTimeWeight;
 					
 				//Age
@@ -559,7 +558,7 @@ void CoinControlDialog::updateLabels(WalletModel *model, QDialog* dialog)
             if (amount < CENT)
                 fLowOutput = true;
 
-            CTxOut txout(amount, (CScript)vector<unsigned char>(24, 0));
+            CTxOut txout(amount, (CScript)std::vector<unsigned char>(24, 0));
             txDummy.vout.push_back(txout);
         }
     }
@@ -575,8 +574,8 @@ void CoinControlDialog::updateLabels(WalletModel *model, QDialog* dialog)
     double dPriorityInputs      = 0;
     unsigned int nQuantity      = 0;
     
-    vector<COutPoint> vCoinControl;
-    vector<COutput>   vOutputs;
+    std::vector<COutPoint> vCoinControl;
+    std::vector<COutput>   vOutputs;
     coinControl->ListSelected(vCoinControl);
     model->getOutputs(vCoinControl, vOutputs);
 
@@ -621,7 +620,7 @@ void CoinControlDialog::updateLabels(WalletModel *model, QDialog* dialog)
         // Min Fee
         int64_t nMinFee = txDummy.GetMinFee(1, GMF_SEND, nBytes);
         
-        nPayFee = max(nFee, nMinFee);
+        nPayFee = std::max(nFee, nMinFee);
 		if(pwalletMain->fSplitBlock)
 			nPayFee = COIN / 100; // make the fee more expensive if using splitblock, this avoids having to calc fee based on multiple vouts
         
@@ -720,7 +719,7 @@ void CoinControlDialog::updateView()
     if (model && model->getOptionsModel())
         nDisplayUnit = model->getOptionsModel()->getDisplayUnit();
         
-    map<QString, vector<COutput> > mapCoins;
+    std::map<QString, std::vector<COutput> > mapCoins;
     model->listCoins(mapCoins);
 
     for (const auto& coins : mapCoins)
@@ -768,7 +767,7 @@ void CoinControlDialog::updateView()
 			
 			//Coin Weight
             int64_t nAmount = out.tx->vout[out.i].nValue;
-            double nTimeWeight = min(GetAdjustedTime() - out.tx->GetTxTime() - nStakeMinAge, (int64_t)nStakeMaxAge) / 86400;
+            double nTimeWeight = std::min(GetAdjustedTime() - out.tx->GetTxTime() - nStakeMinAge, (int64_t)nStakeMaxAge) / 86400;
             nTxWeight = nAmount / COIN * nTimeWeight;
 			nTxWeightSum += nTxWeight;
             

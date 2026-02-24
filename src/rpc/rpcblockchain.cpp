@@ -6,7 +6,6 @@
 #include "main.h"
 #include "bitcoinrpc.h"
 
-using namespace std;
 
 extern void TxToJSON(const CTransaction& tx, const uint256 hashBlock, json& entry);
 extern enum Checkpoints::CPMode CheckpointsMode;
@@ -57,7 +56,7 @@ double GetPoWMHashPS()
         {
             int64_t nActualSpacingWork = pindex->GetBlockTime() - pindexPrevWork->GetBlockTime();
             nTargetSpacingWork = ((nPoWInterval - 1) * nTargetSpacingWork + nActualSpacingWork + nActualSpacingWork) / (nPoWInterval + 1);
-            nTargetSpacingWork = max(nTargetSpacingWork, nTargetSpacingWorkMin);
+            nTargetSpacingWork = std::max(nTargetSpacingWork, nTargetSpacingWorkMin);
             pindexPrevWork = pindex;
         }
 
@@ -148,7 +147,7 @@ json blockToJSON(const CBlock& block, const CBlockIndex* blockindex, bool fPrint
 json getbestblockhash(const json& params, bool fHelp)
 {
     if (fHelp || !params.empty())
-        throw runtime_error(
+        throw std::runtime_error(
             "getbestblockhash\n"
             "Returns the hash of the best block in the longest block chain.");
 
@@ -158,7 +157,7 @@ json getbestblockhash(const json& params, bool fHelp)
 json getblockcount(const json& params, bool fHelp)
 {
     if (fHelp || !params.empty())
-        throw runtime_error(
+        throw std::runtime_error(
             "getblockcount\n"
             "Returns the number of blocks in the longest block chain.");
 
@@ -169,7 +168,7 @@ json getblockcount(const json& params, bool fHelp)
 json getdifficulty(const json& params, bool fHelp)
 {
     if (fHelp || !params.empty())
-        throw runtime_error(
+        throw std::runtime_error(
             "getdifficulty\n"
             "Returns the difficulty as a multiple of the minimum difficulty.");
 
@@ -185,7 +184,7 @@ json getdifficulty(const json& params, bool fHelp)
 json settxfee(const json& params, bool fHelp)
 {
     if (fHelp || params.size() < 1 || params.size() > 1 || AmountFromValue(params[0]) < MIN_TX_FEE)
-        throw runtime_error(
+        throw std::runtime_error(
             "settxfee <amount>\n"
             "<amount> is a real and is rounded to the nearest 0.01");
 
@@ -198,11 +197,11 @@ json settxfee(const json& params, bool fHelp)
 json getrawmempool(const json& params, bool fHelp)
 {
     if (fHelp || !params.empty())
-        throw runtime_error(
+        throw std::runtime_error(
             "getrawmempool\n"
             "Returns all transaction ids in memory pool.");
 
-    vector<uint256> vtxid;
+    std::vector<uint256> vtxid;
     mempool.queryHashes(vtxid);
 
     json a = json::array();
@@ -215,13 +214,13 @@ json getrawmempool(const json& params, bool fHelp)
 json getblockhash(const json& params, bool fHelp)
 {
     if (fHelp || params.size() != 1)
-        throw runtime_error(
+        throw std::runtime_error(
             "getblockhash <index>\n"
             "Returns hash of block in best-block-chain at <index>.");
 
     int nHeight = params[0].get<int>();
     if (nHeight < 0 || nHeight > nBestHeight)
-        throw runtime_error("Block number out of range.");
+        throw std::runtime_error("Block number out of range.");
 
     CBlockIndex* pblockindex = FindBlockByHeight(nHeight);
     return pblockindex->phashBlock->GetHex();
@@ -230,7 +229,7 @@ json getblockhash(const json& params, bool fHelp)
 json getblock(const json& params, bool fHelp)
 {
     if (fHelp || params.size() < 1 || params.size() > 2)
-        throw runtime_error(
+        throw std::runtime_error(
             "getblock <hash> [txinfo]\n"
             "txinfo optional to print more detailed tx info\n"
             "Returns details of a block with given block-hash.");
@@ -251,14 +250,14 @@ json getblock(const json& params, bool fHelp)
 json getblockbynumber(const json& params, bool fHelp)
 {
     if (fHelp || params.size() < 1 || params.size() > 2)
-        throw runtime_error(
+        throw std::runtime_error(
             "getblockbynumber <number> [txinfo]\n"
             "txinfo optional to print more detailed tx info\n"
             "Returns details of a block with given block-number.");
 
     int nHeight = params[0].get<int>();
     if (nHeight < 0 || nHeight > nBestHeight)
-        throw runtime_error("Block number out of range.");
+        throw std::runtime_error("Block number out of range.");
 
     CBlock block;
     CBlockIndex* pblockindex = mapBlockIndex[hashBestChain];
@@ -277,7 +276,7 @@ json getblockbynumber(const json& params, bool fHelp)
 json getcheckpoint(const json& params, bool fHelp)
 {
     if (fHelp || !params.empty())
-        throw runtime_error(
+        throw std::runtime_error(
             "getcheckpoint\n"
             "Show info of synchronized checkpoint.\n");
 

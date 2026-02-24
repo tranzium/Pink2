@@ -14,12 +14,11 @@
 #include "time.h"
 
 
-using namespace std;
 
 json getsubsidy(const json& params, bool fHelp)
 {
     if (fHelp || params.size() > 1)
-        throw runtime_error(
+        throw std::runtime_error(
             "getsubsidy [nTarget]\n"
             "Returns proof-of-work subsidy value for the specified value of target.");
 
@@ -35,7 +34,7 @@ json getsubsidy(const json& params, bool fHelp)
 json getmininginfo(const json& params, bool fHelp)
 {
     if (fHelp || !params.empty())
-        throw runtime_error(
+        throw std::runtime_error(
             "getmininginfo\n"
             "Returns an object containing mining-related information.");
 
@@ -94,7 +93,7 @@ json getmininginfo(const json& params, bool fHelp)
 json getstakinginfo(const json& params, bool fHelp)
 {
     if (fHelp || !params.empty())
-        throw runtime_error(
+        throw std::runtime_error(
             "getstakinginfo\n"
             "Returns an object containing staking-related information.");
 
@@ -140,7 +139,7 @@ json getstakinginfo(const json& params, bool fHelp)
 json getworkex(const json& params, bool fHelp)
 {
     if (fHelp || params.size() > 2)
-        throw runtime_error(
+        throw std::runtime_error(
             "getworkex [data, coinbase]\n"
             "If [data, coinbase] is not specified, returns extended work data.\n"
         );
@@ -151,9 +150,9 @@ json getworkex(const json& params, bool fHelp)
     if (IsInitialBlockDownload())
         throw JSONRPCError(-10, "Pinkcoin is downloading blocks...");
 
-    using mapNewBlock_t = map<uint256, pair<CBlock*, CScript> >;
+    using mapNewBlock_t = std::map<uint256, std::pair<CBlock*, CScript> >;
     static mapNewBlock_t mapNewBlock;
-    static vector<std::unique_ptr<CBlock>> vNewBlock;
+    static std::vector<std::unique_ptr<CBlock>> vNewBlock;
     static CReserveKey reservekey(pwalletMain);
 
     if (params.empty())
@@ -184,7 +183,7 @@ json getworkex(const json& params, bool fHelp)
         }
 
         // Update nTime
-        pblock->nTime = max(pindexPrev->GetPastTimeLimit()+1, GetAdjustedTime());
+        pblock->nTime = std::max(pindexPrev->GetPastTimeLimit()+1, GetAdjustedTime());
         pblock->nNonce = 0;
 
         // Update nExtraNonce
@@ -192,7 +191,7 @@ json getworkex(const json& params, bool fHelp)
         IncrementExtraNonce(pblock, pindexPrev, nExtraNonce);
 
         // Save
-        mapNewBlock[pblock->hashMerkleRoot] = make_pair(pblock, pblock->vtx[0].vin[0].scriptSig);
+        mapNewBlock[pblock->hashMerkleRoot] = std::make_pair(pblock, pblock->vtx[0].vin[0].scriptSig);
 
         // Prebuild hash buffers
         char pmidstate[32];
@@ -227,8 +226,8 @@ json getworkex(const json& params, bool fHelp)
     else
     {
         // Parse parameters
-        vector<unsigned char> vchData = ParseHex(params[0].get<std::string>());
-        vector<unsigned char> coinbase;
+        std::vector<unsigned char> vchData = ParseHex(params[0].get<std::string>());
+        std::vector<unsigned char> coinbase;
 
         if(params.size() == 2)
             coinbase = ParseHex(params[1].get<std::string>());
@@ -265,7 +264,7 @@ json getworkex(const json& params, bool fHelp)
 json getwork(const json& params, bool fHelp)
 {
     if (fHelp || params.size() > 1)
-        throw runtime_error(
+        throw std::runtime_error(
             "getwork [data]\n"
             "If [data] is not specified, returns formatted hash data to work on:\n"
             "  \"midstate\" : precomputed hash state after hashing the first half of the data (DEPRECATED)\n" // deprecated
@@ -280,9 +279,9 @@ json getwork(const json& params, bool fHelp)
     if (IsInitialBlockDownload())
         throw JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD, "Pinkcoin is downloading blocks...");
 
-    using mapNewBlock_t = map<uint256, pair<CBlock*, CScript> >;
+    using mapNewBlock_t = std::map<uint256, std::pair<CBlock*, CScript> >;
     static mapNewBlock_t mapNewBlock;    // FIXME: thread safety
-    static vector<std::unique_ptr<CBlock>> vNewBlock;
+    static std::vector<std::unique_ptr<CBlock>> vNewBlock;
     static CReserveKey reservekey(pwalletMain);
 
     if (params.empty())
@@ -329,7 +328,7 @@ json getwork(const json& params, bool fHelp)
         IncrementExtraNonce(pblock, pindexPrev, nExtraNonce);
 
         // Save
-        mapNewBlock[pblock->hashMerkleRoot] = make_pair(pblock, pblock->vtx[0].vin[0].scriptSig);
+        mapNewBlock[pblock->hashMerkleRoot] = std::make_pair(pblock, pblock->vtx[0].vin[0].scriptSig);
 
         // Pre-build hash buffers
         char pmidstate[32];
@@ -349,7 +348,7 @@ json getwork(const json& params, bool fHelp)
     else
     {
         // Parse parameters
-        vector<unsigned char> vchData = ParseHex(params[0].get<std::string>());
+        std::vector<unsigned char> vchData = ParseHex(params[0].get<std::string>());
         if (vchData.size() != 128)
             throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid parameter");
         CBlock* pdata = reinterpret_cast<CBlock*>(&vchData[0]);
@@ -376,7 +375,7 @@ json getwork(const json& params, bool fHelp)
 json getblocktemplate(const json& params, bool fHelp)
 {
     if (fHelp || params.size() > 1)
-        throw runtime_error(
+        throw std::runtime_error(
             "getblocktemplate [params]\n"
             "Returns data needed to construct a block to work on:\n"
             "  \"version\" : block version\n"
@@ -451,7 +450,7 @@ json getblocktemplate(const json& params, bool fHelp)
     pblock->nNonce = 0;
 
     json transactions = json::array();
-    map<uint256, int64_t> setTxIndex;
+    std::map<uint256, int64_t> setTxIndex;
     int i = 0;
     CTxDB txdb("r");
     for (CTransaction& tx : pblock->vtx)
@@ -471,7 +470,7 @@ json getblocktemplate(const json& params, bool fHelp)
         entry["hash"] = txHash.GetHex();
 
         MapPrevTx mapInputs;
-        map<uint256, CTxIndex> mapUnused;
+        std::map<uint256, CTxIndex> mapUnused;
         bool fInvalid = false;
         if (tx.FetchInputs(txdb, mapUnused, false, false, mapInputs, fInvalid))
         {
@@ -528,13 +527,13 @@ json getblocktemplate(const json& params, bool fHelp)
 json submitblock(const json& params, bool fHelp)
 {
     if (fHelp || params.size() < 1 || params.size() > 2)
-        throw runtime_error(
+        throw std::runtime_error(
             "submitblock <hex data> [optional-params-obj]\n"
             "[optional-params-obj] parameter is currently ignored.\n"
             "Attempts to submit new block to network.\n"
             "See https://en.bitcoin.it/wiki/BIP_0022 for full specification.");
 
-    vector<unsigned char> blockData(ParseHex(params[0].get<std::string>()));
+    std::vector<unsigned char> blockData(ParseHex(params[0].get<std::string>()));
     CDataStream ssBlock(blockData, SER_NETWORK, PROTOCOL_VERSION);
     CBlock block;
     try {

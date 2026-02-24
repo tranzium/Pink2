@@ -4,12 +4,12 @@
 
 #include "checkpoints.h"
 
+#include <sstream>
+
 #include "logging.h"
 #include "txdb.h"
 #include "main.h"
 #include "uint256.h"
-
-using namespace std;
 
 static const int nCheckpointSpan = 10;
 
@@ -51,20 +51,20 @@ namespace Checkpoints
     {
         if (mapArgs.count("-checkpoint") && !mapMultiArgs["-checkpoint"].empty())
         {
-            for (const string& strCheckpoint : mapMultiArgs["-checkpoint"])
+            for (const std::string& strCheckpoint : mapMultiArgs["-checkpoint"])
             {
-                stringstream ss(strCheckpoint);
-                string tempStr;
+                std::stringstream ss(strCheckpoint);
+                std::string tempStr;
 
                 if (!ss.good()) continue;
-                getline(ss, tempStr, ',');
+                std::getline(ss, tempStr, ',');
                 int nBlockNum = atoi(tempStr.c_str());
 
                 if (!ss.good()) continue;
-                getline(ss, tempStr, ',');
+                std::getline(ss, tempStr, ',');
                 uint256 hashCheckpoint(tempStr);
 
-                mapCheckpoints.insert(pair<int, uint256>(nBlockNum, hashCheckpoint));
+                mapCheckpoints.insert(std::pair<int, uint256>(nBlockNum, hashCheckpoint));
             }
         }
     }

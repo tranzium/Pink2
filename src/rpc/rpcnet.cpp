@@ -9,12 +9,11 @@
 #include "db.h"
 #include "walletdb.h"
 
-using namespace std;
 
 json getconnectioncount(const json& params, bool fHelp)
 {
     if (fHelp || !params.empty())
-        throw runtime_error(
+        throw std::runtime_error(
             "getconnectioncount\n"
             "Returns the number of connections to other nodes.");
 
@@ -38,11 +37,11 @@ static void CopyNodeStats(std::vector<CNodeStats>& vstats)
 json getpeerinfo(const json& params, bool fHelp)
 {
     if (fHelp || !params.empty())
-        throw runtime_error(
+        throw std::runtime_error(
             "getpeerinfo\n"
             "Returns data about each connected network node.");
 
-    vector<CNodeStats> vstats;
+    std::vector<CNodeStats> vstats;
     CopyNodeStats(vstats);
 
     json ret = json::array();
@@ -70,18 +69,18 @@ json getpeerinfo(const json& params, bool fHelp)
 json getnodes(const json& params, bool fHelp)
 {
     if (fHelp || !params.empty())
-        throw runtime_error(
+        throw std::runtime_error(
             "getnodes\n"
             "Returns each connected network node as addnodes in conf friendly format.");
 
-    vector<CNodeStats> vstats;
+    std::vector<CNodeStats> vstats;
     CopyNodeStats(vstats);
-    string pNode = "";
+    std::string pNode = "";
 
     for (const CNodeStats& stats : vstats) {
-        if (stats.addrName.rfind(":9134") != string::npos)
+        if (stats.addrName.rfind(":9134") != std::string::npos)
         {
-            string ipAddress = stats.addrName.substr(0, stats.addrName.length() - 5);
+            std::string ipAddress = stats.addrName.substr(0, stats.addrName.length() - 5);
             pNode += "addnode=" + ipAddress + "\n";
         }
     }
@@ -96,7 +95,7 @@ json getnodes(const json& params, bool fHelp)
 json sendalert(const json& params, bool fHelp)
 {
     if (fHelp || params.size() < 6)
-        throw runtime_error(
+        throw std::runtime_error(
             "sendalert <message> <privatekey> <minver> <maxver> <priority> <id> [cancelupto]\n"
             "<message> is the alert text message\n"
             "<privatekey> is hex string of alert master private key\n"
@@ -123,15 +122,15 @@ json sendalert(const json& params, bool fHelp)
 
     CDataStream sMsg(SER_NETWORK, PROTOCOL_VERSION);
     sMsg << (CUnsignedAlert)alert;
-    alert.vchMsg = vector<unsigned char>(sMsg.begin(), sMsg.end());
+    alert.vchMsg = std::vector<unsigned char>(sMsg.begin(), sMsg.end());
 
-    vector<unsigned char> vchPrivKey = ParseHex(params[1].get<std::string>());
+    std::vector<unsigned char> vchPrivKey = ParseHex(params[1].get<std::string>());
     key.SetPrivKey(CPrivKey(vchPrivKey.begin(), vchPrivKey.end())); // if key is not correct openssl may crash
     if (!key.Sign(Hash(alert.vchMsg.begin(), alert.vchMsg.end()), alert.vchSig))
-        throw runtime_error(
+        throw std::runtime_error(
             "Unable to sign alert, check private key?\n");
     if(!alert.ProcessAlert())
-        throw runtime_error(
+        throw std::runtime_error(
             "Failed to process alert.\n");
     // Relay alert
     {

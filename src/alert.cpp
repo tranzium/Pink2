@@ -13,9 +13,7 @@
 #include "sync.h"
 #include "ui_interface.h"
 
-using namespace std;
-
-map<uint256, CAlert> mapAlerts;
+std::map<uint256, CAlert> mapAlerts;
 CCriticalSection cs_mapAlerts;
 
 static const char* pszMainKey = "0429543a763bb47529262f9e11006e4bafbaa0ab29b2bb818d94e1dddb361dd25c29d23a571eff10459bcbe892f7da48e7583f754070885a2e143d62de32ac14fb";
@@ -205,7 +203,7 @@ bool CAlert::ProcessAlert(bool fThread)
     {
         LOCK(cs_mapAlerts);
         // Cancel previous alerts
-        for (map<uint256, CAlert>::iterator mi = mapAlerts.begin(); mi != mapAlerts.end();)
+        for (std::map<uint256, CAlert>::iterator mi = mapAlerts.begin(); mi != mapAlerts.end();)
         {
             const CAlert& alert = (*mi).second;
             if (Cancels(alert))
@@ -236,7 +234,7 @@ bool CAlert::ProcessAlert(bool fThread)
         }
 
         // Add to mapAlerts
-        mapAlerts.insert(make_pair(GetHash(), *this));
+        mapAlerts.insert(std::make_pair(GetHash(), *this));
         // Notify UI and -alertnotify if it applies to me
         if(AppliesToMe())
         {

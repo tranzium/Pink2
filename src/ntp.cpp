@@ -41,7 +41,6 @@
   48 bits total, hence bTimeReq[48]
 */
 
-using namespace std;
 static uint64_t nNTPUnix = 2208988800ull;
 
 bool GetNTPTime(const char *addrConnect, uint64_t& timeRet)
@@ -182,7 +181,7 @@ bool GetNTPTime(const char *addrConnect, uint64_t& timeRet)
 }
 
 static uint64_t ntpTime[4];
-void *threadGetNTPTime(int nServer, const string strPool, uint64_t startMicros)
+void *threadGetNTPTime(int nServer, const std::string strPool, uint64_t startMicros)
 {
     std::string strAddress = strPool;
     if (nServer > 3)
@@ -195,7 +194,7 @@ void *threadGetNTPTime(int nServer, const string strPool, uint64_t startMicros)
         strAddress = "pool.ntp.org";
 
     // Prepend pool server number.
-    strAddress = to_string(nServer) + "." + strAddress;
+    strAddress = std::to_string(nServer) + "." + strAddress;
 
     uint64_t myTime = 0;
     if (GetNTPTime(strAddress.c_str(), myTime))
@@ -211,7 +210,7 @@ void *threadGetNTPTime(int nServer, const string strPool, uint64_t startMicros)
     return nullptr;
 }
 
-bool SetNTPOffset(const string &strPool)
+bool SetNTPOffset(const std::string &strPool)
 {
     int nWait = 0;
     static int tCount = 0;
@@ -220,7 +219,7 @@ bool SetNTPOffset(const string &strPool)
     uint64_t avMicros;
     int64_t nTimeOffset = 0;
 
-    vector<uint64_t> ntpMicros;
+    std::vector<uint64_t> ntpMicros;
 
     while (tCount < 4)
     {
@@ -311,7 +310,7 @@ bool SetNTPOffset(const string &strPool)
 
 }
 
-void *threadNTPUpdate(const string &strNTPool)
+void *threadNTPUpdate(const std::string &strNTPool)
 {
 
     static int nRefreshTime = 0;

@@ -8,7 +8,6 @@
 #include "smessage.h"
 #include "init.h" // pwalletMain
 
-using namespace std;
 
 extern void TxToJSON(const CTransaction& tx, const uint256 hashBlock, json& entry);
 
@@ -17,12 +16,12 @@ extern void TxToJSON(const CTransaction& tx, const uint256 hashBlock, json& entr
 json smsgenable(const json& params, bool fHelp)
 {
     if (fHelp || !params.empty())
-        throw runtime_error(
+        throw std::runtime_error(
             "smsgenable \n"
             "Enable secure messaging.");
 
     if (fSecMsgenabled)
-        throw runtime_error("Secure messaging is already enabled.");
+        throw std::runtime_error("Secure messaging is already enabled.");
 
     json result;
     if (!SecureMsgEnable())
@@ -38,11 +37,11 @@ json smsgenable(const json& params, bool fHelp)
 json smsgdisable(const json& params, bool fHelp)
 {
     if (fHelp || !params.empty())
-        throw runtime_error(
+        throw std::runtime_error(
             "smsgdisable \n"
             "Disable secure messaging.");
     if (!fSecMsgenabled)
-        throw runtime_error("Secure messaging is already disabled.");
+        throw std::runtime_error("Secure messaging is already disabled.");
 
     json result;
     if (!SecureMsgDisable())
@@ -58,7 +57,7 @@ json smsgdisable(const json& params, bool fHelp)
 json smsgoptions(const json& params, bool fHelp)
 {
     if (fHelp || params.size() > 3)
-        throw runtime_error(
+        throw std::runtime_error(
             "smsgoptions [list|set <optname> <value>]\n"
             "List and manage options.");
 
@@ -138,12 +137,12 @@ json smsgoptions(const json& params, bool fHelp)
 json smsglocalkeys(const json& params, bool fHelp)
 {
     if (fHelp || params.size() > 3)
-        throw runtime_error(
+        throw std::runtime_error(
             "smsglocalkeys [whitelist|all|wallet|recv <+/-> <address>|anon <+/-> <address>]\n"
             "List and manage keys.");
 
     if (!fSecMsgenabled)
-        throw runtime_error("Secure messaging is disabled.");
+        throw std::runtime_error("Secure messaging is disabled.");
 
     json result;
 
@@ -351,12 +350,12 @@ json smsglocalkeys(const json& params, bool fHelp)
 json smsgscanchain(const json& params, bool fHelp)
 {
     if (fHelp || !params.empty())
-        throw runtime_error(
+        throw std::runtime_error(
             "smsgscanchain \n"
             "Look for public keys in the block chain.");
 
     if (!fSecMsgenabled)
-        throw runtime_error("Secure messaging is disabled.");
+        throw std::runtime_error("Secure messaging is disabled.");
 
     json result;
     if (!SecureMsgScanBlockChain())
@@ -372,15 +371,15 @@ json smsgscanchain(const json& params, bool fHelp)
 json smsgscanbuckets(const json& params, bool fHelp)
 {
     if (fHelp || !params.empty())
-        throw runtime_error(
+        throw std::runtime_error(
             "smsgscanbuckets \n"
             "Force rescan of all messages in the bucket store.");
 
     if (!fSecMsgenabled)
-        throw runtime_error("Secure messaging is disabled.");
+        throw std::runtime_error("Secure messaging is disabled.");
 
     if (pwalletMain->IsLocked())
-        throw runtime_error("Wallet is locked.");
+        throw std::runtime_error("Wallet is locked.");
 
     json result;
     if (!SecureMsgScanBuckets())
@@ -396,12 +395,12 @@ json smsgscanbuckets(const json& params, bool fHelp)
 json smsgaddkey(const json& params, bool fHelp)
 {
     if (fHelp || params.size() != 2)
-        throw runtime_error(
+        throw std::runtime_error(
             "smsgaddkey <address> <pubkey>\n"
             "Add address, pubkey pair to database.");
 
     if (!fSecMsgenabled)
-        throw runtime_error("Secure messaging is disabled.");
+        throw std::runtime_error("Secure messaging is disabled.");
 
     std::string addr = params[0].get<std::string>();
     std::string pubk = params[1].get<std::string>();
@@ -430,13 +429,13 @@ json smsgaddkey(const json& params, bool fHelp)
 json smsggetpubkey(const json& params, bool fHelp)
 {
     if (fHelp || params.size() != 1)
-        throw runtime_error(
+        throw std::runtime_error(
             "smsggetpubkey <address>\n"
             "Return the base58 encoded compressed public key for an address.\n"
             "Tests localkeys first, then looks in public key db.\n");
 
     if (!fSecMsgenabled)
-        throw runtime_error("Secure messaging is disabled.");
+        throw std::runtime_error("Secure messaging is disabled.");
 
 
     std::string address   = params[0].get<std::string>();
@@ -514,12 +513,12 @@ json smsggetpubkey(const json& params, bool fHelp)
 json smsgsend(const json& params, bool fHelp)
 {
     if (fHelp || params.size() != 3)
-        throw runtime_error(
+        throw std::runtime_error(
             "smsgsend <addrFrom> <addrTo> <message>\n"
             "Send an encrypted message from addrFrom to addrTo.");
 
     if (!fSecMsgenabled)
-        throw runtime_error("Secure messaging is disabled.");
+        throw std::runtime_error("Secure messaging is disabled.");
 
     std::string addrFrom  = params[0].get<std::string>();
     std::string addrTo    = params[1].get<std::string>();
@@ -542,12 +541,12 @@ json smsgsend(const json& params, bool fHelp)
 json smsgsendanon(const json& params, bool fHelp)
 {
     if (fHelp || params.size() != 2)
-        throw runtime_error(
+        throw std::runtime_error(
             "smsgsendanon <addrTo> <message>\n"
             "Send an anonymous encrypted message to addrTo.");
 
     if (!fSecMsgenabled)
-        throw runtime_error("Secure messaging is disabled.");
+        throw std::runtime_error("Secure messaging is disabled.");
 
     std::string addrFrom  = "anon";
     std::string addrTo    = params[0].get<std::string>();
@@ -569,16 +568,16 @@ json smsgsendanon(const json& params, bool fHelp)
 json smsginbox(const json& params, bool fHelp)
 {
     if (fHelp || params.size() > 1) // defaults to read
-        throw runtime_error(
+        throw std::runtime_error(
             "smsginbox [all|unread|clear]\n"
             "Decrypt and display all received messages.\n"
             "Warning: clear will delete all messages.");
 
     if (!fSecMsgenabled)
-        throw runtime_error("Secure messaging is disabled.");
+        throw std::runtime_error("Secure messaging is disabled.");
 
     if (pwalletMain->IsLocked())
-        throw runtime_error("Wallet is locked.");
+        throw std::runtime_error("Wallet is locked.");
 
     std::string mode = "unread";
     if (!params.empty())
@@ -599,7 +598,7 @@ json smsginbox(const json& params, bool fHelp)
         SecMsgDB dbInbox;
 
         if (!dbInbox.Open("cr+"))
-            throw runtime_error("Could not open DB.");
+            throw std::runtime_error("Could not open DB.");
 
         uint32_t nMessages = 0;
         char cbuf[256];
@@ -685,16 +684,16 @@ json smsginbox(const json& params, bool fHelp)
 json smsgoutbox(const json& params, bool fHelp)
 {
     if (fHelp || params.size() > 1) // defaults to read
-        throw runtime_error(
+        throw std::runtime_error(
             "smsgoutbox [all|clear]\n"
             "Decrypt and display all sent messages.\n"
             "Warning: clear will delete all sent messages.");
 
     if (!fSecMsgenabled)
-        throw runtime_error("Secure messaging is disabled.");
+        throw std::runtime_error("Secure messaging is disabled.");
 
     if (pwalletMain->IsLocked())
-        throw runtime_error("Wallet is locked.");
+        throw std::runtime_error("Wallet is locked.");
 
     std::string mode = "all";
     if (!params.empty())
@@ -715,7 +714,7 @@ json smsgoutbox(const json& params, bool fHelp)
         SecMsgDB dbOutbox;
 
         if (!dbOutbox.Open("cr+"))
-            throw runtime_error("Could not open DB.");
+            throw std::runtime_error("Could not open DB.");
 
         uint32_t nMessages = 0;
         char cbuf[256];
@@ -781,12 +780,12 @@ json smsgoutbox(const json& params, bool fHelp)
 json smsgbuckets(const json& params, bool fHelp)
 {
     if (fHelp || params.size() > 1)
-        throw runtime_error(
+        throw std::runtime_error(
             "smsgbuckets [stats|dump]\n"
             "Display some statistics.");
 
     if (!fSecMsgenabled)
-        throw runtime_error("Secure messaging is disabled.");
+        throw std::runtime_error("Secure messaging is disabled.");
 
     std::string mode = "stats";
     if (!params.empty())
