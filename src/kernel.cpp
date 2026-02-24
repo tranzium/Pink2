@@ -5,6 +5,7 @@
 #include "kernel.h"
 #include "logging.h"
 #include "txdb.h"
+#include "arith_uint256.h"
 
 #include "time.h"
 
@@ -273,7 +274,7 @@ bool CheckStakeKernelHash(unsigned int nBits, const CBlock& blockFrom, unsigned 
     if (nTimeBlockFrom + nStakeMinAge > nTimeTx) // Min age requirement
         return error("CheckStakeKernelHash() : min age violation");
 
-    CBigNum bnTargetPerCoinDay;
+    arith_uint256 bnTargetPerCoinDay;
     bnTargetPerCoinDay.SetCompact(nBits);
     int64_t nValueIn = txPrev.vout[prevout.n].nValue;
 
@@ -302,10 +303,10 @@ bool CheckStakeKernelHash(unsigned int nBits, const CBlock& blockFrom, unsigned 
     bnCoinDayWeight_Calc = nValueIn * GetWeight(static_cast<int64_t>(txPrev.nTime), static_cast<int64_t>(nTimeTx), fFlashStake) / nDayTime;
 
 
-    CBigNum bnCoinDayWeight = CBigNum(bnCoinDayWeight_Calc);
+    arith_uint256 bnCoinDayWeight(static_cast<uint64_t>(bnCoinDayWeight_Calc));
 
 
-    targetProofOfStake = (bnCoinDayWeight * bnTargetPerCoinDay).getuint256();
+    targetProofOfStake = ArithToUint256(bnCoinDayWeight * bnTargetPerCoinDay);
 
     // Calculate hash
     CDataStream ss(SER_GETHASH, 0);
@@ -333,7 +334,7 @@ bool CheckStakeKernelHash(unsigned int nBits, const CBlock& blockFrom, unsigned 
     }
     
     // Now check if proof-of-stake hash meets target protocol
-    if (CBigNum(hashProofOfStake) > bnCoinDayWeight * bnTargetPerCoinDay)
+    if (UintToArith256(hashProofOfStake) > bnCoinDayWeight * bnTargetPerCoinDay)
         return false;
     if (fDebug && !fPrintProofOfStake)
     {

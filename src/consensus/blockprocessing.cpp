@@ -8,6 +8,7 @@
 // Extracted from main.cpp — identical function signatures and behavior.
 
 #include "main.h"
+#include "arith_uint256.h"
 #include "checkpoints.h"
 #include "txdb.h"
 #include "kernel.h"
@@ -39,11 +40,11 @@ void static InvalidChainFound(CBlockIndex* pindexNew)
 
     LogPrintf("InvalidChainFound: invalid block=%s  height=%d  trust=%s  blocktrust=%" PRId64 "  date=%s\n",
       pindexNew->GetBlockHash().ToString().substr(0,20).c_str(), pindexNew->nHeight,
-      CBigNum(pindexNew->nChainTrust).ToString().c_str(), nBestInvalidBlockTrust.Get64(),
+      UintToArith256(pindexNew->nChainTrust).ToString().c_str(), nBestInvalidBlockTrust.Get64(),
       DateTimeStrFormat("%x %H:%M:%S", pindexNew->GetBlockTime()).c_str());
     LogPrintf("InvalidChainFound:  current best=%s  height=%d  trust=%s  blocktrust=%" PRId64 "  date=%s\n",
       hashBestChain.ToString().substr(0,20).c_str(), nBestHeight,
-      CBigNum(pindexBest->nChainTrust).ToString().c_str(),
+      UintToArith256(pindexBest->nChainTrust).ToString().c_str(),
       nBestBlockTrust.Get64(),
       DateTimeStrFormat("%x %H:%M:%S", pindexBest->GetBlockTime()).c_str());
 }
@@ -261,7 +262,7 @@ bool CBlock::SetBestChain(CTxDB& txdb, CBlockIndex* pindexNew)
 
     LogPrint(BCLog::CONSENSUS, "SetBestChain: new best=%s  height=%d  trust=%s  blocktrust=%" PRId64 "  date=%s\n",
         hashBestChain.ToString().substr(0,20).c_str(), nBestHeight,
-        CBigNum(nBestChainTrust).ToString().c_str(),
+        UintToArith256(nBestChainTrust).ToString().c_str(),
         nBestBlockTrust.Get64(),
         DateTimeStrFormat("%x %H:%M:%S", pindexBest->GetBlockTime()).c_str());
 
@@ -467,7 +468,7 @@ bool CBlock::AcceptBlock()
     return true;
 }
 
-void GetModTrust(CBigNum &bnStakeTrust, CBigNum &bnTarget, CBlockIndex *pindexBase, const unsigned int nBlockTime, bool isPos, bool isNew)
+void GetModTrust(arith_uint256 &bnStakeTrust, arith_uint256 &bnTarget, CBlockIndex *pindexBase, const unsigned int nBlockTime, bool isPos, bool isNew)
 {
 
     // If this block is more than 10 minutes older than our current best block and is building on a block deeper
@@ -505,7 +506,7 @@ void GetModTrust(CBigNum &bnStakeTrust, CBigNum &bnTarget, CBlockIndex *pindexBa
 
             nBaseStakeTrust.SetCompact(nBestBits);
             bnStakeTrust = nBaseStakeTrust;
-            LogPrint(BCLog::CONSENSUS, "StakeTrust nBestBits=%s\n", bnStakeTrust.getuint256().ToString().c_str());
+            LogPrint(BCLog::CONSENSUS, "StakeTrust nBestBits=%s\n", ArithToUint256(bnStakeTrust).ToString().c_str());
         } else {
             bnStakeTrust = nBaseStakeTrust;
         }
@@ -515,29 +516,31 @@ void GetModTrust(CBigNum &bnStakeTrust, CBigNum &bnTarget, CBlockIndex *pindexBa
 
 uint256 CBlockIndex::GetBlockTrust(bool isNew) const
 {
-    CBigNum bnTarget;
+    arith_uint256 bnTarget;
     bnTarget.SetCompact(nBits);
 
-    if (bnTarget <= 0)
+    if (bnTarget.IsZero())
         return 0;
+
+    // 2^256 / (target+1) == (~target / (target+1)) + 1
+    // This avoids overflow since 2^256 doesn't fit in 256 bits.
 
     if (nTime > nTimeV221)
     {
 
         CBlockIndex *pindexBase = pprev;
 
-        CBigNum bnStakeTrust = 0u;
-        CBigNum bnTargetTest = bnTarget;
-        CBigNum bnTargetBase = CBigNum(1) << 256;
+        arith_uint256 bnStakeTrust(0);
+        arith_uint256 bnTargetTest = bnTarget;
 
         GetModTrust(bnStakeTrust, bnTargetTest, pindexBase, nTime, IsProofOfStake(), isNew);
 
-        uint256 nTrustRet = (bnTargetBase / (bnTargetTest+1)).getuint256();
-        if (bnStakeTrust !=0u)
-            nTrustRet += (bnTargetBase / bnStakeTrust).getuint256();
+        uint256 nTrustRet = ArithToUint256((~bnTargetTest / (bnTargetTest + arith_uint256(1))) + arith_uint256(1));
+        if (!bnStakeTrust.IsZero())
+            nTrustRet += ArithToUint256(~arith_uint256(0) / bnStakeTrust);
 
         return nTrustRet;
     }
 
-    return ((CBigNum(1)<<256) / (bnTarget+1)).getuint256();
+    return ArithToUint256((~bnTarget / (bnTarget + arith_uint256(1))) + arith_uint256(1));
 }

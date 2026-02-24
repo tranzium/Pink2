@@ -17,6 +17,7 @@
 #include <cmath>
 #include <filesystem>
 #include "string_utils.h"
+#include "scriptnum.h"
 
 
 using namespace std;
@@ -36,12 +37,12 @@ unsigned int nTransactionsUpdated = 0;
 map<uint256, CBlockIndex*> mapBlockIndex;
 set<pair<COutPoint, unsigned int> > setStakeSeen;
 
-CBigNum bnProofOfWorkLimit(~uint256(0) >> 20);      // "standard" scrypt target limit for proof of work, results with 0,000244140625 proof-of-work difficulty
-CBigNum bnProofOfStakeLimit(~uint256(0) >> 10);
-CBigNum bnProofOfFlashStakeLimit(~uint256(0) >> 10);
-CBigNum bnProofOfWorkLimitTestNet(~uint256(0) >> 16);
+arith_uint256 bnProofOfWorkLimit = UintToArith256(~uint256(0) >> 20);      // "standard" scrypt target limit for proof of work, results with 0,000244140625 proof-of-work difficulty
+arith_uint256 bnProofOfStakeLimit = UintToArith256(~uint256(0) >> 10);
+arith_uint256 bnProofOfFlashStakeLimit = UintToArith256(~uint256(0) >> 10);
+arith_uint256 bnProofOfWorkLimitTestNet = UintToArith256(~uint256(0) >> 16);
 
-CBigNum nBaseStakeTrust = 0;
+arith_uint256 nBaseStakeTrust(0);
 int nBaseStakeTrustHeight = 0;
 
 unsigned int nTargetSpacing     = 120;               // 2 Minutes
@@ -962,9 +963,9 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock)
     {
         // Extra checks to prevent "fill up memory by spamming with bogus blocks"
         int64_t deltaTime = pblock->GetBlockTime() - pcheckpoint->nTime;
-        CBigNum bnNewBlock;
+        arith_uint256 bnNewBlock;
         bnNewBlock.SetCompact(pblock->nBits);
-        CBigNum bnRequired;
+        arith_uint256 bnRequired;
 
         if (pblock->IsProofOfStake())
         {
@@ -1241,7 +1242,7 @@ bool LoadBlockIndex(bool fAllowNew)
         txNew.nTime = 1486329989;
         txNew.vin.resize(1);
         txNew.vout.resize(1);
-        txNew.vin[0].scriptSig = CScript() << 0 << CBigNum(42) << vector<unsigned char>((const unsigned char*)pszTimestamp, (const unsigned char*)pszTimestamp + strlen(pszTimestamp));
+        txNew.vin[0].scriptSig = CScript() << 0 << CScriptNum(42).getvch() << vector<unsigned char>((const unsigned char*)pszTimestamp, (const unsigned char*)pszTimestamp + strlen(pszTimestamp));
         txNew.vout[0].SetEmpty();
         
         CBlock block;
@@ -1257,7 +1258,7 @@ bool LoadBlockIndex(bool fAllowNew)
 
         // This will figure out a valid hash and Nonce if you're
         // creating a different genesis block:
-            uint256 hashTarget = CBigNum().SetCompact(block.nBits).getuint256();
+            uint256 hashTarget = ArithToUint256(arith_uint256().SetCompact(block.nBits));
             while (block.GetHash() > hashTarget)
                {
                    ++block.nNonce;

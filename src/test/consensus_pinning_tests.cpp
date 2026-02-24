@@ -21,7 +21,7 @@
 #include "test_framework.h"
 
 extern CWallet* pwalletMain;
-extern CBigNum bnProofOfWorkLimit;
+// bnProofOfWorkLimit declared in main.h
 
 // Globals from main.cpp not declared in main.h
 extern std::multimap<uint256, CBlock*> mapOrphanBlocksByPrev;
@@ -65,16 +65,16 @@ CBlock MakeMinimalPoW()
 
 // RAII guard for temporarily lowering PoW difficulty.
 struct TestEasyPoW {
-    CBigNum bnOrig;
+    arith_uint256 bnOrig;
     TestEasyPoW() : bnOrig(bnProofOfWorkLimit) {
-        bnProofOfWorkLimit = CBigNum(~uint256(0) >> 2);
+        bnProofOfWorkLimit = UintToArith256(~uint256(0) >> 2);
     }
     ~TestEasyPoW() { bnProofOfWorkLimit = bnOrig; }
 };
 
 // Mine a valid nonce for a block (assumes easy difficulty).
 bool MineNonce(CBlock& block) {
-    uint256 hashTarget = CBigNum().SetCompact(block.nBits).getuint256();
+    uint256 hashTarget = ArithToUint256(arith_uint256().SetCompact(block.nBits));
     block.nNonce = 0;
     while (block.GetPoWHash() > hashTarget) {
         block.nNonce++;

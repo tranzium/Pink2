@@ -5,7 +5,7 @@
 #ifndef BITCOIN_MAIN_H
 #define BITCOIN_MAIN_H
 
-#include "bignum.h"
+#include "arith_uint256.h"
 #include "sync.h"
 #include "net.h"
 #include "script.h"
@@ -75,15 +75,15 @@ extern unsigned int nNodeLifespan;
 extern int nCoinbaseMaturity;
 extern int nBestHeight;
 extern const unsigned int MAX_PEERS;
-extern CBigNum bnProofOfWorkLimit;
-extern CBigNum bnProofOfStakeLimit;
-extern CBigNum bnProofOfFlashStakeLimit;
+extern arith_uint256 bnProofOfWorkLimit;
+extern arith_uint256 bnProofOfStakeLimit;
+extern arith_uint256 bnProofOfFlashStakeLimit;
 extern uint256 nBestChainTrust;
 extern uint256 hashBestChain;
 extern CBlockIndex* pindexBest;
 extern CBlockIndex* pblockindexFBBHLast;
 extern unsigned int nTransactionsUpdated;
-extern CBigNum nBaseStakeTrust;
+extern arith_uint256 nBaseStakeTrust;
 extern int nBaseStakeTrustHeight;
 extern uint64_t nLastBlockTx;
 extern uint64_t nLastBlockSize;
@@ -144,7 +144,7 @@ const CBlockIndex* GetLastBlockIndex(const CBlockIndex* pindex, bool fProofOfSta
 const CBlockIndex* GetLastBlockIndex2(const CBlockIndex* pindex, bool fFlashStake);
 void StakeMiner(CWallet *pwallet);
 void ResendWalletTransactions(bool fForce = false);
-void GetModTrust(CBigNum &bnModTrust, CBigNum &bnTarget, CBlockIndex &pindexBase, const unsigned int nBlockTime, bool isPos, bool isNew);
+void GetModTrust(arith_uint256 &bnModTrust, arith_uint256 &bnTarget, CBlockIndex &pindexBase, const unsigned int nBlockTime, bool isPos, bool isNew);
 
 
 

@@ -13,12 +13,13 @@
 #include <boost/test/unit_test.hpp>
 
 #include "test_framework.h"
+#include "arith_uint256.h"
 #include "txdb.h"
 #include "bignum.h"
 
 extern CWallet* pwalletMain;
 extern int nCoinbaseMaturity;
-extern CBigNum bnProofOfWorkLimit;
+// bnProofOfWorkLimit declared in main.h
 
 // ===========================================================================
 // Suite 1: Chain construction and ConnectBlock verification
@@ -295,8 +296,8 @@ BOOST_AUTO_TEST_CASE(reject_invalid_pow)
 {
     // Temporarily lower difficulty to create a valid block template,
     // then use a nonce that does NOT satisfy the PoW.
-    CBigNum bnOrig = bnProofOfWorkLimit;
-    bnProofOfWorkLimit = CBigNum(~uint256(0) >> 2);
+    arith_uint256 bnOrig = bnProofOfWorkLimit;
+    bnProofOfWorkLimit = UintToArith256(~uint256(0) >> 2);
 
     pwalletMain->NewKeyPool();
     CBlock* pblock = CreateNewBlock(pwalletMain);
@@ -317,7 +318,7 @@ BOOST_AUTO_TEST_CASE(reject_invalid_pow)
 
     // Now restore real difficulty so this nonce fails PoW check.
     bnProofOfWorkLimit = bnOrig;
-    pblock->nBits = CBigNum(~uint256(0) >> 20).GetCompact();
+    pblock->nBits = UintToArith256(~uint256(0) >> 20).GetCompact();
     pblock->nNonce = 0x12345678;
 
     BOOST_CHECK(!ProcessBlock(NULL, pblock));

@@ -8,6 +8,7 @@
 // Extracted from main.cpp — identical function signatures and behavior.
 
 #include "main.h"
+#include "arith_uint256.h"
 #include "kernel.h"
 
 #include <ctime>
@@ -76,9 +77,9 @@ int64_t GetProofOfStakeReward(int64_t nCoinAge, int64_t nFees, int nHeight, unsi
 //
 // maximum nBits value could possible be required nTime after
 //
-static unsigned int ComputeMaxBits(CBigNum bnTargetLimit, unsigned int nBase, int64_t nTime)
+static unsigned int ComputeMaxBits(arith_uint256 bnTargetLimit, unsigned int nBase, int64_t nTime)
 {
-    CBigNum bnResult;
+    arith_uint256 bnResult;
     bnResult.SetCompact(nBase);
     bnResult *= 2;
     while (nTime > 0 && bnResult < bnTargetLimit)
@@ -108,7 +109,7 @@ unsigned int ComputeMinWork(unsigned int nBase, int64_t nTime)
 unsigned int ComputeMinStake(unsigned int nBase, int64_t nTime, unsigned int nBlockTime)
 {
 
-    CBigNum bnStakeTarget = bnProofOfStakeLimit;
+    arith_uint256 bnStakeTarget = bnProofOfStakeLimit;
 
     if (IsFlashStake(nBlockTime))
         bnStakeTarget = bnProofOfFlashStakeLimit;
@@ -156,12 +157,12 @@ unsigned int GetNextTargetRequired(const CBlockIndex* pindexLast, bool fProofOfS
 
 unsigned int GetNextTargetRequiredV1(const CBlockIndex* pindexLast, bool fProofOfStake, unsigned int nBlockTime)
 {
-    CBigNum bnStakeTarget = bnProofOfStakeLimit;
+    arith_uint256 bnStakeTarget = bnProofOfStakeLimit;
 
     if (IsFlashStake(nBlockTime))
         bnStakeTarget = bnProofOfFlashStakeLimit;
 
-    CBigNum bnTargetLimit = fProofOfStake ? bnStakeTarget : bnProofOfWorkLimit;
+    arith_uint256 bnTargetLimit = fProofOfStake ? bnStakeTarget : bnProofOfWorkLimit;
 
     if (pindexLast == nullptr)
         return bnTargetLimit.GetCompact(); // genesis block
@@ -199,7 +200,7 @@ unsigned int GetNextTargetRequiredV1(const CBlockIndex* pindexLast, bool fProofO
 
     // ppcoin: target change every block
     // ppcoin: retarget with exponential moving toward target spacing
-    CBigNum bnNew;
+    arith_uint256 bnNew;
     int64_t nInterval;
     int64_t nActualSpacing;
 
@@ -233,10 +234,16 @@ unsigned int GetNextTargetRequiredV1(const CBlockIndex* pindexLast, bool fProofO
     else
         nInterval = nTargetTimespan / (nTS);
 
-    bnNew *= ((nInterval - 1) * (nTS) + nActualSpacing + nActualSpacing);
-    bnNew /= ((nInterval + 1) * (nTS));
+    // Multiply then divide to retarget. Use overflow-safe computation:
+    // bnNew = bnNew * num / den  ===  (bnNew / den) * num + (bnNew % den) * num / den
+    // This avoids 256-bit overflow when bnNew is close to 2^254 (easy test targets).
+    {
+        arith_uint256 bnNum(static_cast<uint64_t>((nInterval - 1) * (nTS) + nActualSpacing + nActualSpacing));
+        arith_uint256 bnDen(static_cast<uint64_t>((nInterval + 1) * (nTS)));
+        bnNew = bnNew / bnDen * bnNum + bnNew % bnDen * bnNum / bnDen;
+    }
 
-    if (bnNew <= 0 || bnNew > bnTargetLimit)
+    if (bnNew.IsZero() || bnNew > bnTargetLimit)
         bnNew = bnTargetLimit;
 
     return bnNew.GetCompact();
@@ -244,10 +251,10 @@ unsigned int GetNextTargetRequiredV1(const CBlockIndex* pindexLast, bool fProofO
 
 unsigned int GetNextTargetRequiredV2(const CBlockIndex* pindexLast, bool fProofOfStake, unsigned int nBlockTime)
 {
-    CBigNum bnTargetLimit;
+    arith_uint256 bnTargetLimit;
     int64_t nActualSpacing;
     int nTS;
-    CBigNum bnNew;
+    arith_uint256 bnNew;
 
     bool fFlashStake = false;
 
@@ -302,10 +309,14 @@ unsigned int GetNextTargetRequiredV2(const CBlockIndex* pindexLast, bool fProofO
     else
         nInterval = nTargetTimespan / nTS;
 
-    bnNew *= ((nInterval - 1) * nTS + nActualSpacing + nActualSpacing);
-    bnNew /= ((nInterval + 1) * nTS);
+    // Overflow-safe multiply-then-divide (see V1 comment for rationale).
+    {
+        arith_uint256 bnNum(static_cast<uint64_t>((nInterval - 1) * nTS + nActualSpacing + nActualSpacing));
+        arith_uint256 bnDen(static_cast<uint64_t>((nInterval + 1) * nTS));
+        bnNew = bnNew / bnDen * bnNum + bnNew % bnDen * bnNum / bnDen;
+    }
 
-    if (bnNew <= 0 || bnNew > bnTargetLimit)
+    if (bnNew.IsZero() || bnNew > bnTargetLimit)
         bnNew = bnTargetLimit;
 
     return bnNew.GetCompact();

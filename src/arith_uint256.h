@@ -89,16 +89,29 @@ public:
     arith_uint256& operator*=(const arith_uint256& b);
     arith_uint256& operator/=(const arith_uint256& b);
 
+    arith_uint256& operator%=(const arith_uint256& b)
+    {
+        *this -= (*this / b) * b;
+        return *this;
+    }
+
     friend arith_uint256 operator+(const arith_uint256& a, const arith_uint256& b) { arith_uint256 r(a); r += b; return r; }
     friend arith_uint256 operator-(const arith_uint256& a, const arith_uint256& b) { arith_uint256 r(a); r -= b; return r; }
     friend arith_uint256 operator*(const arith_uint256& a, const arith_uint256& b) { arith_uint256 r(a); r *= b; return r; }
     friend arith_uint256 operator/(const arith_uint256& a, const arith_uint256& b) { arith_uint256 r(a); r /= b; return r; }
+    friend arith_uint256 operator%(const arith_uint256& a, const arith_uint256& b) { arith_uint256 r(a); r %= b; return r; }
 
-    const arith_uint256 operator-() const
+    const arith_uint256 operator~() const
     {
         arith_uint256 ret;
         for (int i = 0; i < WIDTH; i++)
             ret.pn[i] = ~pn[i];
+        return ret;
+    }
+
+    const arith_uint256 operator-() const
+    {
+        arith_uint256 ret = ~(*this);
         ++ret;
         return ret;
     }

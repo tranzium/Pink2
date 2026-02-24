@@ -8,9 +8,7 @@
 #include "bignum.h"
 #include "kernel.h"
 
-extern CBigNum bnProofOfWorkLimit;
-extern CBigNum bnProofOfStakeLimit;
-extern CBigNum bnProofOfFlashStakeLimit;
+// bnProofOfWorkLimit, bnProofOfStakeLimit, bnProofOfFlashStakeLimit declared in main.h
 
 BOOST_AUTO_TEST_SUITE(consensus_tests)
 
@@ -122,11 +120,11 @@ BOOST_AUTO_TEST_CASE(pow_max_hash_fails)
 BOOST_AUTO_TEST_CASE(pow_target_boundary)
 {
     // Hash exactly at target boundary
-    CBigNum bnTarget;
+    arith_uint256 bnTarget;
     unsigned int nBits = bnProofOfWorkLimit.GetCompact();
     bnTarget.SetCompact(nBits);
 
-    uint256 hashAtTarget = bnTarget.getuint256();
+    uint256 hashAtTarget = ArithToUint256(bnTarget);
     BOOST_CHECK(CheckProofOfWork(hashAtTarget, nBits));
 
     // Hash one above target should fail (but we can't easily add 1 to uint256 without

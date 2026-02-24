@@ -11,9 +11,7 @@
 #include "main.h"
 #include "kernel.h"
 
-extern CBigNum bnProofOfWorkLimit;
-extern CBigNum bnProofOfStakeLimit;
-extern CBigNum bnProofOfFlashStakeLimit;
+// bnProofOfWorkLimit, bnProofOfStakeLimit, bnProofOfFlashStakeLimit declared in main.h
 extern unsigned int nModifierInterval;
 
 // ---------------------------------------------------------------------------
@@ -860,7 +858,7 @@ BOOST_AUTO_TEST_CASE(difficulty_retarget_v1_fast_blocks_harder)
         idx[i].nFlags = 0;
     }
     // Use a moderately difficult target (not at limit)
-    CBigNum bnModerate = bnProofOfWorkLimit;
+    arith_uint256 bnModerate = bnProofOfWorkLimit;
     bnModerate >>= 4;  // 16x harder than limit
     unsigned int moderateBits = bnModerate.GetCompact();
 
@@ -879,7 +877,7 @@ BOOST_AUTO_TEST_CASE(difficulty_retarget_v1_fast_blocks_harder)
     unsigned int fastResult = GetNextTargetRequired(&idx[2], false, idx[2].nTime + 120);
 
     // Faster blocks → target should be harder (smaller/lower compact value)
-    CBigNum bnNormal, bnFast;
+    arith_uint256 bnNormal, bnFast;
     bnNormal.SetCompact(normalResult);
     bnFast.SetCompact(fastResult);
     BOOST_CHECK(bnFast <= bnNormal);

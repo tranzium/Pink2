@@ -13,6 +13,7 @@
 #include "base58.h"
 #include "kernel.h"
 #include "coincontrol.h"
+#include "arith_uint256.h"
 #include "string_utils.h"
 
 using namespace std;
@@ -2439,7 +2440,7 @@ bool CWallet::GetStakeWeight(const CKeyStore& keystore, uint64_t& nMinWeight, ui
         bool fFlashStake = (pindexBest->nTime > nTimeV231) && IsFlashStake(static_cast<unsigned int>(GetAdjustedTime()));
 
         int64_t nTimeWeight = GetWeight(static_cast<int64_t>(pcoin.first->nTime), static_cast<int64_t>(GetAdjustedTime()), fFlashStake);
-        // CBigNum bnCoinDayWeight = CBigNum(pcoin.first->vout[pcoin.second].nValue) * nTimeWeight / COIN / (24 * 60 * 60);
+        // Original: bnCoinDayWeight = nValue * nTimeWeight / COIN / (24 * 60 * 60)
 
 
         int64_t bnCoinDayWeight_Calc;
@@ -2451,24 +2452,24 @@ bool CWallet::GetStakeWeight(const CKeyStore& keystore, uint64_t& nMinWeight, ui
         bnCoinDayWeight_Calc = nValue * nTimeWeight / nDayTime;
 
 
-        CBigNum bnCoinDayWeight = CBigNum(bnCoinDayWeight_Calc);
+        arith_uint256 bnCoinDayWeight(static_cast<uint64_t>(bnCoinDayWeight_Calc));
 
         // Weight is greater than zero
         if (nTimeWeight > 0)
         {
-            nWeight += bnCoinDayWeight.getuint64();
+            nWeight += bnCoinDayWeight.GetLow64();
         }
 
                 // Weight is greater than zero, but the maximum value isn't reached yet
                 if (nTimeWeight > 0 && nTimeWeight < nStakeMaxAge)
                 {
-                    nMinWeight += bnCoinDayWeight.getuint64();
+                    nMinWeight += bnCoinDayWeight.GetLow64();
                 }
 
                 // Maximum weight was reached
                 if (nTimeWeight == nStakeMaxAge)
                 {
-                    nMaxWeight += bnCoinDayWeight.getuint64();
+                    nMaxWeight += bnCoinDayWeight.GetLow64();
                 }
     }
 
@@ -2478,7 +2479,7 @@ bool CWallet::GetStakeWeight(const CKeyStore& keystore, uint64_t& nMinWeight, ui
 bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int64_t nSearchInterval, int64_t nFees, CTransaction& txNew, CKey& key)
 {
     CBlockIndex* pindexPrev = pindexBest;
-    CBigNum bnTargetPerCoinDay;
+    arith_uint256 bnTargetPerCoinDay;
     bnTargetPerCoinDay.SetCompact(nBits);
 
     txNew.vin.clear();

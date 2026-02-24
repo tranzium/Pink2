@@ -19,7 +19,7 @@ extern unsigned int nModifierInterval;
 extern unsigned int nTargetSpacing;
 extern unsigned int nTargetSpacing_Staking;
 extern unsigned int nTargetSpacing_FlashStaking;
-extern CBigNum bnProofOfWorkLimit;
+// bnProofOfWorkLimit declared in main.h
 
 // ============================================================================
 // ComputeNextStakeModifier tests

@@ -8,21 +8,22 @@
 // Extracted from main.cpp — identical function signatures and behavior.
 
 #include "main.h"
+#include "arith_uint256.h"
 #include "checkpoints.h"
 #include "txdb.h"
 #include "kernel.h"
 
 bool CheckProofOfWork(uint256 hash, unsigned int nBits)
 {
-    CBigNum bnTarget;
+    arith_uint256 bnTarget;
     bnTarget.SetCompact(nBits);
 
     // Check range
-    if (bnTarget <= 0 || bnTarget > bnProofOfWorkLimit)
+    if (bnTarget.IsZero() || bnTarget > bnProofOfWorkLimit)
         return error("CheckProofOfWork() : nBits below minimum work");
 
     // Check proof of work matches claimed amount
-    if (hash > bnTarget.getuint256())
+    if (UintToArith256(hash) > bnTarget)
         return error("CheckProofOfWork() : hash doesn't match nBits");
 
     return true;
@@ -463,7 +464,7 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
 // age (trust score) of competing branches.
 bool CTransaction::GetCoinAge(CTxDB& txdb, uint64_t& nCoinAge) const
 {
-    CBigNum bnCentSecond = 0;  // coin age in the unit of cent-seconds
+    arith_uint256 bnCentSecond(0);  // coin age in the unit of cent-seconds
     nCoinAge = 0;
 
     if (IsCoinBase())
@@ -488,14 +489,14 @@ bool CTransaction::GetCoinAge(CTxDB& txdb, uint64_t& nCoinAge) const
             continue; // only count coins meeting min age requirement
 
         int64_t nValueIn = txPrev.vout[txin.prevout.n].nValue;
-        bnCentSecond += CBigNum(nValueIn) * (nTime-txPrev.nTime) / CENT;
+        bnCentSecond += arith_uint256(static_cast<uint64_t>(nValueIn)) * arith_uint256(static_cast<uint64_t>(nTime - txPrev.nTime)) / arith_uint256(static_cast<uint64_t>(CENT));
 
         LogPrint(BCLog::CONSENSUS, "coin age nValueIn=%" PRId64 " nTimeDiff=%d bnCentSecond=%s\n", nValueIn, nTime - txPrev.nTime, bnCentSecond.ToString().c_str());
     }
 
-    CBigNum bnCoinDay = bnCentSecond * CENT / COIN / (24 * 60 * 60);
+    arith_uint256 bnCoinDay = bnCentSecond * arith_uint256(static_cast<uint64_t>(CENT)) / arith_uint256(static_cast<uint64_t>(COIN)) / arith_uint256(24 * 60 * 60);
     LogPrint(BCLog::CONSENSUS, "coin age bnCoinDay=%s\n", bnCoinDay.ToString().c_str());
-    nCoinAge = bnCoinDay.getuint64();
+    nCoinAge = bnCoinDay.GetLow64();
     return true;
 }
 

@@ -30,6 +30,8 @@
 #include "protocol.h"
 #include "version.h"
 #include "bignum.h"
+#include "arith_uint256.h"
+#include "scriptnum.h"
 #include "util.h"
 #include "alert.h"
 #include "checkpoints.h"
@@ -62,7 +64,7 @@ static CBlock CreateGenesisBlock()
     txNew.nTime = 1486329989;
     txNew.vin.resize(1);
     txNew.vout.resize(1);
-    txNew.vin[0].scriptSig = CScript() << 0 << CBigNum(42)
+    txNew.vin[0].scriptSig = CScript() << 0 << CScriptNum(42).getvch()
         << std::vector<unsigned char>((const unsigned char*)pszTimestamp,
                                       (const unsigned char*)pszTimestamp + strlen(pszTimestamp));
     txNew.vout[0].SetEmpty();
@@ -73,7 +75,7 @@ static CBlock CreateGenesisBlock()
     block.hashMerkleRoot = block.BuildMerkleTree();
     block.nVersion = 1;
     block.nTime    = 1486329989;
-    block.nBits    = CBigNum(~uint256(0) >> 20).GetCompact();
+    block.nBits    = UintToArith256(~uint256(0) >> 20).GetCompact();
     block.nNonce   = 6777712;
 
     return block;

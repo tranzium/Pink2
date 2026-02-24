@@ -4,6 +4,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "main.h"
+#include "arith_uint256.h"
 #include "db.h"
 #include "txdb.h"
 #include "init.h"
@@ -199,7 +200,7 @@ json getworkex(const json& params, bool fHelp)
         char phash1[64];
         FormatHashBuffers(pblock, pmidstate, pdata, phash1);
 
-        uint256 hashTarget = CBigNum().SetCompact(pblock->nBits).getuint256();
+        uint256 hashTarget = ArithToUint256(arith_uint256().SetCompact(pblock->nBits));
 
         CTransaction coinbaseTx = pblock->vtx[0];
         std::vector<uint256> merkle = pblock->GetMerkleBranch(0);
@@ -336,7 +337,7 @@ json getwork(const json& params, bool fHelp)
         char phash1[64];
         FormatHashBuffers(pblock, pmidstate, pdata, phash1);
 
-        uint256 hashTarget = CBigNum().SetCompact(pblock->nBits).getuint256();
+        uint256 hashTarget = ArithToUint256(arith_uint256().SetCompact(pblock->nBits));
 
         json result;
         result["midstate"] = HexStr(CharCast(pmidstate), CharEnd(pmidstate)); // deprecated
@@ -495,7 +496,7 @@ json getblocktemplate(const json& params, bool fHelp)
     json aux;
     aux["flags"] = HexStr(COINBASE_FLAGS.begin(), COINBASE_FLAGS.end());
 
-    uint256 hashTarget = CBigNum().SetCompact(pblock->nBits).getuint256();
+    uint256 hashTarget = ArithToUint256(arith_uint256().SetCompact(pblock->nBits));
 
     static json aMutable = json::array();
     if (aMutable.empty())

@@ -3,9 +3,10 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "test_framework.h"
+#include "arith_uint256.h"
 #include "txdb.h"
 
-extern CBigNum bnProofOfWorkLimit;
+// bnProofOfWorkLimit declared in main.h
 
 unsigned int TestChain::nNextNonceIndex = 0;
 std::vector<CTransaction> TestChain::s_coinbaseTxns;
@@ -19,7 +20,7 @@ std::vector<CTransaction> TestChain::s_coinbaseTxns;
 // ---------------------------------------------------------------------------
 static bool MineAndProcessBlock(CBlock* pblock)
 {
-    uint256 hashTarget = CBigNum().SetCompact(pblock->nBits).getuint256();
+    uint256 hashTarget = ArithToUint256(arith_uint256().SetCompact(pblock->nBits));
 
     pblock->nNonce = 0;
     while (pblock->GetPoWHash() > hashTarget) {
@@ -35,13 +36,13 @@ static bool MineAndProcessBlock(CBlock* pblock)
 // RAII guard for temporarily lowering PoW difficulty.
 // ---------------------------------------------------------------------------
 struct EasyPoW {
-    CBigNum bnOrigLimit;
+    arith_uint256 bnOrigLimit;
 
     EasyPoW() : bnOrigLimit(bnProofOfWorkLimit) {
         // Set easiest target: only top 2 bits must be zero.
         // ~50% of hashes pass on each try — typically finds a valid
         // nonce in 1-3 attempts.
-        bnProofOfWorkLimit = CBigNum(~uint256(0) >> 2);
+        bnProofOfWorkLimit = UintToArith256(~uint256(0) >> 2);
     }
 
     ~EasyPoW() {
