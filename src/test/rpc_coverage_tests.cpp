@@ -727,7 +727,8 @@ BOOST_AUTO_TEST_CASE(dumpwallet_help_throws)
 BOOST_AUTO_TEST_CASE(dumpwallet_functional)
 {
     json p = json::array();
-    p.push_back(std::string("/tmp/pink2_test_dumpwallet.txt"));
+    std::string dumpPath = (GetDataDir() / "test_dumpwallet.txt").string();
+    p.push_back(dumpPath);
     BOOST_CHECK_NO_THROW(dumpwallet(p, false));
 }
 
@@ -740,12 +741,13 @@ BOOST_AUTO_TEST_CASE(importwallet_help_throws)
 BOOST_AUTO_TEST_CASE(importwallet_functional)
 {
     // First dump, then reimport
+    std::string walletPath = (GetDataDir() / "test_importwallet.txt").string();
     json dumpP = json::array();
-    dumpP.push_back(std::string("/tmp/pink2_test_importwallet.txt"));
+    dumpP.push_back(walletPath);
     BOOST_CHECK_NO_THROW(dumpwallet(dumpP, false));
 
     json importP = json::array();
-    importP.push_back(std::string("/tmp/pink2_test_importwallet.txt"));
+    importP.push_back(walletPath);
     BOOST_CHECK_NO_THROW(importwallet(importP, false));
 }
 

@@ -13,14 +13,32 @@
 #include "string_utils.h"
 
 #include <ctime>
+#include <filesystem>
 #include <iomanip>
 #include <sstream>
 
 #include "logging.h"
 
-using namespace std;
 
 void EnsureWalletIsUnlocked();
+
+static std::filesystem::path ValidateWalletFilePath(const std::string& input)
+{
+    namespace fs = std::filesystem;
+    fs::path p = fs::weakly_canonical(fs::path(input));
+
+    fs::path dataDir = fs::weakly_canonical(GetDataDir());
+    fs::path cwd = fs::weakly_canonical(fs::current_path());
+
+    bool inDataDir = strutil::starts_with(p.string(), dataDir.string());
+    bool inCwd = strutil::starts_with(p.string(), cwd.string());
+
+    if (!inDataDir && !inCwd)
+        throw JSONRPCError(RPC_INVALID_PARAMETER,
+            "File path must be within the data directory or current working directory");
+
+    return p;
+}
 
 static const char* const dumpTimeFormats[] = {
     "%Y-%m-%dT%H:%M:%SZ",
@@ -103,12 +121,12 @@ public:
 json importprivkey(const json& params, bool fHelp)
 {
     if (fHelp || params.size() < 1 || params.size() > 2)
-        throw runtime_error(
+        throw std::runtime_error(
             "importprivkey <pinkcoinprivkey> [label]\n"
             "Adds a private key (as returned by dumpprivkey) to your wallet.");
 
-    string strSecret = params[0].get<std::string>();
-    string strLabel = "";
+    std::string strSecret = params[0].get<std::string>();
+    std::string strLabel = "";
     if (params.size() > 1)
         strLabel = params[1].get<std::string>();
     CBitcoinSecret vchSecret;
@@ -151,14 +169,15 @@ json importprivkey(const json& params, bool fHelp)
 json importwallet(const json& params, bool fHelp)
 {
     if (fHelp || params.size() != 1)
-        throw runtime_error(
+        throw std::runtime_error(
             "importwallet <filename>\n"
             "Imports keys from a wallet dump file (see dumpwallet).");
 
     EnsureWalletIsUnlocked();
 
-    ifstream file;
-    file.open(params[0].get<std::string>().c_str());
+    auto validPath = ValidateWalletFilePath(params[0].get<std::string>());
+    std::ifstream file;
+    file.open(validPath.string().c_str());
     if (!file.is_open())
         throw JSONRPCError(RPC_INVALID_PARAMETER, "Cannot open wallet dump file");
 
@@ -238,13 +257,13 @@ json importwallet(const json& params, bool fHelp)
 json dumpprivkey(const json& params, bool fHelp)
 {
     if (fHelp || params.size() != 1)
-        throw runtime_error(
+        throw std::runtime_error(
             "dumpprivkey <pinkcoinaddress>\n"
             "Reveals the private key corresponding to <pinkcoinaddress>.");
 
     EnsureWalletIsUnlocked();
 
-    string strAddress = params[0].get<std::string>();
+    std::string strAddress = params[0].get<std::string>();
     CBitcoinAddress address;
     if (!address.SetString(strAddress))
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Pinkcoin address");
@@ -263,14 +282,15 @@ json dumpprivkey(const json& params, bool fHelp)
 json dumpwallet(const json& params, bool fHelp)
 {
     if (fHelp || params.size() != 1)
-        throw runtime_error(
+        throw std::runtime_error(
             "dumpwallet <filename>\n"
             "Dumps all wallet keys in a human-readable format.");
 
     EnsureWalletIsUnlocked();
 
-    ofstream file;
-    file.open(params[0].get<std::string>().c_str());
+    auto validPath = ValidateWalletFilePath(params[0].get<std::string>());
+    std::ofstream file;
+    file.open(validPath.string().c_str());
     if (!file.is_open())
         throw JSONRPCError(RPC_INVALID_PARAMETER, "Cannot open wallet dump file");
 
