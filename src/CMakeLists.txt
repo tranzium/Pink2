@@ -60,6 +60,10 @@ set(PINKCOIN_CORE_SOURCES
 
     # Wallet: wallet storage and management
     wallet/wallet.cpp
+    wallet/wallet_keys.cpp
+    wallet/wallet_send.cpp
+    wallet/wallet_staking.cpp
+    wallet/wallet_tx.cpp
     wallet/walletdb.cpp
 
     # Net: peer-to-peer networking
