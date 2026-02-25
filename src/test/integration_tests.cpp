@@ -16,7 +16,7 @@
 #include "arith_uint256.h"
 #include "txdb.h"
 
-extern CWallet* pwalletMain;
+extern std::unique_ptr<CWallet> pwalletMain;
 extern int nCoinbaseMaturity;
 // bnProofOfWorkLimit declared in main.h
 
@@ -299,7 +299,7 @@ BOOST_AUTO_TEST_CASE(reject_invalid_pow)
     bnProofOfWorkLimit = UintToArith256(~uint256(0) >> 2);
 
     pwalletMain->NewKeyPool();
-    CBlock* pblock = CreateNewBlock(pwalletMain);
+    CBlock* pblock = CreateNewBlock(pwalletMain.get());
     BOOST_REQUIRE(pblock != nullptr);
 
     pblock->nVersion = 1;
@@ -936,7 +936,7 @@ BOOST_AUTO_TEST_CASE(create_tx_insufficient_funds)
     // Try to create a large send — should fail since test wallet has no spendable coins
     CScript dest = CScript() << OP_TRUE;
     CWalletTx wtx;
-    CReserveKey reservekey(pwalletMain);
+    CReserveKey reservekey(pwalletMain.get());
     int64_t nFeeRet = 0;
     std::string strNarr;
 

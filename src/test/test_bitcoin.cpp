@@ -7,8 +7,9 @@
 #include "checkpoints.h"
 
 #include <filesystem>
+#include <memory>
 
-CWallet* pwalletMain;
+std::unique_ptr<CWallet> pwalletMain;
 CClientUIInterface uiInterface;
 
 // Global variables that would normally come from init.cpp
@@ -18,7 +19,7 @@ unsigned int nNodeLifespan;
 unsigned int nDerivationMethodIndex;
 bool fUseFastIndex;
 enum Checkpoints::CPMode CheckpointsMode;
-CWallet* pstakeDB;
+std::unique_ptr<CWallet> pstakeDB;
 
 extern bool fPrintToConsole;
 extern void noui_connect();
@@ -44,19 +45,17 @@ struct TestingSetup {
         bitdb.MakeMock();
         LoadBlockIndex(true);
         bool fFirstRun;
-        pwalletMain = new CWallet("wallet.dat");
+        pwalletMain = std::make_unique<CWallet>("wallet.dat");
         pwalletMain->LoadWallet(fFirstRun);
-        RegisterWallet(pwalletMain);
+        RegisterWallet(pwalletMain.get());
 
         // Initialize pstakeDB for staking tests (file-backed for RPC tests)
-        pstakeDB = new CWallet("stake.dat");
+        pstakeDB = std::make_unique<CWallet>("stake.dat");
     }
     ~TestingSetup()
     {
-        delete pstakeDB;
-        pstakeDB = NULL;
-        delete pwalletMain;
-        pwalletMain = NULL;
+        pstakeDB.reset();
+        pwalletMain.reset();
         bitdb.Flush(true);
     }
 };

@@ -10,7 +10,9 @@
 #include "key.h"
 #include "main.h"
 
-extern CWallet* pwalletMain;
+#include <memory>
+
+extern std::unique_ptr<CWallet> pwalletMain;
 
 BOOST_AUTO_TEST_SUITE(walletdb_tests)
 

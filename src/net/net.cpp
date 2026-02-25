@@ -1888,7 +1888,7 @@ void StartNode()
     if (!GetBoolArg("-staking", true))
         LogPrintf("Staking disabled\n");
     else
-        if (!NewThread(ThreadStakeMiner, pwalletMain))
+        if (!NewThread(ThreadStakeMiner, pwalletMain.get()))
             LogPrintf("Error: NewThread(ThreadStakeMiner) failed\n");
 }
 

@@ -17,7 +17,7 @@
 #include "init.h"
 #include "test_framework.h"
 
-extern CWallet* pwalletMain;
+extern std::unique_ptr<CWallet> pwalletMain;
 
 // Declared in bitcoinrpc.cpp but not in bitcoinrpc.h
 extern json help(const json& params, bool fHelp);

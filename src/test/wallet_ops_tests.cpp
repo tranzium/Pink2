@@ -12,7 +12,7 @@
 #include "wallet.h"
 #include "test_framework.h"
 
-extern CWallet* pwalletMain;
+extern std::unique_ptr<CWallet> pwalletMain;
 
 // ============================================================================
 // Balance functions — unit tests (no chain state needed)

@@ -820,12 +820,16 @@ static void RPCAcceptHandler(std::shared_ptr< asio::basic_socket_acceptor<Protoc
      && acceptor->is_open())
         RPCListen(acceptor, context, fUseSSL);
 
+    // RAII guard: automatically deletes conn on error/rejection paths.
+    // On the success path (NewThread), we release() to transfer ownership.
+    std::unique_ptr<AcceptedConnection> guard(conn);
+
     AcceptedConnectionImpl<asio::ip::tcp>* tcp_conn = dynamic_cast< AcceptedConnectionImpl<asio::ip::tcp>* >(conn);
 
     // TODO: Actually handle errors
     if (error)
     {
-        delete conn;
+        // guard destructor will delete conn
     }
 
     // Restrict callers by IP.  It is important to
@@ -837,13 +841,17 @@ static void RPCAcceptHandler(std::shared_ptr< asio::basic_socket_acceptor<Protoc
         // Only send a 403 if we're not using SSL to prevent a DoS during the SSL handshake.
         if (!fUseSSL)
             conn->stream() << HTTPReply(HTTP_FORBIDDEN, "", false) << std::flush;
-        delete conn;
+        // guard destructor will delete conn
     }
 
     // start HTTP client thread
-    else if (!NewThread(ThreadRPCServer3, static_cast<AcceptedConnection*>(conn))) {
+    else if (!NewThread(ThreadRPCServer3, conn)) {
         LogPrintf("Failed to create RPC server client thread\n");
-        delete conn;
+        // guard destructor will delete conn
+    }
+    else {
+        // ThreadRPCServer3 now owns conn (wraps in its own unique_ptr)
+        guard.release();
     }
 
     vnThreadsRunning[THREAD_RPCLISTENER]--;

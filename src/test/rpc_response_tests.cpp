@@ -21,7 +21,7 @@
 using std::runtime_error;
 using std::string;
 
-extern CWallet* pwalletMain;
+extern std::unique_ptr<CWallet> pwalletMain;
 extern json help(const json& params, bool fHelp);
 
 // ============================================================================
@@ -427,7 +427,7 @@ BOOST_AUTO_TEST_CASE(listreceivedbyaddress_response_contract)
     tx.vin.push_back(CTxIn(coinbaseTxns[1].GetHash(), 0));
     tx.vout.push_back(CTxOut(10 * COIN, destScript));
 
-    CWalletTx wtx(pwalletMain, tx);
+    CWalletTx wtx(pwalletMain.get(), tx);
     wtx.hashBlock = blockIndexAt(nBaseHeight + 1)->GetBlockHash();
     wtx.nIndex = 0;
     wtx.fMerkleVerified = true;  // bypass Merkle branch check
@@ -463,7 +463,7 @@ BOOST_AUTO_TEST_CASE(listtransactions_response_contract)
     tx.vin.push_back(CTxIn(coinbaseTxns[2].GetHash(), 0));
     tx.vout.push_back(CTxOut(10 * COIN, destScript));
 
-    CWalletTx wtx(pwalletMain, tx);
+    CWalletTx wtx(pwalletMain.get(), tx);
     wtx.hashBlock = blockIndexAt(nBaseHeight + 1)->GetBlockHash();
     wtx.nIndex = 0;
     wtx.fMerkleVerified = true;
@@ -516,7 +516,7 @@ BOOST_AUTO_TEST_CASE(listunspent_response_contract)
     tx.vin.push_back(CTxIn(coinbaseTxns[3].GetHash(), 0));
     tx.vout.push_back(CTxOut(10 * COIN, destScript));
 
-    CWalletTx wtx(pwalletMain, tx);
+    CWalletTx wtx(pwalletMain.get(), tx);
     wtx.hashBlock = blockIndexAt(nBaseHeight + 1)->GetBlockHash();
     wtx.nIndex = 0;
     wtx.fMerkleVerified = true;
@@ -573,7 +573,7 @@ BOOST_AUTO_TEST_CASE(listaddressgroupings_response_contract)
     tx.vin.push_back(CTxIn(coinbaseTxns[4].GetHash(), 0));
     tx.vout.push_back(CTxOut(10 * COIN, destScript));
 
-    CWalletTx wtx(pwalletMain, tx);
+    CWalletTx wtx(pwalletMain.get(), tx);
     wtx.hashBlock = blockIndexAt(nBaseHeight + 1)->GetBlockHash();
     wtx.nIndex = 0;
     wtx.fMerkleVerified = true;
@@ -699,7 +699,7 @@ BOOST_AUTO_TEST_CASE(gettransaction_response_contract)
 {
     // Add a confirmed coinbase tx to the wallet so gettransaction can find it
     BOOST_REQUIRE(!coinbaseTxns.empty());
-    CWalletTx wtx(pwalletMain, coinbaseTxns[0]);
+    CWalletTx wtx(pwalletMain.get(), coinbaseTxns[0]);
     wtx.hashBlock = blockIndexAt(nBaseHeight + 1)->GetBlockHash();
     wtx.nIndex = 0;  // coinbase is always tx index 0 in block
     pwalletMain->AddToWallet(wtx);

@@ -22,8 +22,8 @@
 #include <memory>
 #include <thread>
 
-extern CWallet* pwalletMain;
-extern CWallet* pstakeDB;
+extern std::unique_ptr<CWallet> pwalletMain;
+extern std::unique_ptr<CWallet> pstakeDB;
 
 // ============================================================================
 // Suite 1: BDB cursor guard RAII tests
@@ -80,7 +80,7 @@ BOOST_AUTO_TEST_CASE(stakedb_load_uses_raii)
 {
     // CStakeDB::LoadWallet now uses BdbCursorGuard.
     CStakeDB stakedb(pstakeDB->strWalletFile);
-    SDBErrors err = stakedb.LoadWallet(pstakeDB);
+    SDBErrors err = stakedb.LoadWallet(pstakeDB.get());
     BOOST_CHECK(err == SDB_LOAD_OK || err == SDB_NONCRITICAL_ERROR);
 }
 

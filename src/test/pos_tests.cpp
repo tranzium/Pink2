@@ -14,7 +14,7 @@
 #include "txdb.h"
 #include "test_framework.h"
 
-extern CWallet* pwalletMain;
+extern std::unique_ptr<CWallet> pwalletMain;
 extern unsigned int nModifierInterval;
 extern unsigned int nTargetSpacing;
 extern unsigned int nTargetSpacing_Staking;

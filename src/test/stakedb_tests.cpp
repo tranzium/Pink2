@@ -8,7 +8,9 @@
 #include "wallet.h"
 #include "db.h"
 
-extern CWallet* pwalletMain;
+#include <memory>
+
+extern std::unique_ptr<CWallet> pwalletMain;
 
 BOOST_AUTO_TEST_SUITE(stakedb_tests)
 

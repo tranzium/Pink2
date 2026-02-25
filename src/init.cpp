@@ -27,8 +27,8 @@
 
 // std:: prefix used explicitly throughout
 
-CWallet* pwalletMain;
-CWallet* pstakeDB;
+std::unique_ptr<CWallet> pwalletMain;
+std::unique_ptr<CWallet> pstakeDB;
 CClientUIInterface uiInterface;
 bool fConfChange;
 bool fNTPSuccess;
@@ -94,10 +94,10 @@ void Shutdown()
         StopNode();
         bitdb.Flush(true);
         std::filesystem::remove(GetPidFile());
-        UnregisterWallet(pwalletMain);
-        UnregisterWallet(pstakeDB);
-        delete pwalletMain;
-        delete pstakeDB;
+        UnregisterWallet(pwalletMain.get());
+        UnregisterWallet(pstakeDB.get());
+        pwalletMain.reset();
+        pstakeDB.reset();
         NewThread(ExitTimeout);
         MilliSleep(50);
         printf("Pinkcoin exited\n\n");
@@ -884,7 +884,7 @@ bool AppInit2(ThreadGroup& threadGroup)
     nStart = GetTimeMillis();
     bool fFirstRun = true;
     bool fFirstStakeOut = true;
-    pwalletMain = new CWallet(strWalletFileName);
+    pwalletMain = std::make_unique<CWallet>(strWalletFileName);
     DBErrors nLoadWalletRet = pwalletMain->LoadWallet(fFirstRun);
     if (nLoadWalletRet != DB_LOAD_OK)
     {
@@ -908,7 +908,7 @@ bool AppInit2(ThreadGroup& threadGroup)
             strErrors << _("Error loading wallet.dat") << "\n";
     }
 
-    pstakeDB = new CWallet(strStakeDBFileName);
+    pstakeDB = std::make_unique<CWallet>(strStakeDBFileName);
 
     SDBErrors nLoadStakeDBRet = pstakeDB->LoadStakeDB(fFirstStakeOut);
     if (nLoadStakeDBRet != SDB_LOAD_OK)
@@ -964,8 +964,8 @@ bool AppInit2(ThreadGroup& threadGroup)
     printf("%s", strErrors.str().c_str());
     printf(" wallet      %15" PRId64 "ms\n", GetTimeMillis() - nStart);
 
-    RegisterWallet(pwalletMain);
-    RegisterWallet(pstakeDB);
+    RegisterWallet(pwalletMain.get());
+    RegisterWallet(pstakeDB.get());
 
     CBlockIndex *pindexRescan = pindexBest;
     if (GetBoolArg("-rescan"))

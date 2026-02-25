@@ -7,10 +7,12 @@
 
 #include "wallet.h"
 
+#include <memory>
+
 class ThreadGroup;
 
-extern CWallet* pwalletMain;
-extern CWallet* pstakeDB;
+extern std::unique_ptr<CWallet> pwalletMain;
+extern std::unique_ptr<CWallet> pstakeDB;
 void StartShutdown();
 void Shutdown();
 bool AppInit2(ThreadGroup& threadGroup);

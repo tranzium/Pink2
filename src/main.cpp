@@ -16,6 +16,7 @@
 #include "time.h"
 #include <cmath>
 #include <filesystem>
+#include <memory>
 #include "string_utils.h"
 #include "scriptnum.h"
 
@@ -65,8 +66,8 @@ int64_t nTimeBestReceived = 0;
 
 CMedianFilter<int> cPeerBlockCounts(8, 0); // Amount of blocks that other nodes claim to have
 
-std::map<uint256, CBlock*> mapOrphanBlocks;
-std::multimap<uint256, CBlock*> mapOrphanBlocksByPrev;
+std::map<uint256, std::unique_ptr<CBlock>> mapOrphanBlocks;
+std::multimap<uint256, CBlock*> mapOrphanBlocksByPrev;  // non-owning view
 std::set<std::pair<COutPoint, unsigned int> > setStakeSeenOrphan;
 
 std::map<uint256, CTransaction> mapOrphanTransactions;
@@ -889,7 +890,7 @@ uint256 static GetOrphanRoot(const CBlock* pblock)
 {
     // Work back to the first block in the orphan chain
     while (mapOrphanBlocks.count(pblock->hashPrevBlock))
-        pblock = mapOrphanBlocks[pblock->hashPrevBlock];
+        pblock = mapOrphanBlocks[pblock->hashPrevBlock].get();
     return pblock->GetHash();
 }
 
@@ -898,7 +899,7 @@ uint256 WantedByOrphan(const CBlock* pblockOrphan)
 {
     // Work back to the first block in the orphan chain
     while (mapOrphanBlocks.count(pblockOrphan->hashPrevBlock))
-        pblockOrphan = mapOrphanBlocks[pblockOrphan->hashPrevBlock];
+        pblockOrphan = mapOrphanBlocks[pblockOrphan->hashPrevBlock].get();
     return pblockOrphan->hashPrevBlock;
 }
 
@@ -1003,18 +1004,19 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock)
             else
                 setStakeSeenOrphan.insert(pblock->GetProofOfStake());
         }
-        CBlock* pblock2 = new CBlock(*pblock);
-        mapOrphanBlocks.insert(std::make_pair(hash, pblock2));
-        mapOrphanBlocksByPrev.insert(std::make_pair(pblock2->hashPrevBlock, pblock2));
+        auto pblock2 = std::make_unique<CBlock>(*pblock);
+        CBlock* pblockRaw = pblock2.get();
+        mapOrphanBlocks.insert(std::make_pair(hash, std::move(pblock2)));
+        mapOrphanBlocksByPrev.insert(std::make_pair(pblockRaw->hashPrevBlock, pblockRaw));
 
         // Ask this guy to fill in what we're missing
         if (pfrom)
         {
-            pfrom->PushGetBlocks(pindexBest, GetOrphanRoot(pblock2));
+            pfrom->PushGetBlocks(pindexBest, GetOrphanRoot(pblockRaw));
             // ppcoin: getblocks may not obtain the ancestor block rejected
             // earlier by duplicate-stake check so we ask for it again directly
             if (!IsInitialBlockDownload())
-                pfrom->AskFor(CInv(MSG_BLOCK, WantedByOrphan(pblock2)));
+                pfrom->AskFor(CInv(MSG_BLOCK, WantedByOrphan(pblockRaw)));
         }
         return true;
     }
@@ -1071,9 +1073,11 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock)
             CBlock* pblockOrphan = mi->second;
             if (pblockOrphan->AcceptBlock())
                 vWorkQueue.push_back(pblockOrphan->GetHash(true));
-            mapOrphanBlocks.erase(pblockOrphan->GetHash());
-            setStakeSeenOrphan.erase(pblockOrphan->GetProofOfStake());
-            delete pblockOrphan;
+            // Save data before erasing from owning map (unique_ptr destroys block)
+            uint256 orphanHash = pblockOrphan->GetHash();
+            auto orphanStake = pblockOrphan->GetProofOfStake();
+            mapOrphanBlocks.erase(orphanHash);
+            setStakeSeenOrphan.erase(orphanStake);
         }
         mapOrphanBlocksByPrev.erase(hashPrev);
     }
@@ -1809,7 +1813,7 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
             if (!fAlreadyHave)
                 pfrom->AskFor(inv);
             else if (inv.type == MSG_BLOCK && mapOrphanBlocks.count(inv.hash)) {
-                pfrom->PushGetBlocks(pindexBest, GetOrphanRoot(mapOrphanBlocks[inv.hash]));
+                pfrom->PushGetBlocks(pindexBest, GetOrphanRoot(mapOrphanBlocks[inv.hash].get()));
             } else if (nInv == nLastBlock) {
                 // In case we are on a very long side-chain, it is possible that we already have
                 // the last block in an inv bundle sent in response to getblocks. Try to detect

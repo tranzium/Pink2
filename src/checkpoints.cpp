@@ -266,8 +266,8 @@ namespace Checkpoints
             return false;
         if (hashBlock == hashPendingCheckpoint)
             return true;
-        if (mapOrphanBlocks.count(hashPendingCheckpoint) 
-            && hashBlock == WantedByOrphan(mapOrphanBlocks[hashPendingCheckpoint]))
+        if (mapOrphanBlocks.count(hashPendingCheckpoint)
+            && hashBlock == WantedByOrphan(mapOrphanBlocks[hashPendingCheckpoint].get()))
             return true;
         return false;
     }
@@ -429,7 +429,7 @@ bool CSyncCheckpoint::ProcessSyncCheckpoint(CNode* pfrom)
             pfrom->PushGetBlocks(pindexBest, hashCheckpoint);
             // ask directly as well in case rejected earlier by duplicate
             // proof-of-stake because getblocks may not get it this time
-            pfrom->AskFor(CInv(MSG_BLOCK, mapOrphanBlocks.count(hashCheckpoint)? WantedByOrphan(mapOrphanBlocks[hashCheckpoint]) : hashCheckpoint));
+            pfrom->AskFor(CInv(MSG_BLOCK, mapOrphanBlocks.count(hashCheckpoint)? WantedByOrphan(mapOrphanBlocks[hashCheckpoint].get()) : hashCheckpoint));
         }
         return false;
     }

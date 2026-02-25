@@ -24,7 +24,7 @@
 using json = nlohmann::json;
 #include "test_framework.h"
 
-extern CWallet* pwalletMain;
+extern std::unique_ptr<CWallet> pwalletMain;
 
 // ============================================================================
 // Suite: wallet_migration_safety — round-trip tests for wallet data types

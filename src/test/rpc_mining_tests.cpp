@@ -11,7 +11,7 @@
 #include "main.h"
 #include "test_framework.h"
 
-extern CWallet* pwalletMain;
+extern std::unique_ptr<CWallet> pwalletMain;
 
 // ============================================================================
 // Suite: Mining RPC commands (uses TestChain for real chain state)

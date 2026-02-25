@@ -12,6 +12,7 @@
 #include "scrypt.h"
 
 #include <list>
+#include <memory>
 
 class CWallet;
 class CBlock;
@@ -93,7 +94,7 @@ extern int64_t nTimeBestReceived;
 extern CCriticalSection cs_setpwalletRegistered;
 extern std::set<CWallet*> setpwalletRegistered;
 extern unsigned char pchMessageStart[4];
-extern std::map<uint256, CBlock*> mapOrphanBlocks;
+extern std::map<uint256, std::unique_ptr<CBlock>> mapOrphanBlocks;
 
 // Settings
 extern int64_t nTransactionFee;

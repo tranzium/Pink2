@@ -5,6 +5,8 @@
 #include "walletdb.h"
 #include "base58.h"
 
+#include <memory>
+
 // how many times to run all the tests to have a chance to catch errors that only show up with particular random shuffles
 #define RUN_TESTS 100
 
@@ -14,7 +16,7 @@
 
 using namespace std;
 
-extern CWallet* pwalletMain;
+extern std::unique_ptr<CWallet> pwalletMain;
 
 typedef set<pair<const CWalletTx*,unsigned int> > CoinSet;
 

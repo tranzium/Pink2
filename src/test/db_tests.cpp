@@ -12,8 +12,10 @@
 #include "walletdb.h"
 #include "main.h"
 
+#include <memory>
+
 extern CDBEnv bitdb;
-extern CWallet* pwalletMain;
+extern std::unique_ptr<CWallet> pwalletMain;
 
 BOOST_AUTO_TEST_SUITE(db_tests)
 

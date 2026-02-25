@@ -14,6 +14,7 @@
 #include "kernel.h"
 #include "coincontrol.h"
 #include "arith_uint256.h"
+#include <memory>
 
 DBErrors CWallet::LoadWallet(bool& fFirstRunRet)
 {
@@ -175,24 +176,23 @@ std::set< std::set<CTxDestination> > CWallet::GetAddressGroupings()
             }
     }
 
-    std::set< std::set<CTxDestination>* > uniqueGroupings; // a set of pointers to groups of addresses
-    std::map< CTxDestination, std::set<CTxDestination>* > setmap;  // map addresses to the unique group containing it
+    std::set< std::shared_ptr<std::set<CTxDestination>> > uniqueGroupings; // a set of pointers to groups of addresses
+    std::map< CTxDestination, std::shared_ptr<std::set<CTxDestination>> > setmap;  // map addresses to the unique group containing it
     for (std::set<CTxDestination> grouping : groupings)
     {
         // make a set of all the groups hit by this new group
-        std::set< std::set<CTxDestination>* > hits;
-        std::map< CTxDestination, std::set<CTxDestination>* >::iterator it;
+        std::set< std::shared_ptr<std::set<CTxDestination>> > hits;
+        std::map< CTxDestination, std::shared_ptr<std::set<CTxDestination>> >::iterator it;
         for (CTxDestination address : grouping)
             if ((it = setmap.find(address)) != setmap.end())
                 hits.insert((*it).second);
 
-        // merge all hit groups into a new single group and delete old groups
-        std::set<CTxDestination>* merged = new std::set<CTxDestination>(grouping);
-        for (std::set<CTxDestination>* hit : hits)
+        // merge all hit groups into a new single group
+        auto merged = std::make_shared<std::set<CTxDestination>>(grouping);
+        for (const auto& hit : hits)
         {
             merged->insert(hit->begin(), hit->end());
             uniqueGroupings.erase(hit);
-            delete hit;
         }
         uniqueGroupings.insert(merged);
 
@@ -202,10 +202,9 @@ std::set< std::set<CTxDestination> > CWallet::GetAddressGroupings()
     }
 
     std::set< std::set<CTxDestination> > ret;
-    for (std::set<CTxDestination>* uniqueGrouping : uniqueGroupings)
+    for (const auto& uniqueGrouping : uniqueGroupings)
     {
         ret.insert(*uniqueGrouping);
-        delete uniqueGrouping;
     }
 
     return ret;

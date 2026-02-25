@@ -49,14 +49,14 @@ struct {
 // NOTE: These tests rely on CreateNewBlock doing its own self-validation!
 BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)
 {
-    CReserveKey reservekey(pwalletMain);
+    CReserveKey reservekey(pwalletMain.get());
     CBlock *pblock;
     CTransaction tx;
     CScript script;
     uint256 hash;
 
     // Simple block creation, nothing special yet:
-    BOOST_CHECK(pblock = CreateNewBlock(pwalletMain));
+    BOOST_CHECK(pblock = CreateNewBlock(pwalletMain.get()));
 
     // We can't make transactions until we have inputs
     // Therefore, load 100 blocks :)
@@ -79,7 +79,7 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)
     delete pblock;
 
     // Just to make sure we can still make simple blocks
-    BOOST_CHECK(pblock = CreateNewBlock(pwalletMain));
+    BOOST_CHECK(pblock = CreateNewBlock(pwalletMain.get()));
 
     // block sigops > limit: 1000 CHECKMULTISIG + 1
     tx.vin.resize(1);
@@ -96,7 +96,7 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)
         mempool.addUnchecked(hash, tx);
         tx.vin[0].prevout.hash = hash;
     }
-    BOOST_CHECK(pblock = CreateNewBlock(pwalletMain));
+    BOOST_CHECK(pblock = CreateNewBlock(pwalletMain.get()));
     delete pblock;
     mempool.clear();
 
@@ -116,14 +116,14 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)
         mempool.addUnchecked(hash, tx);
         tx.vin[0].prevout.hash = hash;
     }
-    BOOST_CHECK(pblock = CreateNewBlock(pwalletMain));
+    BOOST_CHECK(pblock = CreateNewBlock(pwalletMain.get()));
     delete pblock;
     mempool.clear();
 
     // orphan in mempool
     hash = tx.GetHash();
     mempool.addUnchecked(hash, tx);
-    BOOST_CHECK(pblock = CreateNewBlock(pwalletMain));
+    BOOST_CHECK(pblock = CreateNewBlock(pwalletMain.get()));
     delete pblock;
     mempool.clear();
 
@@ -141,7 +141,7 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)
     tx.vout[0].nValue = 5900000000LL;
     hash = tx.GetHash();
     mempool.addUnchecked(hash, tx);
-    BOOST_CHECK(pblock = CreateNewBlock(pwalletMain));
+    BOOST_CHECK(pblock = CreateNewBlock(pwalletMain.get()));
     delete pblock;
     mempool.clear();
 
@@ -152,7 +152,7 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)
     tx.vout[0].nValue = 0;
     hash = tx.GetHash();
     mempool.addUnchecked(hash, tx);
-    BOOST_CHECK(pblock = CreateNewBlock(pwalletMain));
+    BOOST_CHECK(pblock = CreateNewBlock(pwalletMain.get()));
     delete pblock;
     mempool.clear();
 
@@ -170,7 +170,7 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)
     tx.vout[0].nValue -= 1000000;
     hash = tx.GetHash();
     mempool.addUnchecked(hash,tx);
-    BOOST_CHECK(pblock = CreateNewBlock(pwalletMain));
+    BOOST_CHECK(pblock = CreateNewBlock(pwalletMain.get()));
     delete pblock;
     mempool.clear();
 
@@ -184,17 +184,17 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)
     tx.vout[0].scriptPubKey = CScript() << OP_2;
     hash = tx.GetHash();
     mempool.addUnchecked(hash, tx);
-    BOOST_CHECK(pblock = CreateNewBlock(pwalletMain));
+    BOOST_CHECK(pblock = CreateNewBlock(pwalletMain.get()));
     delete pblock;
     mempool.clear();
 
     // subsidy changing
     int nHeight = pindexBest->nHeight;
     pindexBest->nHeight = 209999;
-    BOOST_CHECK(pblock = CreateNewBlock(pwalletMain));
+    BOOST_CHECK(pblock = CreateNewBlock(pwalletMain.get()));
     delete pblock;
     pindexBest->nHeight = 210000;
-    BOOST_CHECK(pblock = CreateNewBlock(pwalletMain));
+    BOOST_CHECK(pblock = CreateNewBlock(pwalletMain.get()));
     delete pblock;
     pindexBest->nHeight = nHeight;
 }

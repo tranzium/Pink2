@@ -520,7 +520,7 @@ json clearwallettransactions(const json& params, bool fHelp)
                 };
 
                 pwalletMain->mapWallet.erase(hash);
-                pwalletMain->NotifyTransactionChanged(pwalletMain, hash, CT_DELETED);
+                pwalletMain->NotifyTransactionChanged(pwalletMain.get(), hash, CT_DELETED);
 
                 nTransactions++;
             };

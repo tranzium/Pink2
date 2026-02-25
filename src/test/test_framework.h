@@ -13,9 +13,10 @@
 #include "miner.h"
 #include "wallet.h"
 
+#include <memory>
 #include <vector>
 
-extern CWallet* pwalletMain;
+extern std::unique_ptr<CWallet> pwalletMain;
 
 // ---------------------------------------------------------------------------
 // TestChain — reusable fixture that mines a PoW chain via ProcessBlock().

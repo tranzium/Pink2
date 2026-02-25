@@ -322,9 +322,9 @@ int main(int argc, char *argv[])
                     splash.finish(&window);
 
                 pClientModel = new ClientModel(&optionsModel);
-                pWalletModel = new WalletModel(pwalletMain, &optionsModel);
-                pStakeModel = new WalletModel(pstakeDB, &optionsModel);
-                pMessageModel = new MessageModel(pwalletMain, pWalletModel);
+                pWalletModel = new WalletModel(pwalletMain.get(), &optionsModel);
+                pStakeModel = new WalletModel(pstakeDB.get(), &optionsModel);
+                pMessageModel = new MessageModel(pwalletMain.get(), pWalletModel);
 
                 window.setClientModel(pClientModel);
                 window.setWalletModel(pWalletModel, pStakeModel);

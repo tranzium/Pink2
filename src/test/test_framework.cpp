@@ -107,7 +107,7 @@ TestChain::TestChain(unsigned int nBlocks)
 
     for (unsigned int i = 0; i < nToMine; ++i)
     {
-        CBlock* pblock = CreateNewBlock(pwalletMain);
+        CBlock* pblock = CreateNewBlock(pwalletMain.get());
         if (!pblock)
             break;
 
@@ -202,7 +202,7 @@ unsigned int TestChain::MineEmptyBlocks(unsigned int nCount)
     unsigned int nMined = 0;
     for (unsigned int i = 0; i < nCount; ++i)
     {
-        CBlock* pblock = CreateNewBlock(pwalletMain);
+        CBlock* pblock = CreateNewBlock(pwalletMain.get());
         if (!pblock)
             break;
 

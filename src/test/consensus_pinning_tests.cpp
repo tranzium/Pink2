@@ -20,7 +20,7 @@
 #include "wallet.h"
 #include "test_framework.h"
 
-extern CWallet* pwalletMain;
+extern std::unique_ptr<CWallet> pwalletMain;
 // bnProofOfWorkLimit declared in main.h
 
 // Globals from main.cpp not declared in main.h
@@ -88,7 +88,7 @@ bool MineNonce(CBlock& block) {
 CBlock MakeBlockAtTip(int nVersion = CBlock::CURRENT_VERSION)
 {
     pwalletMain->NewKeyPool();
-    CBlock* ptemplate = CreateNewBlock(pwalletMain);
+    CBlock* ptemplate = CreateNewBlock(pwalletMain.get());
     if (!ptemplate) return CBlock();
 
     CBlock block = *ptemplate;
@@ -115,7 +115,7 @@ void CleanupOrphanBlock(const uint256& hash)
 {
     auto it = mapOrphanBlocks.find(hash);
     if (it != mapOrphanBlocks.end()) {
-        CBlock* pblock = it->second;
+        CBlock* pblock = it->second.get();
         // Remove from mapOrphanBlocksByPrev
         for (auto it2 = mapOrphanBlocksByPrev.begin();
              it2 != mapOrphanBlocksByPrev.end(); ) {
@@ -126,8 +126,7 @@ void CleanupOrphanBlock(const uint256& hash)
         }
         // Remove from setStakeSeenOrphan if present
         setStakeSeenOrphan.erase(pblock->GetProofOfStake());
-        delete pblock;
-        mapOrphanBlocks.erase(it);
+        mapOrphanBlocks.erase(it);  // unique_ptr destroys block
     }
 }
 
@@ -603,17 +602,16 @@ BOOST_AUTO_TEST_CASE(orphan_block_map_insert_and_find)
     size_t origSize = mapOrphanBlocks.size();
 
     uint256 hash("0x1111111111111111111111111111111111111111111111111111111111111111");
-    CBlock* pblock = new CBlock();
+    auto pblock = std::make_unique<CBlock>();
     pblock->nTime = 12345;
     pblock->hashPrevBlock = uint256("0x2222");
-    mapOrphanBlocks[hash] = pblock;
+    mapOrphanBlocks[hash] = std::move(pblock);
 
     BOOST_CHECK_EQUAL(mapOrphanBlocks.size(), origSize + 1);
     BOOST_CHECK(mapOrphanBlocks.count(hash));
     BOOST_CHECK_EQUAL(mapOrphanBlocks[hash]->nTime, 12345u);
 
-    // Cleanup
-    delete pblock;
+    // Cleanup — erase destroys the unique_ptr automatically
     mapOrphanBlocks.erase(hash);
     BOOST_CHECK_EQUAL(mapOrphanBlocks.size(), origSize);
 }
@@ -623,21 +621,17 @@ BOOST_AUTO_TEST_CASE(orphan_block_by_prev_multimap)
     size_t origSize = mapOrphanBlocksByPrev.size();
     uint256 prevHash("0x3333");
 
-    CBlock* pblock1 = new CBlock();
+    auto pblock1 = std::make_unique<CBlock>();
     pblock1->hashPrevBlock = prevHash;
-    CBlock* pblock2 = new CBlock();
+    auto pblock2 = std::make_unique<CBlock>();
     pblock2->hashPrevBlock = prevHash;
 
-    mapOrphanBlocksByPrev.insert(std::make_pair(prevHash, pblock1));
-    mapOrphanBlocksByPrev.insert(std::make_pair(prevHash, pblock2));
+    mapOrphanBlocksByPrev.insert(std::make_pair(prevHash, pblock1.get()));
+    mapOrphanBlocksByPrev.insert(std::make_pair(prevHash, pblock2.get()));
 
     BOOST_CHECK_EQUAL(mapOrphanBlocksByPrev.count(prevHash), 2u);
 
-    // Cleanup
-    for (auto it = mapOrphanBlocksByPrev.lower_bound(prevHash);
-         it != mapOrphanBlocksByPrev.upper_bound(prevHash); ++it) {
-        delete it->second;
-    }
+    // Cleanup — erase from multimap; unique_ptrs destroy blocks at scope exit
     mapOrphanBlocksByPrev.erase(prevHash);
     BOOST_CHECK_EQUAL(mapOrphanBlocksByPrev.size(), origSize);
 }
@@ -648,19 +642,19 @@ BOOST_AUTO_TEST_CASE(wanted_by_orphan_single_block)
     uint256 hash("0x4444444444444444444444444444444444444444444444444444444444444444");
     uint256 prevHash("0x5555555555555555555555555555555555555555555555555555555555555555");
 
-    CBlock* pblock = new CBlock();
+    auto pblock = std::make_unique<CBlock>();
     pblock->hashPrevBlock = prevHash;
 
     // prevHash is NOT in mapOrphanBlocks, so WantedByOrphan stops immediately
     BOOST_CHECK(!mapOrphanBlocks.count(prevHash));
 
-    mapOrphanBlocks[hash] = pblock;
+    CBlock* pblockRaw = pblock.get();
+    mapOrphanBlocks[hash] = std::move(pblock);
 
-    uint256 wanted = WantedByOrphan(pblock);
+    uint256 wanted = WantedByOrphan(pblockRaw);
     BOOST_CHECK(wanted == prevHash);
 
-    delete pblock;
-    mapOrphanBlocks.erase(hash);
+    mapOrphanBlocks.erase(hash);  // unique_ptr destroys block
 }
 
 BOOST_AUTO_TEST_CASE(wanted_by_orphan_follows_chain)
@@ -672,28 +666,26 @@ BOOST_AUTO_TEST_CASE(wanted_by_orphan_follows_chain)
     uint256 hashB("0x8888888888888888888888888888888888888888888888888888888888888888");
     uint256 hashC("0x9999999999999999999999999999999999999999999999999999999999999999");
 
-    CBlock* pblockA = new CBlock();
+    auto pblockA = std::make_unique<CBlock>();
     pblockA->hashPrevBlock = unknownParent;
 
-    CBlock* pblockB = new CBlock();
+    auto pblockB = std::make_unique<CBlock>();
     pblockB->hashPrevBlock = hashA;
 
-    CBlock* pblockC = new CBlock();
+    auto pblockC = std::make_unique<CBlock>();
     pblockC->hashPrevBlock = hashB;
 
-    mapOrphanBlocks[hashA] = pblockA;
-    mapOrphanBlocks[hashB] = pblockB;
-    mapOrphanBlocks[hashC] = pblockC;
+    CBlock* pblockCRaw = pblockC.get();
+    mapOrphanBlocks[hashA] = std::move(pblockA);
+    mapOrphanBlocks[hashB] = std::move(pblockB);
+    mapOrphanBlocks[hashC] = std::move(pblockC);
 
     // WantedByOrphan(C) follows: C.prev=B (in map) → B.prev=A (in map) → A.prev=unknown (not in map)
     // Returns A.hashPrevBlock = unknownParent
-    uint256 wanted = WantedByOrphan(pblockC);
+    uint256 wanted = WantedByOrphan(pblockCRaw);
     BOOST_CHECK(wanted == unknownParent);
 
-    // Cleanup
-    delete pblockA;
-    delete pblockB;
-    delete pblockC;
+    // Cleanup — erase destroys unique_ptrs automatically
     mapOrphanBlocks.erase(hashA);
     mapOrphanBlocks.erase(hashB);
     mapOrphanBlocks.erase(hashC);
@@ -959,25 +951,26 @@ BOOST_AUTO_TEST_CASE(orphan_block_via_direct_map_operations)
     // difficulty check prevents easy orphan creation in test mode).
     size_t origSize = mapOrphanBlocks.size();
 
-    // Simulate what ProcessBlock does at line 2543-2545
+    // Simulate what ProcessBlock does
     uint256 hash("0xdeadbeef0000000000000000000000000000000000000000000000000000dead");
     uint256 prevHash("0xfeedface0000000000000000000000000000000000000000000000000000feed");
 
-    CBlock* pblock = new CBlock();
+    auto pblock = std::make_unique<CBlock>();
     pblock->hashPrevBlock = prevHash;
     pblock->nTime = GetAdjustedTime();
 
-    mapOrphanBlocks.insert(std::make_pair(hash, pblock));
-    mapOrphanBlocksByPrev.insert(std::make_pair(pblock->hashPrevBlock, pblock));
+    CBlock* pblockRaw = pblock.get();
+    mapOrphanBlocks.insert(std::make_pair(hash, std::move(pblock)));
+    mapOrphanBlocksByPrev.insert(std::make_pair(pblockRaw->hashPrevBlock, pblockRaw));
 
     BOOST_CHECK_EQUAL(mapOrphanBlocks.size(), origSize + 1);
     BOOST_CHECK(mapOrphanBlocks.count(hash));
     BOOST_CHECK(mapOrphanBlocksByPrev.count(prevHash));
 
-    // Duplicate check (same as ProcessBlock line 2482)
+    // Duplicate check (same as ProcessBlock)
     BOOST_CHECK(mapOrphanBlocks.count(hash));
 
-    // Cleanup (same as ProcessBlock lines 2611-2613)
+    // Cleanup (same as ProcessBlock)
     CleanupOrphanBlock(hash);
     BOOST_CHECK_EQUAL(mapOrphanBlocks.size(), origSize);
 }

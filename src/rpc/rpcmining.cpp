@@ -153,7 +153,7 @@ json getworkex(const json& params, bool fHelp)
     using mapNewBlock_t = std::map<uint256, std::pair<CBlock*, CScript> >;
     static mapNewBlock_t mapNewBlock;
     static std::vector<std::unique_ptr<CBlock>> vNewBlock;
-    static CReserveKey reservekey(pwalletMain);
+    static CReserveKey reservekey(pwalletMain.get());
 
     if (params.empty())
     {
@@ -176,7 +176,7 @@ json getworkex(const json& params, bool fHelp)
             nStart = GetAdjustedTime();
 
             // Create new block
-            pblock = CreateNewBlock(pwalletMain);
+            pblock = CreateNewBlock(pwalletMain.get());
             if (!pblock)
                 throw JSONRPCError(-7, "Out of memory");
             vNewBlock.push_back(std::unique_ptr<CBlock>(pblock));
@@ -282,7 +282,7 @@ json getwork(const json& params, bool fHelp)
     using mapNewBlock_t = std::map<uint256, std::pair<CBlock*, CScript> >;
     static mapNewBlock_t mapNewBlock;    // FIXME: thread safety
     static std::vector<std::unique_ptr<CBlock>> vNewBlock;
-    static CReserveKey reservekey(pwalletMain);
+    static CReserveKey reservekey(pwalletMain.get());
 
     if (params.empty())
     {
@@ -310,7 +310,7 @@ json getwork(const json& params, bool fHelp)
             nStart = GetAdjustedTime();
 
             // Create new block
-            pblock = CreateNewBlock(pwalletMain);
+            pblock = CreateNewBlock(pwalletMain.get());
             if (!pblock)
                 throw JSONRPCError(RPC_OUT_OF_MEMORY, "Out of memory");
             vNewBlock.push_back(std::unique_ptr<CBlock>(pblock));
@@ -418,7 +418,7 @@ json getblocktemplate(const json& params, bool fHelp)
     if (IsInitialBlockDownload())
         throw JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD, "Pinkcoin is downloading blocks...");
 
-    static CReserveKey reservekey(pwalletMain);
+    static CReserveKey reservekey(pwalletMain.get());
 
     // Update block
     static unsigned int nTransactionsUpdatedLast;
@@ -437,7 +437,7 @@ json getblocktemplate(const json& params, bool fHelp)
         nStart = GetAdjustedTime();
 
         // Create new block
-        pblock.reset(CreateNewBlock(pwalletMain));
+        pblock.reset(CreateNewBlock(pwalletMain.get()));
         if (!pblock)
             throw JSONRPCError(RPC_OUT_OF_MEMORY, "Out of memory");
 

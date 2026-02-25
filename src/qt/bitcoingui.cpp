@@ -77,8 +77,9 @@
 #include <QFontDatabase>
 
 #include <iostream>
+#include <memory>
 
-extern CWallet* pwalletMain;
+extern std::unique_ptr<CWallet> pwalletMain;
 extern int64_t nLastCoinStakeSearchInterval;
 
 double GetPoSKernelPS();

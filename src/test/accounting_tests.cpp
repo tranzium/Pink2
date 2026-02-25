@@ -12,7 +12,7 @@ GetResults(CWalletDB& walletdb, std::map<int64_t, CAccountingentry>& results)
     std::list<CAccountingentry> aes;
 
     results.clear();
-    BOOST_CHECK(walletdb.ReorderTransactions(pwalletMain) == DB_LOAD_OK);
+    BOOST_CHECK(walletdb.ReorderTransactions(pwalletMain.get()) == DB_LOAD_OK);
     walletdb.ListAccountCreditDebit("", aes);
     for (CAccountingentry& ae : aes)
     {

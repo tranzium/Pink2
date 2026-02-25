@@ -22,8 +22,8 @@
 
 // json type alias provided by bitcoinrpc.h (using json = nlohmann::json)
 
-extern CWallet* pwalletMain;
-extern CWallet* pstakeDB;
+extern std::unique_ptr<CWallet> pwalletMain;
+extern std::unique_ptr<CWallet> pstakeDB;
 extern int64_t nSplitThreshold;
 extern int64_t nCombineThreshold;
 extern int64_t nReserveBalance;

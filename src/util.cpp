@@ -250,6 +250,7 @@ std::string vstrprintf(const char *format, va_list ap)
     char* p = buffer;
     int limit = sizeof(buffer);
     int ret;
+    std::vector<char> dynamic_buf; // manages heap memory automatically
     while (true)
     {
         va_list arg_ptr;
@@ -262,16 +263,11 @@ std::string vstrprintf(const char *format, va_list ap)
         va_end(arg_ptr);
         if (ret >= 0 && ret < limit)
             break;
-        if (p != buffer)
-            delete[] p;
         limit *= 2;
-        p = new char[limit];
-        if (p == nullptr)
-            throw std::bad_alloc();
+        dynamic_buf.resize(limit);
+        p = dynamic_buf.data();
     }
     std::string str(p, p+ret);
-    if (p != buffer)
-        delete[] p;
     return str;
 }
 
