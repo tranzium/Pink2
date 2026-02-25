@@ -8,7 +8,7 @@
 #include "pink_signal.h"
 #include <vector>
 #include "allocators.h" /* for SecureString */
-#include "smessage.h"
+#include "smessage/smessage.h"
 #include <map>
 #include <QAbstractTableModel>
 #include <QStringList>

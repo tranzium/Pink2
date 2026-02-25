@@ -26,7 +26,11 @@ set(PINKCOIN_CORE_SOURCES
     protocol.cpp
     script.cpp
     scrypt.cpp
-    smessage.cpp
+    smessage/smessage.cpp
+    smessage/smessage_crypto.cpp
+    smessage/smessage_db.cpp
+    smessage/smessage_net.cpp
+    smessage/smessage_store.cpp
     stakedb.cpp
     stealth.cpp
     sync.cpp
@@ -94,7 +98,7 @@ set(PINKCOIN_CORE_HEADERS
     script.h
     scrypt.h
     serialize.h
-    smessage.h
+    smessage/smessage.h
     stakedb.h
     stealth.h
     sync.h

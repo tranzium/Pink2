@@ -12,7 +12,7 @@
 #include "init.h"
 #include "ui_interface.h"
 #include "kernel.h"
-#include "smessage.h"
+#include "smessage/smessage.h"
 #include "time.h"
 #include <cmath>
 #include <filesystem>

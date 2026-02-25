@@ -4,7 +4,7 @@
 
 #include <boost/test/unit_test.hpp>
 
-#include "smessage.h"
+#include "smessage/smessage.h"
 #include "xxhash/xxhash.h"
 
 #include <string>

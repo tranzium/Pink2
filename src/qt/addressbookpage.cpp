@@ -13,7 +13,7 @@
 #include <QMessageBox>
 #include <QMenu>
 
-#include "smessage.h"
+#include "smessage/smessage.h"
 
 #ifdef USE_QRCODE
 #include "qrcodedialog.h"

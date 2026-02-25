@@ -61,6 +61,11 @@ extern SecMsgOptions                    smsgOptions;
 extern CCriticalSection cs_smsg;            // all except inbox and outbox
 extern CCriticalSection cs_smsgDB;
 
+extern uint32_t nPeerIdCounter;
+
+// Thread functions (smessage_net.cpp)
+void ThreadSecureMsg();
+void ThreadSecureMsgPow();
 
 
 #pragma pack(push, 1)
@@ -380,6 +385,7 @@ int SecureMsgGetStoredKey(CKeyID& ckid, CPubKey& cpkOut);
 int SecureMsgGetLocalKey(CKeyID& ckid, CPubKey& cpkOut);
 int SecureMsgGetLocalPublicKey(std::string& strAddress, std::string& strPublicKey);
 
+int SecureMsgInsertAddress(CKeyID& hashKey, CPubKey& pubKey);
 int SecureMsgAddAddress(std::string& address, std::string& publicKey);
 
 int SecureMsgRetrieve(SecMsgToken &token, std::vector<unsigned char>& vchData);

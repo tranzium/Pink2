@@ -15,7 +15,7 @@
 #include "wallet.h"
 #include "base58.h"
 #include "init.h"
-#include "smessage.h"
+#include "smessage/smessage.h"
 #include "test_framework.h"
 
 using std::runtime_error;

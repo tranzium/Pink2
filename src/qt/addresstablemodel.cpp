@@ -5,7 +5,7 @@
 #include "wallet.h"
 #include "base58.h"
 #include "stealth.h"
-#include "smessage.h"
+#include "smessage/smessage.h"
 
 #include <QFont>
 #include <QColor>

@@ -12,7 +12,7 @@
 #include "util.h"
 #include "ui_interface.h"
 #include "checkpoints.h"
-#include "smessage.h"
+#include "smessage/smessage.h"
 
 #include <filesystem>
 #include "filelock.h"

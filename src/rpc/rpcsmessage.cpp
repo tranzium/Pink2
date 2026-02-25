@@ -5,7 +5,7 @@
 #include "main.h"
 #include "bitcoinrpc.h"
 
-#include "smessage.h"
+#include "smessage/smessage.h"
 #include "init.h" // pwalletMain
 
 
